@@ -1,0 +1,34 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
+    environment:
+      DATABASE_URL: sqlite:////data/app.db
+      GOOGLE_SERVICE_ACCOUNT_FILE: /secrets/service-account.json
+      CORS_ORIGINS: '["http://localhost:5173"]'
+      TZ: Asia/Kolkata
+    volumes:
+      - ./backend/app:/app/app            # live reload
+      - ./backend/config:/app/config
+      - ./secrets:/secrets:ro
+      - appdata:/data                     # SQLite database persists here
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      retries: 5
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-5173}:5173"
+    environment:
+      VITE_BACKEND_URL: http://backend:8000
+    volumes:
+      - ./frontend/src:/app/src
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  appdata:

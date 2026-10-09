@@ -1,0 +1,34 @@
+# Secrets
+.env
+secrets/*
+!secrets/.gitkeep
+*.json.key
+service-account*.json
+
+# Local data (your portfolio lives here)
+backend/var/
+*.db
+*.db-journal
+uploads/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+frontend/dist/
+*.tsbuildinfo
+
+# Your real exports — only FAKE files belong in sample_data/
+*.pdf
+!sample_data/*.pdf
+real_data/
+
+.DS_Store
+.idea/
+.vscode/

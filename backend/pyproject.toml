@@ -1,0 +1,47 @@
+[project]
+name = "portfolio-analyzer"
+version = "0.1.0"
+description = "Personal portfolio analyzer for Groww holdings (decision support only, never trades)."
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "fastapi>=0.115,<1.0",
+    "uvicorn[standard]>=0.34",
+    "sqlmodel>=0.0.24",
+    "pydantic>=2.10",
+    "pydantic-settings>=2.7",
+    "pyyaml>=6.0",
+    "pandas>=2.2",
+    "numpy>=2.0",
+    "python-multipart>=0.0.20",
+    "httpx>=0.28",
+    "apscheduler>=3.11,<4",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "ruff>=0.9",
+    "mypy>=1.15",
+    "types-pyyaml>=6.0",
+    "httpx2>=2.13.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+ignore_missing_imports = true
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.File", "fastapi.Query", "fastapi.Form"]
