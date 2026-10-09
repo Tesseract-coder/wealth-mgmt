@@ -81,6 +81,18 @@ class DataConfig(BaseModel):
     refresh_time_ist: str = Field(pattern=r"^\d{2}:\d{2}$")
 
 
+class ImportConfig(BaseModel):
+    header_scan_rows: int = Field(gt=0)
+    column_match_min_score: float = Field(ge=0, le=100)
+    min_header_matches: int = Field(ge=1)
+    ticker_name_auto_accept: float = Field(ge=0, le=100)
+    ticker_name_suggest: float = Field(ge=0, le=100)
+    scheme_name_auto_accept: float = Field(ge=0, le=100)
+    scheme_name_suggest: float = Field(ge=0, le=100)
+    max_suggestions: int = Field(gt=0)
+    max_upload_mb: float = Field(gt=0)
+
+
 class TaxConfig(BaseModel):
     verify_note: str
     equity_ltcg_min_holding_days: int
@@ -103,6 +115,7 @@ class Profiles(BaseModel):
     confidence: Confidence
     screener: ScreenerConfig
     data: DataConfig
+    importing: ImportConfig
     tax: TaxConfig
     disclaimer: str
 

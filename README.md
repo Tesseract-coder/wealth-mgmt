@@ -11,7 +11,7 @@ A personal, locally-run dashboard that analyses your **Groww** stock and mutual 
 | Phase | Scope | State |
 |---|---|---|
 | 1 | Scaffold: FastAPI + React, SQLite, config, Docker + no-Docker run | ✅ |
-| 2 | Groww/CAS/manual import, column mapper, ticker resolution, snapshots | ⏳ |
+| 2 | Groww/CAS/manual import, column mapper, ticker resolution, snapshots | ✅ |
 | 3–11 | Market data, analysis engines, signals, UI, screener, Google Sheets, polish | ⏳ |
 
 ## Quick start (no Docker)
@@ -40,6 +40,10 @@ If port 8000 or 5173 is already in use, set `BACKEND_PORT` / `FRONTEND_PORT` in 
 | `make test` | pytest + Vitest |
 | `make lint` | ruff, mypy (strict), tsc (strict) |
 | `make fmt` | Auto-format the backend |
+
+## Importing your holdings
+
+See [docs/GROWW_EXPORT_GUIDE.md](docs/GROWW_EXPORT_GUIDE.md). To try the app without your own data, import the **fake** files in `sample_data/`.
 
 ## Configuration
 

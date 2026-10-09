@@ -1,5 +1,6 @@
 import { Route, Routes } from "react-router-dom";
 import { Layout } from "./components/Layout";
+import { Import } from "./pages/Import";
 import { Placeholder } from "./pages/Placeholder";
 import { Status } from "./pages/Status";
 
@@ -8,7 +9,7 @@ export function App() {
     <Routes>
       <Route element={<Layout />}>
         <Route index element={<Status />} />
-        <Route path="import" element={<Placeholder title="Import" phase={2} />} />
+        <Route path="import" element={<Import />} />
         <Route path="holdings" element={<Placeholder title="Holdings" phase={8} />} />
         <Route path="mutual-funds" element={<Placeholder title="Mutual Funds" phase={8} />} />
         <Route path="screener" element={<Placeholder title="Screener" phase={9} />} />

@@ -1,0 +1,18 @@
+﻿FAKE SAMPLE DATA - for testing only
+Groww - Equity Holdings
+Generated on,09 Oct 2026
+
+Company,ISIN Code,Qty.,Avg. Cost (₹),LTP,Current Value (₹),P&L
+Reliance Industries Ltd,INE002A01018,25,"₹2,410.50","₹2,875.10","₹71,877.50","₹11,615.00"
+Tata Consultancy Services Ltd,INE467B01029,10,"₹3,620.00","₹3,412.35","₹34,123.50","(₹2,076.50)"
+HDFC Bank Ltd,INE040A01034,40,"₹1,495.25","₹1,688.90","₹67,556.00","₹7,746.00"
+Infosys Ltd,INE009A01021,30,"₹1,402.80","₹1,530.45","₹45,913.50","₹3,829.50"
+ITC Ltd,INE154A01025,120,₹412.10,₹438.60,"₹52,632.00","₹3,180.00"
+ICICI Bank Ltd,INE090A01021,35,₹965.40,"₹1,302.15","₹45,575.25","₹11,786.25"
+HDFC Bank Ltd,INE040A01034,5,"₹1,520.00","₹1,688.90","₹8,444.50",₹844.50
+Bajaj Finance Limited,,4,"₹6,850.00","₹7,120.00","₹28,480.00","₹1,080.00"
+Acme Widgets Ltd,INE000X01999,100,₹45.00,₹52.00,"₹5,200.00",₹700.00
+Sold Out Co Ltd,INE111X01111,0,₹10.00,₹12.00,₹0.00,-
+
+Total,,,,,"₹9,99,999.00",
+* Prices are delayed. This is a fake file.

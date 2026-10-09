@@ -112,6 +112,20 @@ data:
   refresh_time_ist: "16:00"    # daily refresh after market close
 
 # ---------------------------------------------------------------------------
+# Importers (fuzzy-match scores are 0–100)
+# ---------------------------------------------------------------------------
+importing:
+  header_scan_rows: 40             # how far down a file to look for the real header row
+  column_match_min_score: 80       # header text vs known column names
+  min_header_matches: 3            # a row needs this many recognised columns to count as the header
+  ticker_name_auto_accept: 92      # company-name match accepted without asking
+  ticker_name_suggest: 70          # weaker matches are offered as suggestions only
+  scheme_name_auto_accept: 90      # MF scheme-name match accepted without asking
+  scheme_name_suggest: 70
+  max_suggestions: 5
+  max_upload_mb: 15
+
+# ---------------------------------------------------------------------------
 # Tax (India). VERIFY CURRENT RATES before relying on these — they change with each Budget.
 # ---------------------------------------------------------------------------
 tax:

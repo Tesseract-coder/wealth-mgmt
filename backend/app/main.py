@@ -5,8 +5,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api import imports, portfolio, reference, system
 from app.api import settings as settings_api
-from app.api import system
 from app.core.db import init_db
 from app.core.profiles import get_profiles
 from app.core.settings import get_settings
@@ -42,6 +42,9 @@ def create_app() -> FastAPI:
     )
     app.include_router(system.router)
     app.include_router(settings_api.router)
+    app.include_router(imports.router)
+    app.include_router(portfolio.router)
+    app.include_router(reference.router)
     return app
 
 
