@@ -15,6 +15,7 @@ from app.api import (
     portfolio,
     reference,
     screener,
+    sheets,
     signals,
     system,
     watchlist,
@@ -84,6 +85,7 @@ def create_app() -> FastAPI:
     app.include_router(screener.router)
     app.include_router(watchlist.router)
     app.include_router(export.router)
+    app.include_router(sheets.router)
     return app
 
 

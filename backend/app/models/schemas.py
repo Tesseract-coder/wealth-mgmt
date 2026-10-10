@@ -1088,3 +1088,90 @@ class WatchlistOut(BaseModel):
     items: list[WatchItemOut]
     fetching_job_id: int | None
     disclaimer: str
+
+
+# ---------------------------------------------------------------------------- Google Sheets
+
+
+class ServiceAccountOut(BaseModel):
+    """Never includes the private key: only where the file is and which robot e-mail it is."""
+
+    configured: bool
+    path: str
+    client_email: str | None
+    project_id: str | None
+    error: str | None
+
+
+class SheetSyncOut(BaseModel):
+    at: ISTDatetime
+    direction: Literal["export", "import", "test"]
+    detail: str | None
+    ok: bool
+    message: str
+
+
+class SheetSettingsOut(BaseModel):
+    stocks_tab: str
+    mf_tab: str
+    stocks_csv_url: str | None
+    mf_csv_url: str | None
+    screener_screen: str | None
+    auto_export: bool
+
+
+class SheetsStatusOut(BaseModel):
+    service_account: ServiceAccountOut
+    sheet_url: str | None
+    spreadsheet_url: str | None  # normalised …/edit link, when the saved link is usable
+    link_error: str | None
+    settings: SheetSettingsOut
+    export_tabs: dict[str, str]
+    default_import_tabs: dict[str, str]
+    history: list[SheetSyncOut]
+    refresh_time_ist: str  # when the scheduled refresh (and auto-export) runs
+
+
+class SheetSettingsIn(BaseModel):
+    sheet_url: str | None = Field(None, max_length=500)
+    stocks_tab: str | None = Field(None, max_length=100)
+    mf_tab: str | None = Field(None, max_length=100)
+    stocks_csv_url: str | None = Field(None, max_length=500)
+    mf_csv_url: str | None = Field(None, max_length=500)
+    screener_screen: str | None = Field(None, pattern=r"^(preset:[a-z0-9_]+|saved:\d+)$")
+    auto_export: bool = False
+
+
+class SheetCheckOut(BaseModel):
+    name: str
+    ok: bool | None
+    detail: str
+
+
+class SheetTestOut(BaseModel):
+    ok: bool
+    checks: list[SheetCheckOut]
+
+
+class SheetExportIn(BaseModel):
+    overwrite: list[str] = Field(default_factory=list, max_length=10)
+
+
+class SheetTabOut(BaseModel):
+    name: str
+    rows: int
+
+
+class SheetExportOut(BaseModel):
+    url: str
+    title: str
+    tabs: list[SheetTabOut]
+    at: ISTDatetime
+
+
+class SheetImportIn(BaseModel):
+    kind: Literal["stocks", "mf"]
+    source: Literal["tab", "csv"]
+    tab: str | None = Field(None, max_length=100, description="Default: the saved import tab")
+    url: str | None = Field(None, max_length=500, description="Default: the saved CSV link")
+    mapping: ColumnMappingIn | None = None

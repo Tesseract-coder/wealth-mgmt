@@ -134,7 +134,15 @@ def _source(filename: str) -> str:
 def import_stocks(
     session: Session, content: bytes, filename: str, user: UserMapping | None = None
 ) -> Imported | NeedsMapping:
-    grid = read_grid(content, filename)
+    return import_stocks_grid(
+        session, read_grid(content, filename), filename, _source(filename), user
+    )
+
+
+def import_stocks_grid(
+    session: Session, grid: Grid, filename: str, source: str, user: UserMapping | None = None
+) -> Imported | NeedsMapping:
+    """Stocks from a grid of cells (an uploaded file, or a Google Sheet tab)."""
     mapping = resolve_mapping(session, grid, "stocks", user)
     if isinstance(mapping, NeedsMapping):
         return mapping
@@ -220,7 +228,7 @@ def import_stocks(
             "No purchase dates in this file, so STCG/LTCG can't be determined yet. "
             "You can add dates later."
         )
-    snap = save_stock_snapshot(session, _source(filename), filename, rows, None)
+    snap = save_stock_snapshot(session, source, filename, rows, None)
     logger.info("Imported %d stock holdings from %s (snapshot %s)", len(rows), filename, snap.id)
     return Imported(snap, skipped, warnings)
 
@@ -305,7 +313,13 @@ def carry_forward_manual(
 def import_mf(
     session: Session, content: bytes, filename: str, user: UserMapping | None = None
 ) -> Imported | NeedsMapping:
-    grid = read_grid(content, filename)
+    return import_mf_grid(session, read_grid(content, filename), filename, _source(filename), user)
+
+
+def import_mf_grid(
+    session: Session, grid: Grid, filename: str, source: str, user: UserMapping | None = None
+) -> Imported | NeedsMapping:
+    """Mutual funds from a grid of cells (an uploaded file, or a Google Sheet tab)."""
     mapping = resolve_mapping(session, grid, "mf", user)
     if isinstance(mapping, NeedsMapping):
         return mapping
@@ -350,7 +364,7 @@ def import_mf(
     rows, kept = carry_forward_manual(session, rows)
     if kept:
         warnings.append(f"Kept {kept} manually added fund(s) from your previous snapshot.")
-    snap = save_mf_snapshot(session, _source(filename), filename, rows, None)
+    snap = save_mf_snapshot(session, source, filename, rows, None)
     logger.info("Imported %d MF holdings from %s (snapshot %s)", len(rows), filename, snap.id)
     return Imported(snap, skipped, warnings)
 

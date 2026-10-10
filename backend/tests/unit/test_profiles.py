@@ -75,7 +75,10 @@ def _data_variant(tmp_path: Path, **changes: object) -> Path:
     ("changes", "match"),
     [
         ({"rate_limits_per_minute": {"yahoo": 60}}, "rate_limits_per_minute is missing"),
-        ({"rate_limits_per_minute": {"yahoo": 0, "mfapi": 1, "nse": 1, "amfi": 1}}, "positive"),
+        (
+            {"rate_limits_per_minute": {"yahoo": 0, "mfapi": 1, "nse": 1, "amfi": 1, "google": 1}},
+            "positive",
+        ),
         ({"refresh_time_ist": "15:00"}, "after market_close_ist"),
         ({"nav_refresh_time_ist": "25:00"}, "nav_refresh_time_ist"),
         ({"reference_min_rows": {"nse_equity": 1}}, "reference_min_rows is missing"),
@@ -157,3 +160,10 @@ def test_long_term_style_rides_out_stops() -> None:
     s = load_profiles(REAL).styles
     assert not s["long_term"].stop_breach_exits
     assert all(s[k].stop_breach_exits for k in ("intraday", "swing", "positional", "custom"))
+
+
+def test_sheets_tab_names_must_differ(tmp_path: Path) -> None:
+    raw = yaml.safe_load(REAL.read_text())
+    raw["sheets"]["export_tabs"]["mf"] = "analysis_stocks"
+    with pytest.raises(ConfigError, match="export_tabs"):
+        load_profiles(_write(tmp_path, raw))

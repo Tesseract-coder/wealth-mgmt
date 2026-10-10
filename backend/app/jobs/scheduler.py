@@ -19,7 +19,10 @@ def start_scheduler(runner: JobRunner) -> BackgroundScheduler:
     price_t, nav_t = parse_hhmm(cfg.refresh_time_ist), parse_hhmm(cfg.nav_refresh_time_ist)
     sched.add_job(
         lambda: runner.submit(
-            JOB_KIND, market_refresh("all"), params={"scope": "all"}, trigger="schedule"
+            JOB_KIND,
+            market_refresh("all", sheets=True),
+            params={"scope": "all", "sheets": True},
+            trigger="schedule",
         ),
         CronTrigger(day_of_week="mon-fri", hour=price_t.hour, minute=price_t.minute, timezone=TZ),
         id="prices",

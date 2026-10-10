@@ -20,6 +20,7 @@ All sources are free and public. The app never logs in anywhere. Every number on
 | Equity + ETF symbol lists | NSE archives `EQUITY_L.csv`, `eq_etfseclist.csv` | Weekly | Used to match ISINs / names to symbols. |
 | Nifty 50/100/200/500 constituents + industry | NSE archives `ind_nifty50list.csv` … `ind_nifty500list.csv` | Weekly | Sector weights (the Nifty 500 list's industry) and the screener universes. Bundled copies are used until a download succeeds. |
 | Fundamentals (statements, shares, sector) | Yahoo Finance via `yfinance` (`.info`, annual income/balance/cash flow, quarterly income) | Weekly (Sat 10:00 IST), with peers | About 5 requests per stock. Cached for `fundamentals_stale_after_days` (7). Holdings are also refreshed in the daily job when stale. **Refresh fundamentals + peers** fetches holdings plus up to 40 Nifty 500 peers per industry you hold, for sector medians; the first run takes 10–30 minutes. |
+| Your holdings and the analysis tabs | **Your Google Sheet**: Sheets API v4 with your service account, or a tab you published as CSV | When you import or export (optionally after the daily refresh) | 50 requests a minute (`rate_limits_per_minute.google`; Google allows 60). An export uses about 7. Only `docs.google.com` links are accepted. See [GOOGLE_SHEETS_SETUP.md](GOOGLE_SHEETS_SETUP.md). |
 | Ownership, 10-year statements | **Your Screener.in exports** (uploaded, never scraped) | When you upload | See the import guide. |
 | Delivery % and traded value | NSE archives `sec_bhavdata_full_DDMMYYYY.csv` (one file per session, all stocks) | With prices | The last 21 sessions are kept (`technical.delivery_lookback_sessions`). The first download takes 2–3 minutes at NSE's rate limit; after that it's one file a day. Days with no file (holidays) are remembered. |
 
@@ -74,6 +75,11 @@ All of these settings live in the `data:` section of `backend/config/profiles.ya
 | `GET/POST /screener/screens`, `PUT/DELETE /screener/screens/{id}` | Your saved screens |
 | `GET /export/screener.csv?preset=&screen_id=&include_held=` | A screen's ideas as CSV |
 | `GET/POST /watchlist`, `GET /watchlist/tickers`, `PATCH/DELETE /watchlist/{ticker}` | The watchlist, scored live from the cache |
+| `GET /sheets/status`, `PUT /sheets/settings` | Google Sheets setup (the key's e-mail only, never the private key) and recent syncs |
+| `POST /sheets/service-account` (file) | Store a service-account key in `secrets/` (mode 600) |
+| `POST /sheets/test` | Connection test, step by step; changes nothing |
+| `POST /sheets/export` `{"overwrite": []}` | Write the four export tabs; 409 lists same-named tabs the app didn't write |
+| `POST /sheets/import` `{"kind": "stocks"\|"mf", "source": "tab"\|"csv", "tab", "url", "mapping"}` | Holdings from a tab or a published CSV link (same importer as a file) |
 
 ## Mutual fund benchmarks
 

@@ -19,7 +19,8 @@ A personal, locally-run dashboard that analyses your **Groww** stock and mutual 
 | 7 | Mutual funds (XIRR, CAGR, rolling returns vs benchmark, risk, Regular vs Direct, cost, overlap, Continue/Review/Switch) and portfolio analytics (P&L, day change, XIRR, allocation, beta, correlation, vs Nifty 50) | ✅ |
 | 8 | Dashboard: onboarding, Overview (KPIs, allocation donut, sector bars, value vs Nifty 50, Action needed), sortable holdings table, candlestick charts with overlays and RSI/MACD panes, fund NAV and rolling-return charts, Settings with editable thresholds, CSV export, data-freshness line, mobile menu | ✅ |
 | 9 | Screener (Nifty 50/100/200/500 or your own list, background scan with progress and Stop, five presets, filter builder, saved screens, entry/stop/targets, sector effect, CSV) and watchlist (live score and signal, changes since added) | ✅ |
-| 10–11 | Google Sheets, polish | ⏳ |
+| 10 | Google Sheets: import holdings from a tab (service account) or a published CSV link; export Summary, Analysis_Stocks, Analysis_MF and Screener tabs with a timestamp and the disclaimer; connection test; optional auto-export after the daily refresh | ✅ |
+| 11 | Polish | ⏳ |
 
 ## Quick start (no Docker)
 
@@ -77,14 +78,18 @@ The **Screener** suggests new stocks. **Run scan** scores every stock in a unive
 
 Screens filter the stored scan instantly: **Top scores**, **Quality at fair price**, **Momentum breakout**, **Pullback in uptrend**, **Growth**, **Dividend + value** (all defined in `profiles.yaml`), or your own from the filter builder, saved by name. Your risk level's pre-filters always apply (liquidity ≥ ₹10 Cr a day, market cap, debt/equity, beta), and stocks you hold are left out unless you tick the box. Each of the top 20 ideas shows its signal and reasons, an entry zone, a stop-loss, targets, and how a starter position would change your sector weights. **Watch** puts it on the **Watchlist**, which re-scores your ideas each time you open it and shows what changed since you added them (signal, score, price) and when the signal last changed. The daily refresh includes watchlist stocks.
 
+## Google Sheets
+
+**Settings → Google Sheets** connects one sheet. With a free Google Cloud *service account* (a robot you share the sheet with, not your login), the app reads your holdings from a tab (**Import → Google Sheet**) and writes four tabs: **Summary**, **Analysis_Stocks**, **Analysis_MF** and **Screener**. Each tab is stamped with the update time and the disclaimer, and it can export automatically after the daily refresh. Without a service account, a tab published as CSV can still be imported. **Test connection** checks every step and says what to fix. The app never touches your other tabs, and it asks before overwriting a same-named tab it didn't create. Setup takes about 10 minutes: [docs/GOOGLE_SHEETS_SETUP.md](docs/GOOGLE_SHEETS_SETUP.md).
+
 Upload Screener.in exports (Import → Screener.in data) for ownership data and 10-year history. [docs/SCORING_METHOD.md](docs/SCORING_METHOD.md) explains every calculation.
 
 ## Configuration
 
 - **`backend/config/profiles.yaml`**: every threshold (styles, risk levels, signal bands, screener limits, tax rates). It is validated at startup, so a typo stops the app with a clear message instead of producing wrong signals.
 - **Settings → Thresholds**: edit the risk limits, buy threshold, signal bands and style weights in the browser. Changes are checked against the whole config, apply at once, and are saved in `backend/var/profiles.local.yaml` (layered over `profiles.yaml`; **Reset** deletes it).
-- **Settings → Export**: download your stock and fund signals as CSV. Each file ends with the date and the disclaimer.
-- **`.env`**: paths, ports and log level. Secrets (the Google service-account JSON) go in `secrets/`, which is gitignored.
+- **Settings → Export**: download your stock and fund signals as CSV (each file ends with the date and the disclaimer), or export everything to Google Sheets.
+- **`.env`**: paths, ports and log level. The Google service-account key goes in `secrets/service-account.json` (gitignored; upload it in Settings, or set `GOOGLE_SERVICE_ACCOUNT_FILE`).
 
 Your data lives in `backend/var/app.db` (or the `appdata` Docker volume). It is never committed.
 

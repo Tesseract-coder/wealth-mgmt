@@ -43,7 +43,7 @@ def _user_mapping(raw: str | None) -> UserMapping | None:
     return UserMapping(m.header_row, m.columns, m.remember)
 
 
-def _needs_mapping_out(
+def needs_mapping_out(
     kind: Literal["stocks", "mf", "screener", "fund_portfolio"], n: NeedsMapping
 ) -> NeedsMappingOut:
     m = n.mapping
@@ -68,7 +68,7 @@ async def _tabular_import(
     except (ImportFileError, ValueError) as e:
         raise HTTPException(400, str(e)) from None
     if isinstance(result, NeedsMapping):
-        return _needs_mapping_out(kind, result)
+        return needs_mapping_out(kind, result)
     return imported_out(session, result)
 
 
@@ -141,7 +141,7 @@ async def import_screener(
     except (ImportFileError, ValueError) as e:
         raise HTTPException(400, str(e)) from None
     if isinstance(result, NeedsMapping):
-        return _needs_mapping_out("screener", result)
+        return needs_mapping_out("screener", result)
     return ScreenerImportedOut(
         kind=result.kind,
         upload_id=result.upload_id,

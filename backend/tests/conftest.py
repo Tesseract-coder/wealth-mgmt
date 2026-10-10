@@ -24,7 +24,7 @@ def _no_waiting(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[Non
     get_settings.cache_clear()
     profiles._profiles = None
     rate_limit.reset_limiters()
-    for source in ("yahoo", "mfapi", "nse", "amfi"):
+    for source in ("yahoo", "mfapi", "nse", "amfi", "google"):
         rate_limit._limiters[source] = rate_limit.RateLimiter(1e9, sleep=lambda _: None)
     monkeypatch.setattr("app.data.http.time.sleep", lambda _: None)
 

@@ -19,6 +19,8 @@ dependencies = [
     "rapidfuzz>=3.14.6",
     "casparser>=1.4.1",
     "yfinance>=0.2.60",
+    "google-auth>=2.40",
+    "cryptography>=44",
 ]
 
 [dependency-groups]

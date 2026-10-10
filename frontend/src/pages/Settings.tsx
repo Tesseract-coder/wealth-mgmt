@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { api, dashboardApi, EXPORTS, type Threshold, type Thresholds } from "../api/client";
+import { api, dashboardApi, EXPORTS, sheetsApi, type Threshold, type Thresholds } from "../api/client";
+import { GoogleSheetsSettings, SheetsExportButton } from "../components/GoogleSheets";
 import { MarketData } from "../components/MarketData";
 import { Alert, Button, Card, inputClass } from "../components/ui";
 import { ProfileForm } from "./Onboarding";
@@ -47,17 +48,7 @@ export function Settings() {
         (config.data && profile.data ? <ProfileForm config={config.data} profile={profile.data} /> : <Card>Loading…</Card>)}
       {tab === "thresholds" && <ThresholdsEditor />}
       {tab === "data" && <MarketData />}
-      {tab === "sheets" && (
-        <Card title="Google Sheets">
-          <p className="text-sm text-slate-600 dark:text-slate-400">
-            Import from and export to a Google Sheet (service account or a published CSV link), with a connection test, arrives in Phase
-            10. Your sheet link from the profile is saved: {profile.data?.gsheet_url ? <code className="break-all">{profile.data.gsheet_url}</code> : "none yet"}.
-          </p>
-          <Button className="mt-3" disabled title="Phase 10">
-            Test connection
-          </Button>
-        </Card>
-      )}
+      {tab === "sheets" && <GoogleSheetsSettings />}
       {tab === "export" && <ExportCard />}
       {tab === "system" && <SystemCard />}
     </div>
@@ -65,21 +56,27 @@ export function Settings() {
 }
 
 function ExportCard() {
+  const sheets = useQuery({ queryKey: ["sheets"], queryFn: sheetsApi.status });
   return (
-    <Card title="Export">
-      <p className="mb-3 text-sm text-slate-500">
-        Signals with their scores and reasons, under your saved profile. Each file ends with the date and the disclaimer. Screener
-        ideas download from the Screener page (Download CSV on any screen). A PDF/HTML portfolio report comes in Phase 11; Google
-        Sheets export in Phase 10.
-      </p>
-      <div className="flex flex-wrap gap-2">
-        {EXPORTS.map((e) => (
-          <a key={e.href} href={e.href} download className="rounded border border-slate-300 px-3 py-1.5 text-sm font-medium hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800">
-            ⬇ {e.label}
-          </a>
-        ))}
-      </div>
-    </Card>
+    <div className="space-y-4">
+      <Card title="Download">
+        <p className="mb-3 text-sm text-slate-500">
+          Signals with their scores and reasons, under your saved profile. Each file ends with the date and the disclaimer. Screener
+          ideas download from the Screener page (Download CSV on any screen). A PDF/HTML portfolio report comes in Phase 11.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {EXPORTS.map((e) => (
+            <a key={e.href} href={e.href} download className="rounded border border-slate-300 px-3 py-1.5 text-sm font-medium hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800">
+              ⬇ {e.label}
+            </a>
+          ))}
+        </div>
+      </Card>
+      <Card title="Google Sheets">
+        <p className="mb-3 text-sm text-slate-500">Writes the Summary, stock, fund and Screener tabs of your sheet. Set it up under the Google Sheets tab.</p>
+        <SheetsExportButton status={sheets.data} />
+      </Card>
+    </div>
   );
 }
 

@@ -110,7 +110,7 @@ export function ProfileForm({ config, profile, firstRun = false }: { config: App
       <Card title="3. Google Sheet (optional)">
         <label className="block text-sm">
           <span className="mb-1 block text-slate-500">
-            Link to a sheet you share with the app's service account, or publish as CSV. Set up in Phase 10; you can leave this blank.
+            Your sheet's link from the address bar. Connect and test it later in Settings → Google Sheets (docs/GOOGLE_SHEETS_SETUP.md). You can leave this blank.
           </span>
           <input className={inputClass} placeholder="https://docs.google.com/spreadsheets/d/…" value={sheet} onChange={(e) => setSheet(e.target.value)} />
         </label>

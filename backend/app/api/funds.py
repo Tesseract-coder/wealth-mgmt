@@ -19,7 +19,7 @@ from app.analysis.mf import (
 )
 from app.analysis.portfolio import summarise
 from app.analysis.returns import RiskStats
-from app.api.imports import _needs_mapping_out, _read, _user_mapping
+from app.api.imports import _read, _user_mapping, needs_mapping_out
 from app.api.market import fr_out
 from app.core.db import get_session
 from app.core.formatting import now_ist
@@ -237,7 +237,7 @@ async def import_fund_portfolio_file(
     except (ImportFileError, ValueError) as e:
         raise HTTPException(400, str(e)) from None
     if isinstance(res, NeedsMapping):
-        return _needs_mapping_out("fund_portfolio", res)
+        return needs_mapping_out("fund_portfolio", res)
     return FundPortfolioImportedOut(**res.__dict__)
 
 

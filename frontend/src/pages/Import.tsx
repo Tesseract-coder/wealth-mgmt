@@ -12,18 +12,20 @@ import {
 } from "../api/client";
 import { ColumnMapper } from "../components/ColumnMapper";
 import { FundPortfolioImport } from "../components/FundPortfolioImport";
+import { SheetImport } from "../components/GoogleSheets";
 import { ScreenerImport } from "../components/ScreenerImport";
 import { FileDrop } from "../components/FileDrop";
 import { Alert, Button, Card, inputClass } from "../components/ui";
 import { UnresolvedFixer } from "../components/UnresolvedFixer";
 import { formatINR } from "../lib/format";
 
-type Tab = "stocks" | "mf" | "cas" | "manual" | "screener" | "fund_portfolio";
+type Tab = "stocks" | "mf" | "cas" | "manual" | "sheets" | "screener" | "fund_portfolio";
 const TABS: { key: Tab; label: string }[] = [
   { key: "stocks", label: "Groww stocks" },
   { key: "mf", label: "Groww mutual funds" },
   { key: "cas", label: "CAS PDF" },
   { key: "manual", label: "Add fund manually" },
+  { key: "sheets", label: "Google Sheet" },
   { key: "screener", label: "Screener.in data" },
   { key: "fund_portfolio", label: "Fund portfolios" },
 ];
@@ -65,6 +67,7 @@ export function Import() {
         {tab === "mf" && <TabularImport key="mf" kind="mf" onDone={done} />}
         {tab === "cas" && <CasImport onDone={done} />}
         {tab === "manual" && <ManualFund onDone={done} />}
+        {tab === "sheets" && <SheetImport onDone={done} />}
         {tab === "screener" && <ScreenerImport />}
         {tab === "fund_portfolio" && <FundPortfolioImport />}
       </Card>

@@ -30,7 +30,9 @@ SCOPES: tuple[Scope, ...] = get_args(Scope)
 JOB_KIND = "market_refresh"
 
 
-def market_refresh(scope: Scope = "all", force: bool = False) -> JobFn:
+def market_refresh(scope: Scope = "all", force: bool = False, sheets: bool = False) -> JobFn:
+    """`sheets`: end with a Google Sheets export when auto-export is on (the scheduled run)."""
+
     def run(progress: Progress) -> str:
         with Session(get_engine()) as s:
             steps: list[tuple[str, Callable[[], RefreshResult]]] = []
@@ -71,6 +73,8 @@ def market_refresh(scope: Scope = "all", force: bool = False) -> JobFn:
                     )
             if scope in ("all", "prices") and stocks:
                 steps.append(("signal history", partial(signals_step, s)))
+            if sheets:
+                steps.append(("Google Sheets export", partial(sheets_step, s)))
             return _run_steps(s, steps, progress)
 
     return run
@@ -114,6 +118,13 @@ def _run_steps(
     return (
         f"{counts['updated']} updated, {counts['skipped']} already fresh, {counts['failed']} failed"
     )
+
+
+def sheets_step(session: Session) -> RefreshResult:
+    from app.sheets.sync import sheets_refresh_step
+
+    outcome, message = sheets_refresh_step(session)
+    return RefreshResult("gsheet", "Google Sheets export", outcome, message)  # type: ignore[arg-type]
 
 
 FUND_JOB_KIND = "fundamentals_refresh"

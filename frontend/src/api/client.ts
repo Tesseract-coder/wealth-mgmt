@@ -1149,3 +1149,101 @@ export const watchlistApi = {
     if (!res.ok) throw new ApiError(res.status, await errorMessage(res));
   },
 };
+
+// ---------------------------------------------------------------------------- Google Sheets
+
+export interface ServiceAccount {
+  configured: boolean;
+  path: string;
+  client_email: string | null;
+  project_id: string | null;
+  error: string | null;
+}
+
+export interface SheetSync {
+  at: string;
+  direction: "export" | "import" | "test";
+  detail: string | null;
+  ok: boolean;
+  message: string;
+}
+
+export interface SheetSettings {
+  stocks_tab: string;
+  mf_tab: string;
+  stocks_csv_url: string | null;
+  mf_csv_url: string | null;
+  screener_screen: string | null;
+  auto_export: boolean;
+}
+
+export interface SheetsStatus {
+  service_account: ServiceAccount;
+  sheet_url: string | null;
+  spreadsheet_url: string | null;
+  link_error: string | null;
+  settings: SheetSettings;
+  export_tabs: Record<"stocks" | "mf" | "screener" | "summary", string>;
+  default_import_tabs: Record<HoldingKind, string>;
+  history: SheetSync[];
+  refresh_time_ist: string;
+}
+
+export type SheetSettingsIn = Partial<Omit<SheetSettings, "auto_export">> & { sheet_url?: string | null; auto_export: boolean };
+
+export interface SheetCheck {
+  name: string;
+  ok: boolean | null;
+  detail: string;
+}
+
+export interface SheetExport {
+  url: string;
+  title: string;
+  tabs: { name: string; rows: number }[];
+  at: string;
+}
+
+export interface SheetImportIn {
+  kind: HoldingKind;
+  source: "tab" | "csv";
+  tab?: string;
+  url?: string;
+  mapping?: ColumnMappingIn;
+}
+
+/** Export refused: these tabs hold content the app didn't write. Resend with `overwrite`. */
+export class ForeignTabsError extends ApiError {
+  constructor(
+    message: string,
+    public tabs: string[],
+  ) {
+    super(409, message);
+  }
+}
+
+export const sheetsApi = {
+  status: () => request<SheetsStatus>("/sheets/status"),
+  save: (body: SheetSettingsIn) => request<SheetsStatus>("/sheets/settings", { method: "PUT", body: JSON.stringify(body) }),
+  uploadKey: (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return upload<ServiceAccount>("/sheets/service-account", form);
+  },
+  test: () => request<{ ok: boolean; checks: SheetCheck[] }>("/sheets/test", { method: "POST" }),
+  export: async (overwrite: string[] = []) => {
+    const res = await fetch(`${BASE}/sheets/export`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ overwrite }),
+    });
+    if (res.status === 409) {
+      const body = (await res.json()) as { detail: { message: string; tabs: string[] } };
+      throw new ForeignTabsError(body.detail.message, body.detail.tabs);
+    }
+    if (!res.ok) throw new ApiError(res.status, await errorMessage(res));
+    return (await res.json()) as SheetExport;
+  },
+  import: (body: SheetImportIn) =>
+    request<Imported | NeedsMapping>("/sheets/import", { method: "POST", body: JSON.stringify(body) }),
+};

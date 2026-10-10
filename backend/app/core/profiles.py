@@ -242,7 +242,7 @@ class ScreenerConfig(BaseModel):
 
 
 _HHMM = r"^([01]\d|2[0-3]):[0-5]\d$"
-SourceKey = Literal["yahoo", "mfapi", "nse", "amfi"]
+SourceKey = Literal["yahoo", "mfapi", "nse", "amfi", "google"]
 ReferenceKey = Literal[
     "nse_equity", "nse_etf", "nifty50", "nifty100", "nifty200", "nifty500", "amfi_navall"
 ]
@@ -475,6 +475,26 @@ class ImportConfig(BaseModel):
     max_upload_mb: float = Field(gt=0)
 
 
+SheetTabKey = Literal["stocks", "mf", "screener", "summary"]
+
+
+class SheetsConfig(BaseModel):
+    export_tabs: dict[SheetTabKey, str]
+    import_tabs: dict[Literal["stocks", "mf"], str]
+    max_import_rows: int = Field(gt=0)
+    summary_actions: int = Field(ge=0)
+
+    @model_validator(mode="after")
+    def tabs_complete(self) -> "SheetsConfig":
+        missing = set(get_args(SheetTabKey)) - set(self.export_tabs)
+        if missing or {"stocks", "mf"} - set(self.import_tabs):
+            raise ValueError("sheets.export_tabs / import_tabs are missing a tab name")
+        names = [n.strip() for n in self.export_tabs.values()]
+        if any(not n for n in names) or len({n.lower() for n in names}) != len(names):
+            raise ValueError("sheets.export_tabs names must be non-empty and different")
+        return self
+
+
 class TaxConfig(BaseModel):
     verify_note: str
     equity_ltcg_min_holding_days: int
@@ -503,6 +523,7 @@ class Profiles(BaseModel):
     data: DataConfig
     technical: TechnicalConfig
     fundamental: FundamentalConfig
+    sheets: SheetsConfig
     importing: ImportConfig
     tax: TaxConfig
     disclaimer: str

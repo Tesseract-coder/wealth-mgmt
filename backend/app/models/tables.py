@@ -343,3 +343,29 @@ class WatchItem(SQLModel, table=True):
     added_score: float | None = None
     added_style: str | None = None
     added_risk: str | None = None
+
+
+class SheetSettings(SQLModel, table=True):
+    """Single row (id=1): how the app reads and writes your Google Sheet. The spreadsheet link
+    itself is UserProfile.gsheet_url. No credentials here: the service-account key stays in
+    secrets/."""
+
+    id: int = Field(default=1, primary_key=True)
+    stocks_tab: str | None = None  # None ⇒ sheets.import_tabs in profiles.yaml
+    mf_tab: str | None = None
+    stocks_csv_url: str | None = None  # "Publish to web" CSV links (no service account needed)
+    mf_csv_url: str | None = None
+    screener_screen: str | None = None  # "preset:top_scores" | "saved:3"; None ⇒ first preset
+    auto_export: bool = False  # export after the scheduled daily refresh
+    updated_at: datetime = Field(default_factory=utcnow)
+
+
+class SheetSync(SQLModel, table=True):
+    """One import, export or connection test against Google Sheets."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    at: datetime = Field(default_factory=utcnow, index=True)
+    direction: str  # "export" | "import" | "test"
+    detail: str | None = None  # tab or kind
+    ok: bool
+    message: str

@@ -312,6 +312,7 @@ data:
     mfapi: 60
     nse: 10
     amfi: 10
+    google: 50                     # Sheets API allows 60 requests/min per user; stay under it
   reference_min_rows:              # a downloaded list smaller than this is rejected as broken
     nse_equity: 1000
     nse_etf: 50
@@ -409,6 +410,23 @@ fundamental:
     promoter_change_pp: 1.0      # promoter stake change (percentage points) worth flagging
     pledge_warn_pct: 10          # pledge above this is a warning (severe: signals.severe_flags)
     institution_change_pp: 1.0   # FII / DII stake change worth flagging
+
+# ---------------------------------------------------------------------------
+# Google Sheets (see docs/GOOGLE_SHEETS_SETUP.md). Export writes ONLY the tabs named under
+# export_tabs, creating them if missing; your other tabs are never touched. A tab with the
+# same name that this app didn't create is left alone unless you confirm the overwrite.
+# ---------------------------------------------------------------------------
+sheets:
+  export_tabs:
+    stocks: Analysis_Stocks
+    mf: Analysis_MF
+    screener: Screener
+    summary: Summary
+  import_tabs:                     # tabs read by "Import from my sheet" (you can type others)
+    stocks: Holdings_Stocks
+    mf: Holdings_MF
+  max_import_rows: 5000            # a tab or CSV larger than this is refused
+  summary_actions: 5               # top actions listed on the Summary tab
 
 # ---------------------------------------------------------------------------
 # Importers (fuzzy-match scores are 0–100)
