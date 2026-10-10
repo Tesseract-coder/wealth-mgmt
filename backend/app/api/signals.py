@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Depends, Path, Query
 from sqlmodel import Session
 
+from app.analysis.backtest import BacktestResult, run_backtest
 from app.analysis.positions import load_portfolio
 from app.analysis.scoring import Reading, SideScore
 from app.analysis.signals import (
@@ -270,3 +271,22 @@ def stock_history(
         )
         for r in history(session, ticker.upper(), style)
     ]
+
+
+@router.get("/backtest/{ticker}", response_model=BacktestResult)
+def backtest(
+    ticker: str = Path(pattern=TICKER, description="Yahoo ticker, e.g. RELIANCE.NS"),
+    style: StyleKey | None = Query(None, description="Defaults to your saved style"),
+    risk: RiskKey | None = Query(None, description="Defaults to your saved risk level"),
+    fetch: bool = Query(True, description="Fetch missing or stale prices first"),
+    session: Session = Depends(get_session),
+) -> BacktestResult:
+    """Replay the technical signal rules over the last few years (`backtest:` in profiles.yaml).
+
+    A historical test only: it reports how often past signals were followed by the expected
+    move, and a rule-following strategy vs buy-and-hold. It does not predict the future."""
+    st, rk, _ = active_profile(session, style, risk)
+    style_key, notes = resolve_style(st)
+    res = run_backtest(CachedProvider(session), ticker, style=style_key, risk_key=rk, fetch=fetch)
+    res.notes = notes + res.notes
+    return res

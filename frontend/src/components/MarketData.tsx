@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { isActive, marketApi, type Freshness, type FreshnessStatus, type Job, type Quote } from "../api/client";
+import { isActive, marketApi, type Freshness, type FreshnessStatus, type Job, type Quote, type Schedule } from "../api/client";
 import { formatDate, formatFreshness, formatINR, formatNumber, formatPct } from "../lib/format";
 import { Alert, Button, Card } from "./ui";
 
@@ -109,12 +109,8 @@ export function MarketData() {
             <FreshnessBadge f={{ status: k, reason: LABEL[k] }} /> {s.summary[k]}
           </span>
         ))}
-        <span className="text-slate-500">
-          {s.schedule.enabled
-            ? `Auto-refresh: prices ${s.schedule.prices}, NAVs ${s.schedule.navs}, fundamentals ${s.schedule.fundamentals}`
-            : "Auto-refresh is off"}
-        </span>
       </div>
+      <ScheduleInfo schedule={s.schedule} />
 
       {refresh.isError && <Alert tone="error">{refresh.error.message}</Alert>}
       {shownJob && <JobLine job={shownJob} />}
@@ -224,6 +220,38 @@ function JobLine({ job, title = "Last refresh" }: { job: Job; title?: string }) 
           </ul>
         </details>
       )}
+    </div>
+  );
+}
+
+/** The refresh schedule with each job's next run, in IST. */
+export function ScheduleInfo({ schedule }: { schedule: Schedule }) {
+  if (!schedule.enabled) {
+    return (
+      <p className="mb-3 text-sm text-slate-500">
+        Automatic refresh is off (<code>SCHEDULER_ENABLED=false</code>). Use the buttons above to refresh.
+      </p>
+    );
+  }
+  const next = new Map((schedule.jobs ?? []).map((j) => [j.id, j.next_run]));
+  const rows: [string, string, string | null | undefined][] = [
+    ["prices", `Prices and signals: ${schedule.prices}`, next.get("prices")],
+    ["navs", `Mutual fund NAVs: ${schedule.navs}`, next.get("navs")],
+    ["fundamentals", `Fundamentals: ${schedule.fundamentals}`, next.get("fundamentals")],
+  ];
+  return (
+    <div className="mb-3 text-sm">
+      <h3 className="font-medium">Automatic refresh</h3>
+      <ul className="mt-1 space-y-0.5 text-slate-600 dark:text-slate-400">
+        {rows.map(([id, text, at]) => (
+          <li key={id}>
+            {text}
+            {at ? ` · next ${formatFreshness(new Date(at))}` : ""}
+            {id === "prices" && schedule.sheets_auto_export ? " · then exports to Google Sheets" : ""}
+          </li>
+        ))}
+      </ul>
+      {schedule.note && <p className="mt-1 text-xs text-slate-500">{schedule.note}</p>}
     </div>
   );
 }

@@ -429,6 +429,30 @@ sheets:
   summary_actions: 5               # top actions listed on the Summary tab
 
 # ---------------------------------------------------------------------------
+# Backtest helper (Analysis → Backtest). Replays the TECHNICAL rules over past prices. It is a
+# historical test only: it doesn't predict the future, and fundamentals aren't replayed
+# because their point-in-time history isn't available from free sources.
+# ---------------------------------------------------------------------------
+backtest:
+  years: 3                         # how far back to replay
+  step_sessions: 5                 # evaluate the rules every N sessions (5 = weekly)
+  warmup_sessions: 260             # history needed before the first evaluation (200-DMA, 52-week range)
+  horizon_sessions:                # forward window for "was the signal right?", per style
+    intraday: 5
+    swing: 20
+    positional: 60
+    long_term: 120
+    custom: 20
+
+# ---------------------------------------------------------------------------
+# Report (Settings → Export → Portfolio report: HTML, print to PDF)
+# ---------------------------------------------------------------------------
+report:
+  top_reasons: 2                   # bullish / bearish reasons per stock
+  actions: 10                      # "Action needed" items listed
+  screener_ideas: 10               # top screener ideas listed (when a scan exists)
+
+# ---------------------------------------------------------------------------
 # Importers (fuzzy-match scores are 0–100)
 # ---------------------------------------------------------------------------
 importing:

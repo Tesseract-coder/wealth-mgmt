@@ -239,7 +239,7 @@ def summary_table(
     add("Unrealised P&L", s.pnl, None, True)
     add("Unrealised P&L %", s.pnl_pct)
     add("Day change", s.day_change, s.day_change_note, True)
-    add("XIRR %", None if s.xirr is None else round(s.xirr * 100, 2), s.xirr_basis)
+    add("XIRR %", s.xirr, s.xirr_basis)
     add("Stock signals", _counts([h.signal_label for h in stocks.holdings]))
     add("Fund signals", _counts([f.signal_label for f in funds.funds]))
     breached = [h.label for h in stocks.holdings if h.stop_breached]

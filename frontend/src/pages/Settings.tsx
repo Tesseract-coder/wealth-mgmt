@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { api, dashboardApi, EXPORTS, sheetsApi, type Threshold, type Thresholds } from "../api/client";
+import { api, dashboardApi, EXPORTS, REPORT_URL, sheetsApi, type Threshold, type Thresholds } from "../api/client";
 import { GoogleSheetsSettings, SheetsExportButton } from "../components/GoogleSheets";
 import { MarketData } from "../components/MarketData";
 import { Alert, Button, Card, inputClass } from "../components/ui";
@@ -45,7 +45,13 @@ export function Settings() {
         ))}
       </div>
       {tab === "profile" &&
-        (config.data && profile.data ? <ProfileForm config={config.data} profile={profile.data} /> : <Card>Loading…</Card>)}
+        (config.error || profile.error ? (
+          <Alert tone="error">Couldn't load your profile: {(config.error ?? profile.error)?.message}</Alert>
+        ) : config.data && profile.data ? (
+          <ProfileForm config={config.data} profile={profile.data} />
+        ) : (
+          <Card>Loading…</Card>
+        ))}
       {tab === "thresholds" && <ThresholdsEditor />}
       {tab === "data" && <MarketData />}
       {tab === "sheets" && <GoogleSheetsSettings />}
@@ -55,18 +61,36 @@ export function Settings() {
   );
 }
 
+const LINK_BTN =
+  "rounded border border-slate-300 px-3 py-1.5 text-sm font-medium hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800";
+
 function ExportCard() {
   const sheets = useQuery({ queryKey: ["sheets"], queryFn: sheetsApi.status });
   return (
     <div className="space-y-4">
+      <Card title="Portfolio report (HTML / PDF)">
+        <p className="mb-3 text-sm text-slate-500">
+          One page with your summary, actions, allocation, every stock and fund with its signal and reasons, the top screener ideas,
+          data freshness and the disclaimer. Open it and use <strong>Print / Save as PDF</strong> for a PDF (it is laid out for A4
+          landscape, with the disclaimer on every page). Built from cached data, so it opens in a few seconds.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <a href={REPORT_URL} target="_blank" rel="noreferrer" className={LINK_BTN}>
+            📄 Open report<span className="sr-only"> (opens in a new tab)</span>
+          </a>
+          <a href={`${REPORT_URL}?download=true`} download className={LINK_BTN}>
+            ⬇ Download HTML
+          </a>
+        </div>
+      </Card>
       <Card title="Download">
         <p className="mb-3 text-sm text-slate-500">
           Signals with their scores and reasons, under your saved profile. Each file ends with the date and the disclaimer. Screener
-          ideas download from the Screener page (Download CSV on any screen). A PDF/HTML portfolio report comes in Phase 11.
+          ideas download from the Screener page (Download CSV on any screen).
         </p>
         <div className="flex flex-wrap gap-2">
           {EXPORTS.map((e) => (
-            <a key={e.href} href={e.href} download className="rounded border border-slate-300 px-3 py-1.5 text-sm font-medium hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800">
+            <a key={e.href} href={e.href} download className={LINK_BTN}>
               ⬇ {e.label}
             </a>
           ))}

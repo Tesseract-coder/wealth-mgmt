@@ -11,6 +11,7 @@ import {
   type StyleKey,
   type TimeframeReport,
 } from "../api/client";
+import { BacktestView } from "../components/Backtest";
 import { FreshnessBadge } from "../components/MarketData";
 import { FundamentalHoldings, FundamentalReportView } from "../components/FundamentalView";
 import { HoldingSignalsView } from "../components/SignalView";
@@ -44,11 +45,12 @@ export function DirectionTag({ d }: { d: Direction }) {
 }
 
 /** Signal (with chart), technical and fundamental views of a holding or any NSE stock. */
-type View = "signal" | "technical" | "fundamental";
+type View = "signal" | "technical" | "fundamental" | "backtest";
 const VIEWS: { key: View; label: string }[] = [
   { key: "signal", label: "Signal" },
   { key: "technical", label: "Technical" },
   { key: "fundamental", label: "Fundamental" },
+  { key: "backtest", label: "Backtest" },
 ];
 
 /** Query string for links within the page, keeping the chosen style and view. */
@@ -67,7 +69,7 @@ export function Technical() {
   const profile = useQuery({ queryKey: ["profile"], queryFn: api.profile });
   const style = (params.get("style") as StyleKey | null) ?? profile.data?.style ?? null;
   const raw = params.get("view");
-  const view: View = raw === "fundamental" || raw === "technical" ? raw : "signal";
+  const view: View = raw === "fundamental" || raw === "technical" || raw === "backtest" ? raw : "signal";
   const styleKnown = params.has("style") || profile.isSuccess || profile.isError;
   const update = (next: { style?: string | null; view?: View }) => {
     const p = new URLSearchParams(params);
@@ -96,7 +98,7 @@ export function Technical() {
             <label className="text-sm">
               <span className="mb-1 block text-slate-500">Style</span>
               <select className={inputClass} value={style ?? ""} onChange={(e) => update({ style: e.target.value || null })}>
-                <option value="">{view === "signal" ? "Your saved style" : "Daily only (no style chosen)"}</option>
+                <option value="">{view === "signal" || view === "backtest" ? "Your saved style" : "Daily only (no style chosen)"}</option>
                 {config.data &&
                   Object.entries(config.data.styles).map(([k, s]) => (
                     <option key={k} value={k}>
@@ -109,7 +111,7 @@ export function Technical() {
           <TickerSearch style={style} view={view} />
         </div>
       </div>
-      <div role="tablist" className="flex gap-1 border-b border-slate-200 dark:border-slate-800">
+      <div role="tablist" className="flex gap-1 overflow-x-auto border-b border-slate-200 dark:border-slate-800">
         {VIEWS.map(({ key: v, label }) => (
           <button
             key={v}
@@ -140,6 +142,14 @@ export function Technical() {
           <StockDetail ticker={ticker} style={style} fundamentalLink={`/analysis/${encodeURIComponent(ticker)}${analysisQuery(style, "fundamental")}`} />
         ) : (
           <HoldingSignalsView style={style} linkQuery={analysisQuery(style)} />
+        )
+      ) : view === "backtest" ? (
+        !styleKnown ? (
+          <Card>Loading…</Card>
+        ) : ticker ? (
+          <BacktestView ticker={ticker} style={style} />
+        ) : (
+          <Card>Choose a stock with the search box above (or open one from your holdings) to replay the signal rules on its history.</Card>
         )
       ) : view === "fundamental" ? (
         ticker ? (

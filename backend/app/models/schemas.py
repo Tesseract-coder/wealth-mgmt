@@ -221,11 +221,20 @@ class QuoteOut(BaseModel):
     freshness: FreshnessOut
 
 
+class ScheduledJobOut(BaseModel):
+    id: str
+    name: str
+    next_run: ISTDatetime | None
+
+
 class ScheduleOut(BaseModel):
     enabled: bool
     prices: str
     navs: str
     fundamentals: str
+    jobs: list[ScheduledJobOut] = []
+    sheets_auto_export: bool = False
+    note: str = ""
 
 
 class JobOut(BaseModel):

@@ -495,6 +495,28 @@ class SheetsConfig(BaseModel):
         return self
 
 
+class BacktestConfig(BaseModel):
+    years: int = Field(ge=1, le=10)
+    step_sessions: int = Field(ge=1)
+    warmup_sessions: int = Field(ge=30)
+    horizon_sessions: dict[StyleKey, int]
+
+    @model_validator(mode="after")
+    def every_style(self) -> "BacktestConfig":
+        missing = set(get_args(StyleKey)) - set(self.horizon_sessions)
+        if missing:
+            raise ValueError(f"backtest.horizon_sessions is missing {sorted(missing)}")
+        if any(v < 1 for v in self.horizon_sessions.values()):
+            raise ValueError("backtest.horizon_sessions must be at least 1")
+        return self
+
+
+class ReportConfig(BaseModel):
+    top_reasons: int = Field(ge=0, le=5)
+    actions: int = Field(ge=0)
+    screener_ideas: int = Field(ge=0)
+
+
 class TaxConfig(BaseModel):
     verify_note: str
     equity_ltcg_min_holding_days: int
@@ -524,6 +546,8 @@ class Profiles(BaseModel):
     technical: TechnicalConfig
     fundamental: FundamentalConfig
     sheets: SheetsConfig
+    backtest: BacktestConfig
+    report: ReportConfig
     importing: ImportConfig
     tax: TaxConfig
     disclaimer: str

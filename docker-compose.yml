@@ -6,12 +6,15 @@ services:
     environment:
       DATABASE_URL: sqlite:////data/app.db
       GOOGLE_SERVICE_ACCOUNT_FILE: /secrets/service-account.json
+      # Edited thresholds and refreshed NSE/AMFI lists live on the volume, so rebuilds keep them.
+      PROFILES_OVERRIDE_PATH: /data/profiles.local.yaml
+      REFERENCE_DATA_DIR: /data/reference
       CORS_ORIGINS: '["http://localhost:5173"]'
       TZ: Asia/Kolkata
     volumes:
       - ./backend/app:/app/app            # live reload
       - ./backend/config:/app/config
-      - ./secrets:/secrets:ro
+      - ./secrets:/secrets                # writable: Settings → Google Sheets → Upload saves the key here
       - appdata:/data                     # SQLite database persists here
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
@@ -24,6 +27,7 @@ services:
       - "127.0.0.1:${FRONTEND_PORT:-5173}:5173"
     environment:
       VITE_BACKEND_URL: http://backend:8000
+      VITE_HOST: 0.0.0.0
     volumes:
       - ./frontend/src:/app/src
     depends_on:

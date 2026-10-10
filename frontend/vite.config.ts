@@ -23,7 +23,8 @@ export default defineConfig({
     },
   },
   server: {
-    host: true,
+    // This machine only. Docker sets VITE_HOST=0.0.0.0 (its port is still published on 127.0.0.1).
+    host: process.env.VITE_HOST ?? "localhost",
     port: 5173,
     proxy: {
       "/api": { target: backend, changeOrigin: true, rewrite: (p) => p.replace(/^\/api/, "") },

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, Navigate } from "react-router-dom";
-import { api } from "../api/client";
+import { api, REPORT_URL } from "../api/client";
 import { ActionList } from "../components/ActionList";
 import { PortfolioSummaryCard } from "../components/PortfolioSummary";
 import { Alert } from "../components/ui";
@@ -35,6 +35,14 @@ export function Overview() {
             </p>
           )}
         </div>
+        <a
+          href={REPORT_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="rounded border border-slate-300 px-3 py-1.5 text-sm font-medium hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+        >
+          📄 Portfolio report<span className="sr-only"> (opens in a new tab)</span>
+        </a>
       </div>
       <PortfolioSummaryCard sectorLimit={risk ? risk.max_weight_per_sector : null} />
       <ActionList />

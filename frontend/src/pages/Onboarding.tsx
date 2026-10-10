@@ -9,6 +9,7 @@ export function Onboarding() {
   const config = useQuery({ queryKey: ["config"], queryFn: api.config });
   const profile = useQuery({ queryKey: ["profile"], queryFn: api.profile });
   if (config.isError) return <Alert tone="error">{config.error.message}</Alert>;
+  if (profile.isError) return <Alert tone="error">{profile.error.message}</Alert>;
   if (!config.data || !profile.data) return <Card>Loading…</Card>;
   return <ProfileForm config={config.data} profile={profile.data} firstRun />;
 }

@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useTheme } from "../hooks/useTheme";
+import { BackendStatus } from "./BackendStatus";
 import { Disclaimer } from "./Disclaimer";
+import { ErrorBoundary } from "./ErrorBoundary";
 import { FreshnessBar } from "./FreshnessBar";
 
 export const NAV = [
@@ -27,6 +29,10 @@ export function Layout() {
   }
   return (
     <div className="flex min-h-screen flex-col">
+      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-white focus:px-3 focus:py-1 focus:text-sm dark:focus:bg-slate-900">
+        Skip to content
+      </a>
+      <BackendStatus />
       <header className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
           <span className="font-semibold">Portfolio Analyzer</span>
@@ -73,8 +79,10 @@ export function Layout() {
           <FreshnessBar />
         </div>
       </header>
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6">
-        <Outlet />
+      <main id="main" className="mx-auto w-full min-w-0 max-w-7xl flex-1 px-4 py-6">
+        <ErrorBoundary resetKey={pathname}>
+          <Outlet />
+        </ErrorBoundary>
       </main>
       <Disclaimer />
     </div>

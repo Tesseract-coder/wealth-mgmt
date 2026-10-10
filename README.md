@@ -20,23 +20,30 @@ A personal, locally-run dashboard that analyses your **Groww** stock and mutual 
 | 8 | Dashboard: onboarding, Overview (KPIs, allocation donut, sector bars, value vs Nifty 50, Action needed), sortable holdings table, candlestick charts with overlays and RSI/MACD panes, fund NAV and rolling-return charts, Settings with editable thresholds, CSV export, data-freshness line, mobile menu | ✅ |
 | 9 | Screener (Nifty 50/100/200/500 or your own list, background scan with progress and Stop, five presets, filter builder, saved screens, entry/stop/targets, sector effect, CSV) and watchlist (live score and signal, changes since added) | ✅ |
 | 10 | Google Sheets: import holdings from a tab (service account) or a published CSV link; export Summary, Analysis_Stocks, Analysis_MF and Screener tabs with a timestamp and the disclaimer; connection test; optional auto-export after the daily refresh | ✅ |
-| 11 | Polish | ⏳ |
+| 11 | Polish: portfolio report (HTML, print to PDF), backtest helper, refresh schedule with next run times, error states (backend-offline banner, page error boundary, plain-English server errors), mobile and dark-mode pass, final docs | ✅ |
 
 ## Quick start (no Docker)
 
-Prerequisites: [uv](https://docs.astral.sh/uv/) and Node 20 (via [nvm](https://github.com/nvm-sh/nvm)).
+You need [uv](https://docs.astral.sh/uv/) and Node 20 (via [nvm](https://github.com/nvm-sh/nvm)).
 
-1. `curl -LsSf https://astral.sh/uv/install.sh | sh`
-2. `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash && nvm install 20`
-3. `make setup` installs Python 3.12 + dependencies, runs `npm ci`, and creates `.env`
-4. `make dev`
-5. Open http://localhost:5173. API docs are at http://localhost:8000/docs
+1. Install uv: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+2. Install Node 20: `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash && nvm install 20`
+3. In this folder, run `make setup`. It installs Python 3.12 and the dependencies, runs `npm ci`, and creates `.env`.
+4. Run `make dev`.
+5. Open http://localhost:5173 and choose your investing style. Risk defaults to Medium.
+6. Download your holdings from Groww ([guide](docs/GROWW_EXPORT_GUIDE.md)) and upload them on the **Import** page. To try the app first, use the fake files in `sample_data/`.
+7. Wait for the first price download (it starts on its own; progress is under **Settings → Data refresh**). Then open **Overview** or **Holdings** to see each signal and its reasons.
+8. Optional: connect Google Sheets ([guide](docs/GOOGLE_SHEETS_SETUP.md)).
+
+API docs are at http://localhost:8000/docs.
 
 ## Quick start (Docker)
 
 1. `cp .env.example .env`
 2. `docker compose up --build`
-3. Open http://localhost:5173
+3. Open http://localhost:5173 and continue from step 5 above.
+
+The database, edited thresholds and refreshed reference lists are kept in the `appdata` volume. Your service-account key goes in `./secrets/`.
 
 If port 8000 or 5173 is already in use, set `BACKEND_PORT` / `FRONTEND_PORT` in `.env`.
 
@@ -82,16 +89,70 @@ Screens filter the stored scan instantly: **Top scores**, **Quality at fair pric
 
 **Settings → Google Sheets** connects one sheet. With a free Google Cloud *service account* (a robot you share the sheet with, not your login), the app reads your holdings from a tab (**Import → Google Sheet**) and writes four tabs: **Summary**, **Analysis_Stocks**, **Analysis_MF** and **Screener**. Each tab is stamped with the update time and the disclaimer, and it can export automatically after the daily refresh. Without a service account, a tab published as CSV can still be imported. **Test connection** checks every step and says what to fix. The app never touches your other tabs, and it asks before overwriting a same-named tab it didn't create. Setup takes about 10 minutes: [docs/GOOGLE_SHEETS_SETUP.md](docs/GOOGLE_SHEETS_SETUP.md).
 
+## Portfolio report (HTML / PDF)
+
+To get the report:
+- **Overview → Portfolio report**, or **Settings → Export → Open report**, opens a single self-contained page.
+- **Download HTML** saves it as a file.
+- For a PDF, click **Print / Save as PDF** on the report. It is laid out for A4 landscape and repeats the disclaimer at the foot of every page.
+
+The report contains:
+- the summary (value, invested, P&L, day change, XIRR, beta);
+- the Action needed list;
+- allocation by sector against your limit, by asset class and by market cap;
+- every stock with its signal, scores, confidence, stop, the rule that fired, top reasons, red flags and suggested action;
+- every fund with its signal and reasons;
+- the top screener ideas from your latest scan;
+- a data-freshness section listing anything stale or missing.
+
+It is built from cached data, so it never waits on a download. Endpoint: `GET /export/report`.
+
+## Backtest helper
+
+**Analysis → (a stock) → Backtest** replays the signal rules over the last 3 years. Each week the rules see only the prices up to that day. It reports:
+- how often Buy and Sell signals were followed by the expected move, against the base rate;
+- a rule-following strategy vs buy-and-hold, with total return and maximum drawdown.
+
+It is a historical test of the **technical** rules only. Fundamentals have no free point-in-time history, so they aren't replayed, and costs and taxes are ignored. **Past results don't predict future returns.** Details are in [SCORING_METHOD.md, Part 8](docs/SCORING_METHOD.md#part-8-backtest-helper-analysis--backtest).
+
+## Automatic refresh
+
+While the app is running it refreshes on a schedule (Asia/Kolkata):
+- **Prices:** Mon–Fri at 16:00. Signals for your holdings and watchlist are recorded after each price refresh, and the Google Sheets export follows if auto-export is on.
+- **NAVs:** daily at 23:30.
+- **Fundamentals:** Saturdays at 10:00.
+
+**Settings → Data refresh** shows the next run of each. The schedule doesn't run while the app is stopped: a run missed by up to an hour still happens, and on the next start the app refreshes whatever is stale. To keep it current every day, leave `make dev` (or Docker) running, or just open the app after 4 PM. Set `SCHEDULER_ENABLED=false` in `.env` to turn the schedule off. The times are in `profiles.yaml` (`data.refresh_time_ist`, `data.nav_refresh_time_ist`, `fundamental.refresh_*`).
+
 Upload Screener.in exports (Import → Screener.in data) for ownership data and 10-year history. [docs/SCORING_METHOD.md](docs/SCORING_METHOD.md) explains every calculation.
 
 ## Configuration
 
 - **`backend/config/profiles.yaml`**: every threshold (styles, risk levels, signal bands, screener limits, tax rates). It is validated at startup, so a typo stops the app with a clear message instead of producing wrong signals.
 - **Settings → Thresholds**: edit the risk limits, buy threshold, signal bands and style weights in the browser. Changes are checked against the whole config, apply at once, and are saved in `backend/var/profiles.local.yaml` (layered over `profiles.yaml`; **Reset** deletes it).
-- **Settings → Export**: download your stock and fund signals as CSV (each file ends with the date and the disclaimer), or export everything to Google Sheets.
+- **Settings → Export**: open the portfolio report, download your stock and fund signals as CSV (each file ends with the date and the disclaimer), or export everything to Google Sheets.
 - **`.env`**: paths, ports and log level. The Google service-account key goes in `secrets/service-account.json` (gitignored; upload it in Settings, or set `GOOGLE_SERVICE_ACCOUNT_FILE`).
 
 Your data lives in `backend/var/app.db` (or the `appdata` Docker volume). It is never committed.
+
+## Troubleshooting
+
+| What you see | What to do |
+|---|---|
+| Red **Backend offline** banner | The backend isn't running or is on another port. Run `make dev` and check that `BACKEND_PORT` in `.env` matches. The banner clears itself once the backend answers. |
+| "Something went wrong on the server (…)" | A bug or unexpected data. Nothing was changed. The full error is in the terminal running `make dev`. Try again; a **Refresh now** under Settings → Data refresh fixes most missing-data cases. |
+| Prices marked **stale** or **unavailable** | Yahoo Finance may be rate-limiting or down. The app keeps the last good data, says so, and retries on the next refresh. Check **Settings → Data refresh** for the error. |
+| A stock shows **Insufficient data** | It has no price history yet (refresh) or its ticker didn't resolve (fix it on the Import page). The app never guesses a signal. |
+| The app stops at startup with a config error | `profiles.yaml` or your threshold edits are invalid. The message names the field. Fix it, or delete `backend/var/profiles.local.yaml` to drop your threshold edits. |
+| Port already in use | Set `BACKEND_PORT` / `FRONTEND_PORT` in `.env`. |
+| Google Sheets errors | See the troubleshooting table in [docs/GOOGLE_SHEETS_SETUP.md](docs/GOOGLE_SHEETS_SETUP.md#troubleshooting). |
+
+## Privacy and safety
+
+- The app runs only on your machine and binds to `127.0.0.1`. Nothing is uploaded anywhere except requests to the free data sources (they see only ticker symbols and scheme codes) and, if you set it up, Google Sheets.
+- It never asks for broker logins, passwords, PINs, OTPs or TOTP secrets, and it has no order-placement code of any kind.
+- CAS PDF passwords are used in memory for one import and never stored.
+- Secrets (`.env`, `secrets/`) and your data (`backend/var/`) are gitignored.
 
 ## Layout
 

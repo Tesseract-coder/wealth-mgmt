@@ -2,8 +2,9 @@ import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api import (
     analysis,
@@ -25,7 +26,7 @@ from app.core.db import init_db
 from app.core.profiles import get_profiles
 from app.core.settings import get_settings
 from app.jobs.runner import get_runner, mark_interrupted, reset_runner
-from app.jobs.scheduler import start_scheduler
+from app.jobs.scheduler import start_scheduler, stop_scheduler
 from app.jobs.tasks import JOB_KIND, market_refresh
 
 logger = logging.getLogger(__name__)
@@ -37,17 +38,15 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     init_db()
     if n := mark_interrupted():
         logger.warning("Marked %d unfinished job(s) from a previous run as interrupted", n)
-    scheduler = None
     if get_settings().scheduler_enabled:
-        scheduler = start_scheduler(get_runner())
+        start_scheduler(get_runner())
         if profiles.data.refresh_on_startup:
             # Only stale items are fetched, so this is cheap when data is current.
             get_runner().submit(
                 JOB_KIND, market_refresh("all"), params={"scope": "all"}, trigger="startup"
             )
     yield
-    if scheduler:
-        scheduler.shutdown(wait=False)
+    stop_scheduler()
     reset_runner()
 
 
@@ -72,6 +71,23 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    @app.exception_handler(Exception)
+    async def unexpected_error(request: Request, exc: Exception) -> JSONResponse:
+        """A bug or an unhandled data problem: log the traceback, answer in plain words."""
+        logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+        what = f"{type(exc).__name__}: {exc}"[:300]
+        return JSONResponse(
+            status_code=500,
+            content={
+                "detail": (
+                    f"Something went wrong on the server ({what}). The full error is in the "
+                    "backend log (the terminal running `make dev`). Try again; if it keeps "
+                    "happening, a refresh under Settings → Data refresh may fix missing data."
+                )
+            },
+        )
+
     app.include_router(system.router)
     app.include_router(settings_api.router)
     app.include_router(imports.router)

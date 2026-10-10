@@ -437,3 +437,32 @@ A starter position is the Buy target weight (`rebalance.buy_target` × max weigh
 
 ## Part 7: Watchlist
 Each stock is re-scored from cached data when you open the page, with your current style and risk. The first score after adding it is its baseline. The page shows the signal, score and price change since then, and the last date the recorded signal changed. The daily refresh downloads watchlist stocks with your holdings and records their signals in the same signal history.
+
+## Part 8: Backtest helper (Analysis → Backtest)
+
+A **historical test** of the rules on one stock. It shows how the rules behaved in the past and does not predict the future. Settings are under `backtest:` in `profiles.yaml`.
+
+### How the replay works
+1. **Days tested.** Every `step_sessions` (5) sessions over the last `years` (3), ending on the latest session. The first evaluation needs `warmup_sessions` (260) of history before it, enough for the 200-DMA and the 52-week range.
+2. **No look-ahead.** On each of those days the price history is cut at that day, so nothing after it is visible. A test checks that changing later prices never changes an earlier signal.
+3. **Same scoring as the live signal.** The technical engine and technical score run on your style's daily-or-longer timeframes. Intraday bars aren't replayed: Yahoo keeps only weeks of them.
+4. **Same signal rules** (`decide`). The ATR trailing stop is treated as the live app treats it: a breach is a Sell when the replay is "in" and your style exits on stops, and otherwise a red flag that blocks a Buy. There is no position weight, so the over-weight rule doesn't apply.
+
+**Left out**, because free sources have no point-in-time history (today's P/E replayed into 2023 would be look-ahead):
+- fundamentals;
+- delivery %.
+
+So the replayed signal is a technical-only signal. It can differ from today's live signal, which also uses fundamentals and your position.
+
+### What is reported
+- **Hit rate.** A Buy or Strong Buy was "right" if the price was higher `horizon_sessions` later. The horizon is per style: swing 20, positional 60, long-term 120. A Reduce or Sell was right if the price was lower. Evaluations too recent to have a full window aren't counted.
+- **Base rate.** How often the price was higher after *any* evaluation day. A rule helps only if its hit rate beats this.
+- **Average move after** each signal.
+- **Following the rules** vs **buy and hold**:
+  - The strategy is in after a Buy, out after a Reduce or Sell, and unchanged on a Hold.
+  - A change decided at a day's close is traded at the next session's open.
+  - Prices are adjusted for splits and bonuses (`adj_close`).
+  - For each, the app reports total return, maximum drawdown (the largest fall from a peak) and time in the market.
+  - Brokerage, taxes, slippage and dividends are not modelled.
+
+One stock over three years is a small sample, so read the numbers as a sanity check of the rules, not as evidence that they work.

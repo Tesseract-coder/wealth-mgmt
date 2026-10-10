@@ -9,8 +9,21 @@ export class ApiError extends Error {
   }
 }
 
+export const OFFLINE_MESSAGE =
+  "Can't reach the backend. Is it running? Start everything with `make dev` (or `docker compose up`), then try again.";
+
+/** fetch that turns a network failure (backend stopped, wrong port) into a clear ApiError. */
+async function call(url: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "AbortError") throw e;
+    throw new ApiError(0, OFFLINE_MESSAGE);
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await call(`${BASE}${path}`, {
     ...init,
     headers: { "Content-Type": "application/json", ...init?.headers },
   });
@@ -83,7 +96,7 @@ export const api = {
 // --------------------------------------------------------------------------- import / portfolio
 
 async function upload<T>(path: string, form: FormData): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, { method: "POST", body: form });
+  const res = await call(`${BASE}${path}`, { method: "POST", body: form });
   if (!res.ok) throw new ApiError(res.status, await errorMessage(res));
   return (await res.json()) as T;
 }
@@ -97,7 +110,11 @@ async function errorMessage(res: Response): Promise<string> {
   } catch {
     // not JSON
   }
-  return text || res.statusText;
+  // The dev proxy answers 502/503/504 (or 500 with an empty or HTML body) when the backend is down.
+  if ([502, 503, 504].includes(res.status) || (res.status >= 500 && (!text || text.trimStart().startsWith("<")))) {
+    return res.status === 500 && !text ? OFFLINE_MESSAGE : `The backend didn't answer properly (HTTP ${res.status}). ${OFFLINE_MESSAGE}`;
+  }
+  return text || res.statusText || `HTTP ${res.status}`;
 }
 
 export type HoldingKind = "stocks" | "mf";
@@ -323,12 +340,28 @@ export interface Job {
   errors: string[];
 }
 
+export interface ScheduledJob {
+  id: string;
+  name: string;
+  next_run: string | null;
+}
+
+export interface Schedule {
+  enabled: boolean;
+  prices: string;
+  navs: string;
+  fundamentals: string;
+  jobs: ScheduledJob[];
+  sheets_auto_export: boolean;
+  note: string;
+}
+
 export interface MarketStatus {
   generated_at: string;
   summary: Record<FreshnessStatus, number>;
   references: ReferenceStatus[];
   quotes: Quote[];
-  schedule: { enabled: boolean; prices: string; navs: string; fundamentals: string };
+  schedule: Schedule;
   last_job: Job | null;
   last_fundamentals_job: Job | null;
   notes: string[];
@@ -402,7 +435,63 @@ export interface TechnicalSummary {
   top_bearish: string[];
 }
 
+export interface BacktestPoint {
+  date: string;
+  close: number;
+  score: number | null;
+  signal: SignalKey;
+  in_market: boolean;
+  strategy: number;
+  buy_hold: number;
+}
+
+export interface BacktestStats {
+  group: "buy" | "hold" | "exit" | "no_signal" | "all";
+  label: string;
+  count: number;
+  measured: number;
+  hit_rate: number | null;
+  rise_rate: number | null;
+  avg_forward_return: number | null;
+}
+
+export interface BacktestPerformance {
+  total_return: number;
+  max_drawdown: number;
+  exposure: number;
+}
+
+export interface Backtest {
+  ticker: string;
+  label: string;
+  style: StyleKey;
+  style_label: string;
+  risk: RiskKey;
+  risk_label: string;
+  status: "ok" | "insufficient_data";
+  message: string;
+  start: string | null;
+  end: string | null;
+  sessions: number;
+  evaluations: number;
+  step_sessions: number;
+  horizon_sessions: number;
+  timeframes: string[];
+  stats: BacktestStats[];
+  strategy: BacktestPerformance | null;
+  buy_hold: BacktestPerformance | null;
+  trades: number;
+  points: BacktestPoint[];
+  notes: string[];
+  caveat: string;
+}
+
+/** The portfolio report (HTML; print it to PDF from the browser). */
+export const REPORT_URL = `${BASE}/export/report`;
+
 export const analysisApi = {
+  backtest: (ticker: string, style?: StyleKey | null) =>
+    request<Backtest>(`/analysis/backtest/${encodeURIComponent(ticker)}${style ? `?style=${style}` : ""}`),
   technical: (ticker: string, style?: StyleKey | null) =>
     request<TechnicalReport>(
       `/analysis/technical/${encodeURIComponent(ticker)}${style ? `?style=${style}` : ""}`,
@@ -1125,7 +1214,7 @@ export const screenerApi = {
       body: JSON.stringify({ name, filters }),
     }),
   deleteScreen: async (id: number) => {
-    const res = await fetch(`${BASE}/screener/screens/${id}`, { method: "DELETE" });
+    const res = await call(`${BASE}/screener/screens/${id}`, { method: "DELETE" });
     if (!res.ok) throw new ApiError(res.status, await errorMessage(res));
   },
   csvHref: (sel: { preset?: string; screen_id?: number; include_held?: boolean }) => {
@@ -1145,7 +1234,7 @@ export const watchlistApi = {
   note: (ticker: string, note: string) =>
     request<WatchItem>(`/watchlist/${encodeURIComponent(ticker)}`, { method: "PATCH", body: JSON.stringify({ note }) }),
   remove: async (ticker: string) => {
-    const res = await fetch(`${BASE}/watchlist/${encodeURIComponent(ticker)}`, { method: "DELETE" });
+    const res = await call(`${BASE}/watchlist/${encodeURIComponent(ticker)}`, { method: "DELETE" });
     if (!res.ok) throw new ApiError(res.status, await errorMessage(res));
   },
 };
@@ -1232,7 +1321,7 @@ export const sheetsApi = {
   },
   test: () => request<{ ok: boolean; checks: SheetCheck[] }>("/sheets/test", { method: "POST" }),
   export: async (overwrite: string[] = []) => {
-    const res = await fetch(`${BASE}/sheets/export`, {
+    const res = await call(`${BASE}/sheets/export`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ overwrite }),

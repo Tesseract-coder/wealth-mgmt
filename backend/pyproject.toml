@@ -55,3 +55,4 @@ extend-immutable-calls = ["fastapi.Depends", "fastapi.File", "fastapi.Query", "f
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["E501"]  # fixture data lines (NAVAll rows, CSV headers) read better unwrapped
 "app/screener/fields.py" = ["E501"]  # the field table reads better one field per line
+"app/export/report.py" = ["E501"]  # HTML and CSS templates read better unwrapped

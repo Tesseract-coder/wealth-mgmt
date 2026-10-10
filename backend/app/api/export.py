@@ -5,7 +5,7 @@ import csv
 import io
 
 from fastapi import APIRouter, Depends, Query
-from fastapi.responses import Response
+from fastapi.responses import HTMLResponse, Response
 from sqlmodel import Session
 
 from app.api.funds import mf_holdings
@@ -14,8 +14,10 @@ from app.api.signals import holdings_signals
 from app.core.db import get_session
 from app.core.formatting import format_freshness, now_ist
 from app.core.profiles import get_profiles
+from app.export.report import build_report
 from app.export.tables import Table, funds_table, screener_table, stocks_table
 from app.models.schemas import ScreenIn
+from app.sheets.sync import get_sheet_settings, screen_request
 
 router = APIRouter(prefix="/export", tags=["export"])
 
@@ -64,3 +66,19 @@ def screener_csv(
         session,
     )
     return csv_response(screener_table(d))
+
+
+@router.get("/report", response_class=HTMLResponse)
+def report(
+    download: bool = Query(False, description="Send as a file instead of showing it"),
+    session: Session = Depends(get_session),
+) -> HTMLResponse:
+    """Portfolio report as one self-contained HTML page: summary, actions, allocation, every
+    stock and fund with its signal and reasons, screener ideas, data freshness and the
+    disclaimer. Use the browser's Print → Save as PDF for a PDF. Cached data only."""
+    html = build_report(session, screen_request(session, get_sheet_settings(session)))
+    headers = {"Cache-Control": "no-store"}
+    if download:
+        stamp = now_ist().strftime("%Y-%m-%d")
+        headers["Content-Disposition"] = f'attachment; filename="portfolio-report-{stamp}.html"'
+    return HTMLResponse(html, headers=headers)

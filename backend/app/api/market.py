@@ -25,6 +25,7 @@ from app.data.quotes import quotes
 from app.data.reference_refresh import reference_status
 from app.importers.reference import scheme_resolver
 from app.jobs.runner import get_runner
+from app.jobs.scheduler import scheduled_jobs
 from app.jobs.tasks import FUND_JOB_KIND, JOB_KIND, fundamentals_refresh, market_refresh
 from app.models.schemas import (
     BarOut,
@@ -37,9 +38,10 @@ from app.models.schemas import (
     QuoteOut,
     ReferenceStatusOut,
     RefreshIn,
+    ScheduledJobOut,
     ScheduleOut,
 )
-from app.models.tables import Job
+from app.models.tables import Job, SheetSettings
 
 router = APIRouter(prefix="/market", tags=["market"])
 
@@ -101,6 +103,15 @@ def status(session: Session = Depends(get_session)) -> MarketStatusOut:
             prices=f"Mon–Fri {cfg.refresh_time_ist} IST",
             navs=f"Daily {cfg.nav_refresh_time_ist} IST",
             fundamentals=f"Weekly, {fcfg.refresh_day.capitalize()} {fcfg.refresh_time_ist} IST",
+            jobs=[
+                ScheduledJobOut(id=j.id, name=j.name, next_run=j.next_run) for j in scheduled_jobs()
+            ],
+            sheets_auto_export=bool((sh := session.get(SheetSettings, 1)) and sh.auto_export),
+            note=(
+                "Scheduled refreshes run only while the app is running. A run missed by up to "
+                "an hour still happens; anything older is caught up on the next start, which "
+                "refreshes whatever is stale."
+            ),
         ),
         last_job=job_out(last) if last else None,
         last_fundamentals_job=job_out(last_fund) if last_fund else None,

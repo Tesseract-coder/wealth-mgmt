@@ -3,9 +3,9 @@ import { Layout } from "./components/Layout";
 import { Holdings } from "./pages/Holdings";
 import { Import } from "./pages/Import";
 import { MutualFunds } from "./pages/MutualFunds";
+import { NotFound } from "./pages/NotFound";
 import { Onboarding } from "./pages/Onboarding";
 import { Overview } from "./pages/Overview";
-import { Placeholder } from "./pages/Placeholder";
 import { Screener } from "./pages/Screener";
 import { Settings } from "./pages/Settings";
 import { Technical } from "./pages/Technical";
@@ -27,7 +27,7 @@ export function App() {
         <Route path="screener" element={<Screener />} />
         <Route path="watchlist" element={<Watchlist />} />
         <Route path="settings" element={<Settings />} />
-        <Route path="*" element={<Placeholder title="Not found" phase={0} />} />
+        <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
   );

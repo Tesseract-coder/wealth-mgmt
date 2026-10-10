@@ -1,6 +1,8 @@
 """Daily refresh schedule (APScheduler, Asia/Kolkata). Missed runs coalesce into one."""
 
 import logging
+from dataclasses import dataclass
+from datetime import datetime
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -11,9 +13,34 @@ from app.jobs.tasks import FUND_JOB_KIND, JOB_KIND, fundamentals_refresh, market
 
 logger = logging.getLogger(__name__)
 TZ = "Asia/Kolkata"
+_scheduler: BackgroundScheduler | None = None
+
+
+@dataclass(frozen=True)
+class ScheduledJob:
+    id: str
+    name: str
+    next_run: datetime | None
+
+
+def scheduled_jobs() -> list[ScheduledJob]:
+    """The running schedule with each job's next run (empty when the scheduler is off)."""
+    if _scheduler is None or not _scheduler.running:
+        return []
+    return [
+        ScheduledJob(j.id, j.name, getattr(j, "next_run_time", None)) for j in _scheduler.get_jobs()
+    ]
+
+
+def stop_scheduler() -> None:
+    global _scheduler
+    if _scheduler is not None:
+        _scheduler.shutdown(wait=False)
+        _scheduler = None
 
 
 def start_scheduler(runner: JobRunner) -> BackgroundScheduler:
+    global _scheduler
     cfg = get_profiles().data
     sched = BackgroundScheduler(timezone=TZ)
     price_t, nav_t = parse_hhmm(cfg.refresh_time_ist), parse_hhmm(cfg.nav_refresh_time_ist)
@@ -55,6 +82,7 @@ def start_scheduler(runner: JobRunner) -> BackgroundScheduler:
         misfire_grace_time=6 * 3600,
     )
     sched.start()
+    _scheduler = sched
     logger.info(
         "Scheduler started: prices Mon–Fri %s IST, NAVs daily %s IST",
         cfg.refresh_time_ist,

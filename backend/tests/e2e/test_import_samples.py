@@ -3,6 +3,7 @@ fund gets a signal with reasons, and the portfolio summary builds (market data, 
 fundamentals faked, no network)."""
 
 import json
+from html import escape
 from pathlib import Path
 
 import pytest
@@ -73,3 +74,19 @@ def test_all_samples_import_and_get_signals(
     summary = client.get("/portfolio/summary").json()
     assert summary["total_value"] > 0 and summary["by_asset_class"]
     assert "SEBI-registered" in summary["disclaimer"]
+
+    # The portfolio report shows every holding with its signal, and the disclaimer.
+    r = client.get("/export/report")
+    assert r.status_code == 200 and r.headers["content-type"].startswith("text/html")
+    html = r.text
+    for h in body["holdings"]:
+        assert escape(h["label"]) in html and escape(h["signal_label"]) in html
+    for f in funds["funds"]:
+        assert escape(f["signal_label"]) in html
+    assert html.count("SEBI-registered") >= 2  # top box and the footer on every printed page
+    assert "Swing style" in html and "Print / Save as PDF" in html
+
+    # A backtest replays the rules on the cached history.
+    bt = client.get("/analysis/backtest/RELIANCE.NS", params={"fetch": False}).json()
+    assert bt["style"] == "swing" and bt["status"] in ("ok", "insufficient_data")
+    assert "not predict" in bt["caveat"]
