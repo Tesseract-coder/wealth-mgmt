@@ -19,6 +19,8 @@ All sources are free and public. The app never logs in anywhere. Every number on
 | Latest NAVs + scheme list | AMFI `NAVAll.txt` | Daily 23:30 IST | Also used to match fund names to scheme codes. If it has a newer NAV than mfapi, the newer one is used. |
 | Equity + ETF symbol lists | NSE archives `EQUITY_L.csv`, `eq_etfseclist.csv` | Weekly | Used to match ISINs / names to symbols. |
 | Nifty 500 constituents + industry | NSE archives `ind_nifty500list.csv` | Weekly | Sector weights (Phase 7) and the screener universe (Phase 9). |
+| Fundamentals (statements, shares, sector) | Yahoo Finance via `yfinance` (`.info`, annual income/balance/cash flow, quarterly income) | Weekly (Sat 10:00 IST), with peers | About 5 requests per stock. Cached for `fundamentals_stale_after_days` (7). Holdings are also refreshed in the daily job when stale. **Refresh fundamentals + peers** fetches holdings plus up to 40 Nifty 500 peers per industry you hold, for sector medians; the first run takes 10–30 minutes. |
+| Ownership, 10-year statements | **Your Screener.in exports** (uploaded, never scraped) | When you upload | See the import guide. |
 | Delivery % and traded value | NSE archives `sec_bhavdata_full_DDMMYYYY.csv` (one file per session, all stocks) | With prices | The last 21 sessions are kept (`technical.delivery_lookback_sessions`). The first download takes 2–3 minutes at NSE's rate limit; after that it's one file a day. Days with no file (holidays) are remembered. |
 
 BSE-only stocks are fetched as `SYMBOL.BO`. Yahoo knows BSE stocks by trading symbol, not by the numeric scrip code, and its BSE history can have gaps.
@@ -41,13 +43,16 @@ All of these settings live in the `data:` section of `backend/config/profiles.ya
 | Endpoint | |
 |---|---|
 | `GET /market/status` | Freshness of every holding, benchmark and reference list, plus the last refresh job |
-| `POST /market/refresh` `{"scope": "all"\|"reference"\|"prices"\|"navs", "force": false}` | Starts a background refresh and returns the job |
+| `POST /market/refresh` `{"scope": "all"\|"reference"\|"prices"\|"navs"\|"fundamentals", "force": false}` | Starts a background refresh and returns the job |
 | `GET /jobs/{id}`, `GET /jobs` | Job progress and errors |
 | `GET /market/prices/{ticker}?interval=1d\|1wk\|1mo\|15m\|1h&start=YYYY-MM-DD&refresh=false` | Cached bars (fetched on first request). Weekly/monthly bars are built from daily ones; `last_complete=false` means the final bar's week/month isn't over |
 | `GET /market/nav/{amfi_code}?start=&refresh=` | NAV history |
 | `GET /analysis/technical/{ticker}?style=&timeframes=&fetch=true` | Technical readings for one stock (style defaults to your saved one) |
 | `GET /analysis/technical/holdings?style=` | A short summary for every current holding (cached data only) |
 | `GET /analysis/technical/{ticker}/series?interval=&start=` | Indicator lines for charts |
+| `GET /analysis/fundamental/{ticker}?fetch=true` | Fundamental metrics, F-score and readings |
+| `GET /analysis/fundamental/holdings` | A short fundamentals summary per holding (cached data only) |
+| `POST /import/screener` (file, optional `mapping`, optional `symbol`) | Upload a Screener.in screen or company export |
 
 ## Swapping a data source
 

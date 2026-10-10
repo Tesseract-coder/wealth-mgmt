@@ -1,0 +1,9 @@
+FAKE SAMPLE DATA - for testing only
+S.No.,Name,NSE Code,CMP Rs.,P/E,Mar Cap Rs.Cr.,ROCE %,Prom. Hold. %,Chg in Prom Hold %,Pledged %,FII Hold %,Chg in FII Hold %,DII Hold %,Chg in DII Hold %,Debt / Eq,Sales Var 5Yrs %,Profit Var 5Yrs %
+1,Reliance Industr,RELIANCE,1170.3,19.6,1583705,9.1,50.1,-0.2,0.0,19.2,-1.4,18.9,1.6,0.44,11.2,9.8
+2,TCS,TCS,3412.4,24.1,1234567,62.5,71.8,0.0,0.6,12.1,-2.3,11.0,2.1,0.09,10.4,9.9
+3,HDFC Bank,HDFCBANK,707.3,15.5,1090472,7.4,0.0,0.0,0.0,47.9,1.8,35.2,-1.1,,18.7,17.2
+4,ITC,,438.6,25.3,548000,37.9,0.0,0.0,0.0,40.2,0.4,42.3,0.9,0.0,9.1,11.4
+5,Asian Paints,ASIANPAINT,2465.8,52.0,236500,27.1,52.6,-1.8,12.4,13.4,-2.0,16.1,1.2,0.12,8.0,6.1
+6,Acme Imaginary Widgets,,99.0,8.0,1200,4.0,60.0,0.0,32.0,1.0,0.0,2.0,0.0,2.6,-5.0,-12.0
+,Median: 6 Co.,,805.0,21.8,392283,18.0,51.3,0.0,0.3,16.3,-0.5,17.5,1.0,0.12,9.6,9.9

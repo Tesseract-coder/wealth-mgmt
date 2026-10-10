@@ -157,7 +157,93 @@ MF_FIELDS: tuple[FieldSpec, ...] = (
     ),
 )
 
-FIELDS = {"stocks": STOCK_FIELDS, "mf": MF_FIELDS}
+# Screener.in screen exports: the user picks the columns, so everything but the name is optional.
+# Values keep Screener's units (₹ crore, percent).
+SCREENER_FIELDS: tuple[FieldSpec, ...] = (
+    FieldSpec("name", "Company name", ("name", "company", "company name"), True),
+    FieldSpec("nse_code", "NSE code", ("nse code", "nse symbol", "symbol")),
+    FieldSpec("bse_code", "BSE code", ("bse code",)),
+    FieldSpec("cmp", "Current price", ("cmp rs", "cmp", "current price")),
+    FieldSpec("pe", "P/E", ("p/e", "pe", "price to earning", "stock p/e")),
+    FieldSpec(
+        "market_cap_cr",
+        "Market cap (₹ Cr)",
+        ("mar cap rs cr", "market cap", "market capitalization", "mar cap"),
+    ),
+    FieldSpec("div_yield_pct", "Dividend yield %", ("div yld %", "dividend yield", "div yld")),
+    FieldSpec("roce_pct", "ROCE %", ("roce %", "roce", "return on capital employed")),
+    FieldSpec("roe_pct", "ROE %", ("roe %", "roe", "return on equity")),
+    FieldSpec("debt_to_equity", "Debt / equity", ("debt / eq", "debt to equity", "debt/eq", "d/e")),
+    FieldSpec(
+        "promoter_pct",
+        "Promoter holding %",
+        ("prom hold %", "promoter holding", "promoter holding %", "prom hold"),
+    ),
+    FieldSpec(
+        "promoter_change_pct",
+        "Change in promoter holding",
+        (
+            "chg in prom hold %",
+            "change in promoter holding",
+            "chg in promoter holding",
+            "prom hold chg",
+        ),
+    ),
+    FieldSpec(
+        "pledge_pct", "Pledged %", ("pledged %", "pledged percentage", "pledge %", "pledged")
+    ),
+    FieldSpec("fii_pct", "FII holding %", ("fii hold %", "fii holding", "fii hold")),
+    FieldSpec(
+        "fii_change_pct",
+        "Change in FII holding",
+        ("chg in fii hold %", "change in fii holding", "fii hold chg"),
+    ),
+    FieldSpec("dii_pct", "DII holding %", ("dii hold %", "dii holding", "dii hold")),
+    FieldSpec(
+        "dii_change_pct",
+        "Change in DII holding",
+        ("chg in dii hold %", "change in dii holding", "dii hold chg"),
+    ),
+    FieldSpec(
+        "sales_growth_3y_pct",
+        "Sales growth 3y %",
+        ("sales var 3yrs %", "sales growth 3years", "sales growth 3y"),
+    ),
+    FieldSpec(
+        "profit_growth_3y_pct",
+        "Profit growth 3y %",
+        ("profit var 3yrs %", "profit growth 3years", "profit growth 3y"),
+    ),
+    FieldSpec(
+        "sales_growth_5y_pct",
+        "Sales growth 5y %",
+        ("sales var 5yrs %", "sales growth 5years", "sales growth 5y"),
+    ),
+    FieldSpec(
+        "profit_growth_5y_pct",
+        "Profit growth 5y %",
+        ("profit var 5yrs %", "profit growth 5years", "profit growth 5y"),
+    ),
+    FieldSpec(
+        "qtr_sales_var_pct",
+        "Quarterly sales growth %",
+        ("qtr sales var %", "yoy quarterly sales growth"),
+    ),
+    FieldSpec(
+        "qtr_profit_var_pct",
+        "Quarterly profit growth %",
+        ("qtr profit var %", "yoy quarterly profit growth"),
+    ),
+    FieldSpec("opm_pct", "Operating margin %", ("opm %", "opm", "operating profit margin")),
+    FieldSpec(
+        "interest_coverage",
+        "Interest coverage",
+        ("int coverage", "interest coverage ratio", "interest coverage"),
+    ),
+    FieldSpec("current_ratio", "Current ratio", ("current ratio",)),
+)
+
+FIELDS = {"stocks": STOCK_FIELDS, "mf": MF_FIELDS, "screener": SCREENER_FIELDS}
 
 
 def normalise_header(text: str) -> str:

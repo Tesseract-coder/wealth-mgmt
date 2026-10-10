@@ -12,7 +12,10 @@ from typing import Protocol
 import pandas as pd
 from sqlmodel import Session
 
-from app.data import delivery, navs, prices, store
+from app.core.formatting import now_ist
+from app.data import delivery, fundamentals, navs, prices, store
+from app.data.freshness import Freshness
+from app.data.fundamentals import RawFundamentals
 from app.data.navs import LatestNav
 from app.data.prices import Bars, DailyInterval, IntradayInterval
 from app.data.store import RefreshResult
@@ -38,6 +41,14 @@ class DataProvider(Protocol):
     def latest_nav(self, code: str) -> LatestNav: ...
 
     def delivery(self, symbol: str, sessions: int) -> pd.DataFrame: ...
+
+    def fundamentals(self, ticker: str) -> RawFundamentals | None: ...
+
+    def fundamentals_freshness(self, ticker: str) -> Freshness: ...
+
+    def ensure_fundamentals(
+        self, ticker: str, label: str | None = None, force: bool = False
+    ) -> RefreshResult: ...
 
 
 class CachedProvider:
@@ -74,3 +85,15 @@ class CachedProvider:
 
     def delivery(self, symbol: str, sessions: int) -> pd.DataFrame:
         return delivery.delivery_history(self.session, symbol, sessions)
+
+    def fundamentals(self, ticker: str) -> RawFundamentals | None:
+        return fundamentals.load_raw(self.session, ticker)
+
+    def fundamentals_freshness(self, ticker: str) -> Freshness:
+        st = store.get_status(self.session, fundamentals.fund_key(ticker))
+        return fundamentals.fundamentals_freshness(st, now_ist())
+
+    def ensure_fundamentals(
+        self, ticker: str, label: str | None = None, force: bool = False
+    ) -> RefreshResult:
+        return fundamentals.refresh_fundamentals(self.session, ticker, label, force=force)

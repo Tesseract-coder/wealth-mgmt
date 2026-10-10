@@ -163,10 +163,134 @@ def mf_messy_csv() -> None:
         csv.writer(f).writerows(rows)
 
 
+def screener_screen_csv() -> None:
+    """Mimics a Screener.in screen export with ownership columns added. Numbers are FAKE."""
+    header = ["S.No.", "Name", "NSE Code", "CMP Rs.", "P/E", "Mar Cap Rs.Cr.", "ROCE %",
+              "Prom. Hold. %", "Chg in Prom Hold %", "Pledged %", "FII Hold %",
+              "Chg in FII Hold %", "DII Hold %", "Chg in DII Hold %", "Debt / Eq",
+              "Sales Var 5Yrs %", "Profit Var 5Yrs %"]
+    rows = [
+        [1, "Reliance Industr", "RELIANCE", 1170.3, 19.6, 1583705, 9.1, 50.1, -0.2, 0.0, 19.2, -1.4, 18.9, 1.6, 0.44, 11.2, 9.8],
+        [2, "TCS", "TCS", 3412.4, 24.1, 1234567, 62.5, 71.8, 0.0, 0.6, 12.1, -2.3, 11.0, 2.1, 0.09, 10.4, 9.9],
+        [3, "HDFC Bank", "HDFCBANK", 707.3, 15.5, 1090472, 7.4, 0.0, 0.0, 0.0, 47.9, 1.8, 35.2, -1.1, "", 18.7, 17.2],
+        [4, "ITC", "", 438.6, 25.3, 548000, 37.9, 0.0, 0.0, 0.0, 40.2, 0.4, 42.3, 0.9, 0.0, 9.1, 11.4],
+        [5, "Asian Paints", "ASIANPAINT", 2465.8, 52.0, 236500, 27.1, 52.6, -1.8, 12.4, 13.4, -2.0, 16.1, 1.2, 0.12, 8.0, 6.1],
+        [6, "Acme Imaginary Widgets", "", 99.0, 8.0, 1200, 4.0, 60.0, 0.0, 32.0, 1.0, 0.0, 2.0, 0.0, 2.6, -5.0, -12.0],
+        ["", "Median: 6 Co.", "", 805.0, 21.8, 392283, 18.0, 51.3, 0.0, 0.3, 16.3, -0.5, 17.5, 1.0, 0.12, 9.6, 9.9],
+    ]
+    with open(OUT / "screener_screen.csv", "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow([BANNER])
+        w.writerow(header)
+        w.writerows(rows)
+
+
+def screener_company_xlsx() -> None:
+    """Mimics Screener.in's company "Export to Excel" (Data Sheet tab), 10 years. FAKE numbers."""
+    from datetime import date
+
+    wb = Workbook()
+    wb.active.title = "Profit & Loss"
+    wb.active.append([BANNER])
+    ws = wb.create_sheet("Data Sheet")
+    years = [date(y, 3, 31) for y in range(2017, 2027)]
+    quarters = [date(2024, 6, 30), date(2024, 9, 30), date(2024, 12, 31), date(2025, 3, 31),
+                date(2025, 6, 30), date(2025, 9, 30), date(2025, 12, 31), date(2026, 3, 31),
+                date(2026, 6, 30), date(2026, 9, 30)]
+
+    def grow(base: float, rate: float) -> list[float]:
+        return [round(base * (1 + rate) ** i, 2) for i in range(len(years))]
+
+    sales = grow(42000, 0.08)
+    raw = [round(x * 0.38, 2) for x in sales]
+    other_exp = [round(x * 0.26, 2) for x in sales]
+    other_inc = [round(x * 0.05, 2) for x in sales]
+    dep = [round(x * 0.03, 2) for x in sales]
+    interest = [40.0] * len(years)
+    pbt = [round(s - r - o + oi - d - i, 2) for s, r, o, oi, d, i in zip(sales, raw, other_exp, other_inc, dep, interest)]
+    tax = [round(x * 0.25, 2) for x in pbt]
+    np_ = [round(p - t, 2) for p, t in zip(pbt, tax)]
+    rows = [
+        ["COMPANY NAME", "ITC Ltd"],
+        [BANNER],
+        ["META"],
+        ["Number of shares", 12_500_000_000],
+        ["Face Value", 1],
+        ["Current Price", 438.6],
+        ["Market Capitalization", 548250],
+        [],
+        ["PROFIT & LOSS"],
+        ["Report Date", *years],
+        ["Sales", *sales],
+        ["Raw Material Cost", *raw],
+        ["Change in Inventory", *[0.0] * len(years)],
+        ["Power and Fuel", *[0.0] * len(years)],
+        ["Other Mfr. Exp", *[0.0] * len(years)],
+        ["Employee Cost", *[0.0] * len(years)],
+        ["Selling and admin", *[0.0] * len(years)],
+        ["Other Expenses", *other_exp],
+        ["Other Income", *other_inc],
+        ["Depreciation", *dep],
+        ["Interest", *interest],
+        ["Profit before tax", *pbt],
+        ["Tax", *tax],
+        ["Net profit", *np_],
+        ["Dividend Amount", *[round(x * 0.8, 2) for x in np_]],
+        [],
+        ["Quarters"],
+        ["Report Date", *quarters],
+        ["Sales", *[round(13000 * 1.02 ** i, 2) for i in range(len(quarters))]],
+        ["Expenses", *[round(8500 * 1.02 ** i, 2) for i in range(len(quarters))]],
+        ["Other Income", *[600.0] * len(quarters)],
+        ["Depreciation", *[400.0] * len(quarters)],
+        ["Interest", *[10.0] * len(quarters)],
+        ["Profit before tax", *[round(4690 * 1.02 ** i, 2) for i in range(len(quarters))]],
+        ["Tax", *[round(1172 * 1.02 ** i, 2) for i in range(len(quarters))]],
+        ["Net profit", *[round(3518 * 1.02 ** i, 2) for i in range(len(quarters))]],
+        ["Operating Profit", *[round(4500 * 1.02 ** i, 2) for i in range(len(quarters))]],
+        [],
+        ["BALANCE SHEET"],
+        ["Report Date", *years],
+        ["Equity Share Capital", *[1250.0] * len(years)],
+        ["Reserves", *grow(55000, 0.07)],
+        ["Borrowings", *[300.0] * len(years)],
+        ["Other Liabilities", *grow(15000, 0.05)],
+        ["Total", *[round(1250 + r + 300 + o, 2) for r, o in zip(grow(55000, 0.07), grow(15000, 0.05))]],
+        ["Net Block", *grow(22000, 0.05)],
+        ["Capital Work in Progress", *[2500.0] * len(years)],
+        ["Investments", *grow(25000, 0.06)],
+        ["Other Assets", *grow(21750, 0.08)],
+        ["Total", *[round(1250 + r + 300 + o, 2) for r, o in zip(grow(55000, 0.07), grow(15000, 0.05))]],
+        ["Receivables", *grow(3000, 0.05)],
+        ["Inventory", *grow(10000, 0.05)],
+        ["Cash & Bank", *grow(4000, 0.05)],
+        ["No. of Equity Shares", *[12_500_000_000] * len(years)],
+        ["New Bonus Shares", *[None] * len(years)],
+        ["Face value", *[1] * len(years)],
+        [],
+        ["CASH FLOW:"],
+        ["Report Date", *years],
+        ["Cash from Operating Activity", *[round(x * 1.1, 2) for x in np_]],
+        ["Cash from Investing Activity", *[round(-x * 0.4, 2) for x in np_]],
+        ["Cash from Financing Activity", *[round(-x * 0.7, 2) for x in np_]],
+        ["Net Cash Flow", *[0.0] * len(years)],
+        [],
+        ["PRICE:", *[round(200 + 25 * i, 2) for i in range(len(years))]],
+        [],
+        ["DERIVED:"],
+        ["Adjusted Equity Shares in Cr", *[1250.0] * len(years)],
+    ]
+    for r in rows:
+        ws.append(r)
+    wb.save(OUT / "screener_company_ITC.xlsx")
+
+
 if __name__ == "__main__":
     stocks_xlsx()
     stocks_messy_csv()
     stocks_unknown_headers_csv()
     mf_xlsx()
     mf_messy_csv()
+    screener_screen_csv()
+    screener_company_xlsx()
     print("Wrote fake samples to", OUT)

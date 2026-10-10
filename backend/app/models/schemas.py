@@ -124,7 +124,7 @@ class FieldSpecOut(BaseModel):
 
 class NeedsMappingOut(BaseModel):
     status: Literal["needs_mapping"] = "needs_mapping"
-    kind: Literal["stocks", "mf"]
+    kind: Literal["stocks", "mf", "screener"]
     header_row: int  # 0-based
     headers: list[str]
     detected: dict[str, int]
@@ -203,6 +203,7 @@ class ScheduleOut(BaseModel):
     enabled: bool
     prices: str
     navs: str
+    fundamentals: str
 
 
 class JobOut(BaseModel):
@@ -227,6 +228,7 @@ class MarketStatusOut(BaseModel):
     quotes: list[QuoteOut]
     schedule: ScheduleOut
     last_job: JobOut | None
+    last_fundamentals_job: JobOut | None
     notes: list[str]
 
 
@@ -265,7 +267,7 @@ class NavSeriesOut(BaseModel):
 
 
 class RefreshIn(BaseModel):
-    scope: Literal["all", "reference", "prices", "navs"] = "all"
+    scope: Literal["all", "reference", "prices", "navs", "fundamentals"] = "all"
     force: bool = False
 
 
@@ -336,3 +338,70 @@ class IndicatorSeriesOut(BaseModel):
     interval: str
     t: list[str]
     columns: dict[str, list[float | None]]
+
+
+# --------------------------------------------------------------------------- fundamentals
+
+
+class ScreenerImportedOut(BaseModel):
+    status: Literal["imported"] = "imported"
+    kind: Literal["screen", "company"]
+    upload_id: int
+    matched: list[dict[str, str]]  # {"symbol", "name"}
+    unmatched: list[str]
+    warnings: list[str]
+
+
+class MetricOut(BaseModel):
+    key: str
+    label: str
+    value: float | None
+    unit: str
+    basis: str
+    sector_median: float | None
+    peers: int
+
+
+class FTestOut(BaseModel):
+    name: str
+    passed: bool | None
+    detail: str
+
+
+class FScoreOut(BaseModel):
+    score: int | None
+    computable: int
+    tests: list[FTestOut]
+
+
+class FundamentalReportOut(BaseModel):
+    ticker: str
+    label: str
+    sector: str | None
+    is_financial: bool
+    source: str | None
+    latest_year: date | None
+    freshness: FreshnessOut
+    metrics: list[MetricOut]
+    fscore: FScoreOut | None
+    observations: list[ObservationOut]
+    unavailable: list[str]
+    notes: list[str]
+    fetch_errors: list[str]
+    disclaimer: str
+
+
+class FundamentalSummaryOut(BaseModel):
+    ticker: str
+    label: str
+    sector: str | None
+    source: str | None
+    freshness: FreshnessOut
+    pe: float | None
+    roe: float | None
+    debt_equity: float | None
+    fscore: int | None
+    bullish: int
+    bearish: int
+    top_bullish: list[str]
+    top_bearish: list[str]

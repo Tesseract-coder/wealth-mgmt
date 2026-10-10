@@ -12,6 +12,7 @@ import {
   type TimeframeReport,
 } from "../api/client";
 import { FreshnessBadge } from "../components/MarketData";
+import { FundamentalHoldings, FundamentalReportView } from "../components/FundamentalView";
 import { Alert, Card, inputClass } from "../components/ui";
 import { useDebounced } from "../hooks/useDebounced";
 import { formatDate, formatINR } from "../lib/format";
@@ -40,45 +41,98 @@ export function DirectionTag({ d }: { d: Direction }) {
 }
 
 /** Technical readings for a holding or any NSE stock (full stock detail with charts: Phase 8). */
+type View = "technical" | "fundamental";
+
+/** Query string for links within the page, keeping the chosen style and view. */
+export function analysisQuery(style: StyleKey | null, view: View = "technical"): string {
+  const p = new URLSearchParams();
+  if (style) p.set("style", style);
+  if (view !== "technical") p.set("view", view);
+  const s = p.toString();
+  return s ? `?${s}` : "";
+}
+
 export function Technical() {
   const { ticker } = useParams();
   const [params, setParams] = useSearchParams();
   const config = useQuery({ queryKey: ["config"], queryFn: api.config });
   const profile = useQuery({ queryKey: ["profile"], queryFn: api.profile });
   const style = (params.get("style") as StyleKey | null) ?? profile.data?.style ?? null;
+  const view: View = params.get("view") === "fundamental" ? "fundamental" : "technical";
   const styleKnown = params.has("style") || profile.isSuccess || profile.isError;
+  const update = (next: { style?: string | null; view?: View }) => {
+    const p = new URLSearchParams(params);
+    if (next.style !== undefined) {
+      if (next.style) p.set("style", next.style);
+      else p.delete("style");
+    }
+    if (next.view !== undefined) {
+      if (next.view === "fundamental") p.set("view", "fundamental");
+      else p.delete("view");
+    }
+    setParams(p);
+  };
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">Technicals</h1>
+          <h1 className="text-2xl font-semibold">Analysis</h1>
           <p className="text-sm text-slate-500">
-            Chart readings with the numbers behind each one. Scores and Buy/Hold/Sell signals come in a later phase.
+            Chart and company readings with the numbers behind each one. Scores and Buy/Hold/Sell signals come in a
+            later phase.
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-3">
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-500">Style</span>
-            <select
-              className={inputClass}
-              value={style ?? ""}
-              onChange={(e) => setParams(e.target.value ? { style: e.target.value } : {})}
-            >
-              <option value="">Daily only (no style chosen)</option>
-              {config.data &&
-                Object.entries(config.data.styles).map(([k, s]) => (
-                  <option key={k} value={k}>
-                    {s.label} ({s.timeframes.join(", ")})
-                  </option>
-                ))}
-            </select>
-          </label>
-          <TickerSearch style={style} />
+          {view === "technical" && (
+            <label className="text-sm">
+              <span className="mb-1 block text-slate-500">Style</span>
+              <select className={inputClass} value={style ?? ""} onChange={(e) => update({ style: e.target.value || null })}>
+                <option value="">Daily only (no style chosen)</option>
+                {config.data &&
+                  Object.entries(config.data.styles).map(([k, s]) => (
+                    <option key={k} value={k}>
+                      {s.label} ({s.timeframes.join(", ")})
+                    </option>
+                  ))}
+              </select>
+            </label>
+          )}
+          <TickerSearch style={style} view={view} />
         </div>
       </div>
-      {/* Wait for the saved profile so we don't analyse twice (once without, once with the style). */}
-      {!styleKnown ? (
+      <div role="tablist" className="flex gap-1 border-b border-slate-200 dark:border-slate-800">
+        {(["technical", "fundamental"] as const).map((v) => (
+          <button
+            key={v}
+            type="button"
+            role="tab"
+            aria-selected={view === v}
+            onClick={() => update({ view: v })}
+            className={`-mb-px border-b-2 px-3 py-2 text-sm ${
+              view === v ? "border-slate-900 font-medium dark:border-slate-100" : "border-transparent text-slate-500"
+            }`}
+          >
+            {v === "technical" ? "Technical" : "Fundamental"}
+          </button>
+        ))}
+      </div>
+      {ticker && (
+        <div className="flex flex-wrap items-baseline gap-3">
+          <h2 className="text-xl font-semibold">{ticker}</h2>
+          <Link to={`/analysis${analysisQuery(style, view)}`} className="text-sm underline">
+            ← all holdings
+          </Link>
+        </div>
+      )}
+      {view === "fundamental" ? (
+        ticker ? (
+          <FundamentalReportView ticker={ticker} />
+        ) : (
+          <FundamentalHoldings />
+        )
+      ) : /* Wait for the saved profile so we don't analyse twice (once without, once with the style). */
+      !styleKnown ? (
         <Card>Loading…</Card>
       ) : ticker ? (
         <Report ticker={ticker} style={style} />
@@ -89,7 +143,7 @@ export function Technical() {
   );
 }
 
-function TickerSearch({ style }: { style: StyleKey | null }) {
+function TickerSearch({ style, view }: { style: StyleKey | null; view: View }) {
   const [q, setQ] = useState("");
   const navigate = useNavigate();
   const dq = useDebounced(q.trim());
@@ -100,7 +154,7 @@ function TickerSearch({ style }: { style: StyleKey | null }) {
   });
   const go = (t: string) => {
     setQ("");
-    navigate(`/technical/${encodeURIComponent(t)}${style ? `?style=${style}` : ""}`);
+    navigate(`/analysis/${encodeURIComponent(t)}${analysisQuery(style, view)}`);
   };
   return (
     <div className="relative w-72 text-sm">
@@ -169,7 +223,7 @@ function HoldingsSummary({ style }: { style: StyleKey | null }) {
             {q.data.map((r) => (
               <tr key={r.ticker} className="border-t border-slate-100 align-top dark:border-slate-800">
                 <td className="py-1 pr-2">
-                  <Link className="underline" to={`/technical/${encodeURIComponent(r.ticker)}${style ? `?style=${style}` : ""}`}>
+                  <Link className="underline" to={`/analysis/${encodeURIComponent(r.ticker)}${analysisQuery(style)}`}>
                     {r.label}
                   </Link>
                   <div className="font-mono text-xs text-slate-500">{r.ticker}</div>
@@ -204,12 +258,6 @@ function Report({ ticker, style }: { ticker: string; style: StyleKey | null }) {
   const r = q.data;
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-baseline gap-3">
-        <h2 className="text-xl font-semibold">{r.label}</h2>
-        <Link to={style ? `/technical?style=${style}` : "/technical"} className="text-sm underline">
-          ← all holdings
-        </Link>
-      </div>
       {r.fetch_errors.map((e) => (
         <Alert key={e} tone="warning">
           Could not refresh: {e}. Showing cached data where available.

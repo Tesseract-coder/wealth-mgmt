@@ -25,9 +25,10 @@ def _no_waiting(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     monkeypatch.setattr("app.data.http.time.sleep", lambda _: None)
 
     def offline(*_: object, **__: object) -> pd.DataFrame:
-        raise AssertionError("test tried to call Yahoo Finance; patch app.data.yahoo._download")
+        raise ConnectionError("test tried to call Yahoo Finance; patch app.data.yahoo")
 
     monkeypatch.setattr("app.data.yahoo._download", offline)
+    monkeypatch.setattr("app.data.yahoo._fund_download", offline)
 
     def no_network(req: httpx.Request) -> httpx.Response:
         raise httpx.ConnectError(f"network disabled in tests ({req.url})")

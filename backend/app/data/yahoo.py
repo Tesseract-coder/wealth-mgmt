@@ -7,6 +7,7 @@ retried with backoff; an empty answer is an error, never an empty-but-valid seri
 import logging
 import time
 from datetime import date, timedelta
+from typing import Any
 
 import pandas as pd
 import yfinance as yf
@@ -102,3 +103,79 @@ def fetch_intraday(ticker: str, interval: str, days: int) -> pd.DataFrame:
         idx = idx.tz_localize("UTC")
     df.index = idx.tz_convert("UTC").rename("ts")
     return df[~df.index.duplicated(keep="last")].sort_index()
+
+
+INFO_KEYS = (
+    "longName",
+    "sector",
+    "industry",
+    "marketCap",
+    "sharesOutstanding",
+    "currentPrice",
+    "trailingPE",
+    "priceToBook",
+    "enterpriseToEbitda",
+    "dividendYield",
+    "beta",
+    "heldPercentInsiders",
+    "heldPercentInstitutions",
+    "financialCurrency",
+    "currency",
+)
+STATEMENTS = {
+    "income": "income_stmt",
+    "balance": "balance_sheet",
+    "cashflow": "cashflow",
+    "quarterly_income": "quarterly_income_stmt",
+}
+
+
+def _fund_download(ticker: str, what: str) -> Any:
+    """One raw yfinance fundamentals call ("info" or a Ticker statement attribute)."""
+    t = yf.Ticker(ticker)
+    return t.info if what == "info" else getattr(t, what)
+
+
+def _frame_json(df: pd.DataFrame | None) -> dict[str, dict[str, float]]:
+    if df is None or df.empty:
+        return {}
+    out: dict[str, dict[str, float]] = {}
+    for row, series in df.iterrows():
+        vals = {
+            pd.Timestamp(col).date().isoformat(): float(v)
+            for col, v in series.items()
+            if v is not None and not pd.isna(v)
+        }
+        if vals:
+            out[str(row)] = vals
+    return out
+
+
+def fetch_fundamentals(ticker: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    """(info subset, statements) for a ticker. Each call is rate-limited and retried.
+
+    A statement Yahoo doesn't have comes back empty; only a total failure raises."""
+    cfg = get_profiles().data
+    results: dict[str, Any] = {}
+    errors: list[str] = []
+    for what in ("info", *STATEMENTS.values()):
+        for attempt in range(cfg.http_retries + 1):
+            limiter("yahoo").acquire()
+            try:
+                results[what] = _fund_download(ticker, what)
+                break
+            except Exception as e:
+                msg = f"{e.__class__.__name__}: {e}"[:160]
+                if "RateLimit" in e.__class__.__name__:
+                    limiter("yahoo").penalise(cfg.http_backoff_seconds * 2 ** (attempt + 2))
+                if attempt == cfg.http_retries:
+                    errors.append(f"{what}: {msg}")
+                else:
+                    time.sleep(cfg.http_backoff_seconds * 2**attempt)
+    info_raw = results.get("info") or {}
+    info = {k: info_raw.get(k) for k in INFO_KEYS if info_raw.get(k) is not None}
+    statements = {key: _frame_json(results.get(attr)) for key, attr in STATEMENTS.items()}
+    if not info and not any(statements.values()):
+        detail = "; ".join(errors) if errors else "nothing returned"
+        raise FetchError(f"Yahoo Finance has no fundamentals for {ticker} ({detail})")
+    return info, statements

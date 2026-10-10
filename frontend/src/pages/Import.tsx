@@ -11,17 +11,19 @@ import {
   type StockHolding,
 } from "../api/client";
 import { ColumnMapper } from "../components/ColumnMapper";
+import { ScreenerImport } from "../components/ScreenerImport";
 import { FileDrop } from "../components/FileDrop";
 import { Alert, Button, Card, inputClass } from "../components/ui";
 import { UnresolvedFixer } from "../components/UnresolvedFixer";
 import { formatINR } from "../lib/format";
 
-type Tab = "stocks" | "mf" | "cas" | "manual";
+type Tab = "stocks" | "mf" | "cas" | "manual" | "screener";
 const TABS: { key: Tab; label: string }[] = [
   { key: "stocks", label: "Groww stocks" },
   { key: "mf", label: "Groww mutual funds" },
   { key: "cas", label: "CAS PDF" },
   { key: "manual", label: "Add fund manually" },
+  { key: "screener", label: "Screener.in data" },
 ];
 
 export function Import() {
@@ -61,6 +63,7 @@ export function Import() {
         {tab === "mf" && <TabularImport key="mf" kind="mf" onDone={done} />}
         {tab === "cas" && <CasImport onDone={done} />}
         {tab === "manual" && <ManualFund onDone={done} />}
+        {tab === "screener" && <ScreenerImport />}
       </Card>
 
       {result && <ResultSummary result={result} />}

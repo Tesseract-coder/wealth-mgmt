@@ -186,7 +186,7 @@ export interface FieldSpec {
 
 export interface NeedsMapping {
   status: "needs_mapping";
-  kind: HoldingKind;
+  kind: HoldingKind | "screener";
   header_row: number;
   headers: string[];
   detected: Record<string, number>;
@@ -209,6 +209,15 @@ export interface ManualMFIn {
   purchase_date?: string | null;
 }
 
+export interface ScreenerImported {
+  status: "imported";
+  kind: "screen" | "company";
+  upload_id: number;
+  matched: { symbol: string; name: string }[];
+  unmatched: string[];
+  warnings: string[];
+}
+
 export const importApi = {
   tabular: (kind: HoldingKind, file: File, mapping?: ColumnMappingIn) => {
     const form = new FormData();
@@ -224,6 +233,13 @@ export const importApi = {
     form.append("file", file);
     form.append("password", password);
     return upload<Imported>("/import/cas", form);
+  },
+  screener: (file: File, mapping?: ColumnMappingIn, symbol?: string) => {
+    const form = new FormData();
+    form.append("file", file);
+    if (mapping) form.append("mapping", JSON.stringify(mapping));
+    if (symbol) form.append("symbol", symbol);
+    return upload<ScreenerImported | NeedsMapping>("/import/screener", form);
   },
   manualMf: (body: ManualMFIn) =>
     request<Imported>("/import/mf-manual", { method: "POST", body: JSON.stringify(body) }),
@@ -302,12 +318,13 @@ export interface MarketStatus {
   summary: Record<FreshnessStatus, number>;
   references: ReferenceStatus[];
   quotes: Quote[];
-  schedule: { enabled: boolean; prices: string; navs: string };
+  schedule: { enabled: boolean; prices: string; navs: string; fundamentals: string };
   last_job: Job | null;
+  last_fundamentals_job: Job | null;
   notes: string[];
 }
 
-export type RefreshScope = "all" | "reference" | "prices" | "navs";
+export type RefreshScope = "all" | "reference" | "prices" | "navs" | "fundamentals";
 
 export const marketApi = {
   status: () => request<MarketStatus>("/market/status"),
@@ -381,4 +398,54 @@ export const analysisApi = {
     ),
   holdings: (style?: StyleKey | null) =>
     request<TechnicalSummary[]>(`/analysis/technical/holdings${style ? `?style=${style}` : ""}`),
+};
+
+// --------------------------------------------------------------------------- fundamentals
+
+export interface Metric {
+  key: string;
+  label: string;
+  value: number | null;
+  unit: string;
+  basis: string;
+  sector_median: number | null;
+  peers: number;
+}
+
+export interface FundamentalReport {
+  ticker: string;
+  label: string;
+  sector: string | null;
+  is_financial: boolean;
+  source: "yahoo" | "screener" | null;
+  latest_year: string | null;
+  freshness: Freshness;
+  metrics: Metric[];
+  fscore: { score: number | null; computable: number; tests: { name: string; passed: boolean | null; detail: string }[] } | null;
+  observations: Observation[];
+  unavailable: string[];
+  notes: string[];
+  fetch_errors: string[];
+  disclaimer: string;
+}
+
+export interface FundamentalSummary {
+  ticker: string;
+  label: string;
+  sector: string | null;
+  source: string | null;
+  freshness: Freshness;
+  pe: number | null;
+  roe: number | null;
+  debt_equity: number | null;
+  fscore: number | null;
+  bullish: number;
+  bearish: number;
+  top_bullish: string[];
+  top_bearish: string[];
+}
+
+export const fundamentalApi = {
+  report: (ticker: string) => request<FundamentalReport>(`/analysis/fundamental/${encodeURIComponent(ticker)}`),
+  holdings: () => request<FundamentalSummary[]>("/analysis/fundamental/holdings"),
 };

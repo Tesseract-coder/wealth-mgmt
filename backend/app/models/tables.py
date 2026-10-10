@@ -217,3 +217,39 @@ class BhavcopyDay(SQLModel, table=True):
     status: str  # "ok" | "missing"
     rows: int = 0
     fetched_at: datetime = Field(default_factory=utcnow)
+
+
+class FundamentalsRaw(SQLModel, table=True):
+    """Yahoo Finance fundamentals as fetched: a subset of .info plus the statements as JSON."""
+
+    ticker: str = Field(primary_key=True)
+    fetched_at: datetime = Field(default_factory=utcnow)
+    info_json: str = "{}"
+    statements_json: str = "{}"  # {"income": {row: {date: value}}, "balance": …, …}
+
+
+class FundamentalMetrics(SQLModel, table=True):
+    """Computed metrics per stock, kept so sector medians are a cheap lookup."""
+
+    ticker: str = Field(primary_key=True)
+    sector_key: str | None = Field(default=None, index=True)  # "nse:Capital Goods" | "yahoo:Energy"
+    computed_at: datetime = Field(default_factory=utcnow)
+    metrics_json: str = "{}"
+
+
+class ScreenerUpload(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    kind: str  # "screen" (a screen's results table) | "company" (a company's Excel export)
+    filename: str
+    uploaded_at: datetime = Field(default_factory=utcnow, index=True)
+    rows: int = 0
+
+
+class ScreenerData(SQLModel, table=True):
+    """Latest Screener.in data per stock (newer uploads replace older ones field by field)."""
+
+    symbol: str = Field(primary_key=True)  # NSE symbol
+    upload_id: int = Field(foreign_key="screenerupload.id")
+    updated_at: datetime = Field(default_factory=utcnow)
+    fields_json: str = "{}"  # screen columns: {"pe": 21.2, "promoter_pct": 50.1, …}
+    statements_json: str | None = None  # company export: {"annual": {...}, "quarterly": {...}}

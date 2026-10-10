@@ -62,8 +62,8 @@ function renderAt(path: string) {
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={[path]}>
         <Routes>
-          <Route path="/technical" element={<Technical />} />
-          <Route path="/technical/:ticker" element={<Technical />} />
+          <Route path="/analysis" element={<Technical />} />
+          <Route path="/analysis/:ticker" element={<Technical />} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -75,7 +75,7 @@ afterEach(() => vi.unstubAllGlobals());
 describe("Technical page", () => {
   it("groups readings by direction with text labels, shows gaps and fetch errors", async () => {
     mockFetch();
-    renderAt("/technical/RELIANCE.NS");
+    renderAt("/analysis/RELIANCE.NS");
     expect(await screen.findByText(/13\.6% below its 200-day SMA/)).toBeInTheDocument();
     expect(screen.getAllByText(/▼ Bearish/).length).toBeGreaterThan(0); // never colour alone
     expect(screen.getByText("Stochastic %K 15.0: oversold")).toBeInTheDocument();
@@ -87,9 +87,26 @@ describe("Technical page", () => {
 
   it("lists holdings with their data status", async () => {
     mockFetch();
-    renderAt("/technical");
+    renderAt("/analysis");
 
     expect(await screen.findByText("Tata Consultancy")).toBeInTheDocument();
     expect(screen.getByText("Unavailable")).toBeInTheDocument();
+  });
+});
+
+describe("Analysis tabs", () => {
+  it("old /technical links redirect to /analysis", async () => {
+    mockFetch();
+    const { App } = await import("../App");
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter initialEntries={["/technical/RELIANCE.NS?style=swing"]}>
+          <App />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText(/13\.6% below its 200-day SMA/)).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Technical" })).toHaveAttribute("aria-selected", "true");
   });
 });

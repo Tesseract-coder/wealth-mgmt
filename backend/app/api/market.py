@@ -25,7 +25,7 @@ from app.data.quotes import quotes
 from app.data.reference_refresh import reference_status
 from app.importers.reference import scheme_resolver
 from app.jobs.runner import get_runner
-from app.jobs.tasks import JOB_KIND, market_refresh
+from app.jobs.tasks import FUND_JOB_KIND, JOB_KIND, fundamentals_refresh, market_refresh
 from app.models.schemas import (
     BarOut,
     FreshnessOut,
@@ -87,6 +87,10 @@ def status(session: Session = Depends(get_session)) -> MarketStatusOut:
     last = session.exec(
         select(Job).where(Job.kind == JOB_KIND).order_by(col(Job.id).desc())
     ).first()
+    last_fund = session.exec(
+        select(Job).where(Job.kind == FUND_JOB_KIND).order_by(col(Job.id).desc())
+    ).first()
+    fcfg = get_profiles().fundamental
     return MarketStatusOut(
         generated_at=now,
         summary=summary,
@@ -96,8 +100,10 @@ def status(session: Session = Depends(get_session)) -> MarketStatusOut:
             enabled=get_settings().scheduler_enabled,
             prices=f"Mon–Fri {cfg.refresh_time_ist} IST",
             navs=f"Daily {cfg.nav_refresh_time_ist} IST",
+            fundamentals=f"Weekly, {fcfg.refresh_day.capitalize()} {fcfg.refresh_time_ist} IST",
         ),
         last_job=job_out(last) if last else None,
+        last_fundamentals_job=job_out(last_fund) if last_fund else None,
         notes=[
             "Prices are end-of-day closes from Yahoo Finance (free, unofficial, delayed). "
             "A day's bar is stored only once the session is over.",
@@ -108,6 +114,12 @@ def status(session: Session = Depends(get_session)) -> MarketStatusOut:
 
 @router.post("/refresh", response_model=JobOut, status_code=202)
 def refresh(body: RefreshIn) -> JobOut:
+    """scope=fundamentals runs as its own job (holdings + sector peers; can take a while)."""
+    if body.scope == "fundamentals":
+        job = get_runner().submit(
+            FUND_JOB_KIND, fundamentals_refresh(body.force), params={"force": body.force}
+        )
+        return job_out(job)
     job = get_runner().submit(
         JOB_KIND,
         market_refresh(body.scope, body.force),

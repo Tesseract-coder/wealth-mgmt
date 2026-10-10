@@ -238,6 +238,62 @@ class TechnicalConfig(BaseModel):
         return self
 
 
+class FundamentalThresholds(BaseModel):
+    valuation_cheap_ratio: float = Field(gt=0)
+    valuation_rich_ratio: float = Field(gt=0)
+    peg_cheap: float = Field(gt=0)
+    peg_rich: float = Field(gt=0)
+    roe_good: float
+    roe_poor: float
+    roce_good: float
+    roce_poor: float
+    margin_trend_flat_pp: float = Field(ge=0)
+    growth_good: float
+    growth_poor: float
+    quarter_yoy_good: float
+    quarter_yoy_poor: float
+    debt_equity_low: float = Field(ge=0)
+    interest_coverage_good: float
+    interest_coverage_poor: float
+    current_ratio_good: float
+    current_ratio_poor: float
+    dividend_yield_high: float = Field(ge=0)
+    fscore_strong: int = Field(ge=0, le=9)
+    fscore_weak: int = Field(ge=0, le=9)
+    promoter_change_pp: float = Field(gt=0)
+    pledge_warn_pct: float = Field(ge=0, le=100)
+    institution_change_pp: float = Field(gt=0)
+
+    @model_validator(mode="after")
+    def ordered(self) -> "FundamentalThresholds":
+        pairs = [
+            ("valuation_cheap_ratio", "valuation_rich_ratio"),
+            ("peg_cheap", "peg_rich"),
+            ("roe_poor", "roe_good"),
+            ("roce_poor", "roce_good"),
+            ("growth_poor", "growth_good"),
+            ("quarter_yoy_poor", "quarter_yoy_good"),
+            ("interest_coverage_poor", "interest_coverage_good"),
+            ("current_ratio_poor", "current_ratio_good"),
+            ("fscore_weak", "fscore_strong"),
+        ]
+        for lo, hi in pairs:
+            if getattr(self, lo) >= getattr(self, hi):
+                raise ValueError(f"fundamental.thresholds.{lo} must be below {hi}")
+        return self
+
+
+class FundamentalConfig(BaseModel):
+    financial_sectors: list[str]
+    sector_min_peers: int = Field(ge=1)
+    sector_max_peers: int = Field(ge=1)
+    refresh_day: Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+    refresh_time_ist: str = Field(pattern=_HHMM)
+    screener_max_age_days: int = Field(gt=0)
+    cross_check_tolerance: float = Field(gt=0)
+    thresholds: FundamentalThresholds
+
+
 class ImportConfig(BaseModel):
     header_scan_rows: int = Field(gt=0)
     column_match_min_score: float = Field(ge=0, le=100)
@@ -273,6 +329,7 @@ class Profiles(BaseModel):
     screener: ScreenerConfig
     data: DataConfig
     technical: TechnicalConfig
+    fundamental: FundamentalConfig
     importing: ImportConfig
     tax: TaxConfig
     disclaimer: str

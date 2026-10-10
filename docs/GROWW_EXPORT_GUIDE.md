@@ -60,7 +60,26 @@ The password is used once, in memory, to open the PDF. It is never saved, logged
 
 Manual funds are kept when you later re-import from Groww or a CAS, unless the import already contains the same scheme. You can remove a manual fund from the holdings table on the Import page.
 
-## 3. Snapshots
+## 3. Screener.in data (optional, recommended)
+
+Yahoo Finance gives about 4 years of statements and no ownership data. Screener.in fills both gaps. You need a free Screener.in account. **The app never visits Screener.in; you export the files and upload them** on **Import → Screener.in data**.
+
+### a) A screen's results (ownership + key ratios for many stocks at once)
+1. On screener.in, open a screen. A simple way to cover your holdings is a **watchlist** or a screen like `Market Capitalization > 0` filtered to your stocks.
+2. **Edit columns** and add: *NSE Code, Promoter holding, Change in promoter holding, Pledged percentage, FII holding, Change in FII holding, DII holding, Change in DII holding* (optionally *Debt to equity, ROCE, Sales growth 5Years, Profit growth 5Years*).
+3. Click **Export** and upload the file.
+
+Rows are matched by **NSE Code**, which is why that column is on the list. Without it, matching falls back to the company name, and Screener.in's short names don't always match. Unmatched rows are listed. If the columns aren't recognised, you'll get the same column-mapping step as for Groww files.
+
+### b) A company's Excel export (10 years of results)
+1. On a company page, click **Export to Excel**.
+2. Upload the .xlsx. The company is matched by name; if that fails, type its NSE symbol in the box and upload again.
+
+With 10 years of results the app can work out 5-year growth, and it uses Screener.in's statements for that company instead of Yahoo's.
+
+Uploads older than 120 days are ignored. Re-export after each quarterly results season.
+
+## 4. Snapshots
 
 Every import (and every manual change) is saved as a dated **snapshot**. The latest stock snapshot plus the latest mutual fund snapshot make up your current portfolio. Older snapshots are kept so later phases can chart your portfolio value and signals over time.
 
@@ -75,6 +94,8 @@ Every import (and every manual change) is saved as a dated **snapshot**. The lat
 | `groww_stocks_unknown_headers.csv` | Unrecognisable columns, which triggers the mapping step |
 | `groww_mf_holdings.xlsx` | A clean Groww-style MF export; all 5 funds match |
 | `groww_mf_messy.csv` | A renamed fund, a fund without plan info, an unknown fund |
+| `screener_screen.csv` | A Screener.in-style screen with ownership columns, a "Median" row, and an unknown company |
+| `screener_company_ITC.xlsx` | A Screener.in-style company export ("Data Sheet" tab) with 10 years of made-up results |
 
 Regenerate them with `cd backend && uv run python ../sample_data/generate_samples.py`.
 

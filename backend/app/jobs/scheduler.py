@@ -7,7 +7,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 from app.core.profiles import get_profiles, parse_hhmm
 from app.jobs.runner import JobRunner
-from app.jobs.tasks import JOB_KIND, market_refresh
+from app.jobs.tasks import FUND_JOB_KIND, JOB_KIND, fundamentals_refresh, market_refresh
 
 logger = logging.getLogger(__name__)
 TZ = "Asia/Kolkata"
@@ -36,6 +36,20 @@ def start_scheduler(runner: JobRunner) -> BackgroundScheduler:
         name="Daily NAV refresh",
         coalesce=True,
         misfire_grace_time=3600,
+    )
+    fcfg = get_profiles().fundamental
+    fund_t = parse_hhmm(fcfg.refresh_time_ist)
+    sched.add_job(
+        lambda: runner.submit(
+            FUND_JOB_KIND, fundamentals_refresh(), params={"peers": True}, trigger="schedule"
+        ),
+        CronTrigger(
+            day_of_week=fcfg.refresh_day, hour=fund_t.hour, minute=fund_t.minute, timezone=TZ
+        ),
+        id="fundamentals",
+        name="Weekly fundamentals refresh",
+        coalesce=True,
+        misfire_grace_time=6 * 3600,
     )
     sched.start()
     logger.info(

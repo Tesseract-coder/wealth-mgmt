@@ -7,6 +7,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, Path, Query
 from sqlmodel import Session
 
+from app.analysis.fundamental import FundamentalReport, analyse_fundamentals
 from app.analysis.technical import (
     FrameAnalysis,
     Interval,
@@ -16,14 +17,19 @@ from app.analysis.technical import (
 )
 from app.api.market import TICKER, fr_out
 from app.core.db import get_session
-from app.core.profiles import StyleKey, get_profiles
+from app.core.profiles import RiskLevel, StyleKey, get_profiles
 from app.data.prices import get_daily, get_intraday
 from app.data.provider import CachedProvider
 from app.data.quotes import stock_targets
 from app.models.schemas import (
     FrameAnalysisOut,
+    FScoreOut,
+    FTestOut,
+    FundamentalReportOut,
+    FundamentalSummaryOut,
     IndicatorSeriesOut,
     LevelOut,
+    MetricOut,
     ObservationOut,
     TechnicalReportOut,
     TechnicalSummaryOut,
@@ -66,6 +72,94 @@ def report_out(r: TechnicalReport) -> TechnicalReportOut:
         notes=r.notes,
         disclaimer=get_profiles().disclaimer,
     )
+
+
+def _active_risk(session: Session) -> tuple[RiskLevel, str]:
+    profiles = get_profiles()
+    p = session.get(UserProfile, 1)
+    key = p.risk if p and p.risk in profiles.risk_levels else profiles.defaults.risk
+    level = profiles.risk_levels[key]
+    return level, level.label
+
+
+def fundamental_out(r: FundamentalReport) -> FundamentalReportOut:
+    return FundamentalReportOut(
+        ticker=r.ticker,
+        label=r.label,
+        sector=r.sector,
+        is_financial=r.is_financial,
+        source=r.source,
+        latest_year=r.latest_year,
+        freshness=fr_out(r.freshness),
+        metrics=[MetricOut(**m.__dict__) for m in r.metrics.values()],
+        fscore=(
+            FScoreOut(
+                score=r.fscore.score,
+                computable=r.fscore.computable,
+                tests=[FTestOut(**t.__dict__) for t in r.fscore.tests],
+            )
+            if r.fscore
+            else None
+        ),
+        observations=[ObservationOut(**o.__dict__) for o in r.observations],
+        unavailable=r.unavailable,
+        notes=r.notes,
+        fetch_errors=r.fetch_errors,
+        disclaimer=get_profiles().disclaimer,
+    )
+
+
+@router.get("/fundamental/holdings", response_model=list[FundamentalSummaryOut])
+def holdings_fundamental(session: Session = Depends(get_session)) -> list[FundamentalSummaryOut]:
+    """Fundamentals for every current stock holding, from cached data only (no network)."""
+    risk, risk_label = _active_risk(session)
+    provider = CachedProvider(session)
+    out = []
+    for t in stock_targets(session):
+        r = analyse_fundamentals(
+            session, provider, t.code, label=t.label, risk=risk, risk_label=risk_label, fetch=False
+        )
+        major = [o for o in r.observations if not o.minor]
+
+        def val(k: str, rep: FundamentalReport = r) -> float | None:
+            return rep.metrics[k].value if k in rep.metrics else None
+
+        out.append(
+            FundamentalSummaryOut(
+                ticker=t.code,
+                label=t.label,
+                sector=r.sector,
+                source=r.source,
+                freshness=fr_out(r.freshness),
+                pe=val("pe"),
+                roe=val("roe"),
+                debt_equity=val("debt_equity"),
+                fscore=r.fscore.score if r.fscore else None,
+                bullish=sum(o.direction == "bullish" for o in major),
+                bearish=sum(o.direction == "bearish" for o in major),
+                top_bullish=[o.text for o in major if o.direction == "bullish"][:3],
+                top_bearish=[o.text for o in major if o.direction == "bearish"][:3],
+            )
+        )
+    return out
+
+
+@router.get("/fundamental/{ticker}", response_model=FundamentalReportOut)
+def fundamental(
+    ticker: str = Path(pattern=TICKER, description="Yahoo ticker, e.g. RELIANCE.NS"),
+    fetch: bool = Query(True, description="Fetch Yahoo fundamentals if missing or stale"),
+    session: Session = Depends(get_session),
+) -> FundamentalReportOut:
+    risk, risk_label = _active_risk(session)
+    r = analyse_fundamentals(
+        session,
+        CachedProvider(session),
+        ticker.upper(),
+        risk=risk,
+        risk_label=risk_label,
+        fetch=fetch,
+    )
+    return fundamental_out(r)
 
 
 def _active_style(session: Session) -> StyleKey | None:

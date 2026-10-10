@@ -1,4 +1,5 @@
-"""Market-data refresh job: reference lists → prices (holdings + benchmarks) → NAVs.
+"""Refresh jobs. Market data: reference lists → prices → delivery → NAVs → holdings' fundamentals.
+Fundamentals (weekly): holdings plus Nifty 500 peers in the same NSE industry, for medians.
 
 Each step skips anything that is already fresh unless `force` is set, so the job is cheap to
 run often. A failure on one item is recorded and the job moves on; old data is kept.
@@ -8,12 +9,13 @@ from collections.abc import Callable
 from functools import partial
 from typing import Literal, get_args
 
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.core.db import get_engine
 from app.core.profiles import ReferenceKey
 from app.data.delivery import refresh_delivery
 from app.data.files import REFERENCE_FILES
+from app.data.fundamentals import refresh_fundamentals
 from app.data.navs import refresh_nav
 from app.data.prices import refresh_daily
 from app.data.quotes import benchmark_targets, fund_targets, stock_targets
@@ -49,26 +51,96 @@ def market_refresh(scope: Scope = "all", force: bool = False) -> JobFn:
                 for t in fund_targets(s):
                     steps.append((t.label, partial(refresh_nav, s, t.code, t.label, force=force)))
 
-            counts = {"updated": 0, "skipped": 0, "failed": 0}
-            total = len(steps)
-            progress.update(0, total, "Starting")
-            for i, (label, step) in enumerate(steps):
-                progress.update(i, total, f"Refreshing {label}")
-                try:
-                    result = step()
-                    # Never leave a transaction open between steps: progress updates use their
-                    # own connection, and SQLite allows one writer at a time.
-                    s.commit()
-                except Exception as e:  # unexpected bug: record it, keep going
-                    s.rollback()
-                    result = RefreshResult("?", label, "failed", f"{e.__class__.__name__}: {e}")
-                counts[result.outcome] += 1
-                if result.outcome == "failed":
-                    progress.error(f"{label}: {result.message}")
-            progress.update(total, total)
-        return (
-            f"{counts['updated']} updated, {counts['skipped']} already fresh, "
-            f"{counts['failed']} failed"
-        )
+            if scope == "all":
+                for t in stock_targets(s):
+                    steps.append(
+                        (
+                            f"fundamentals {t.label}",
+                            partial(fundamentals_step, s, t.code, t.label, force),
+                        )
+                    )
+            return _run_steps(s, steps, progress)
+
+    return run
+
+
+def _run_steps(
+    s: Session, steps: list[tuple[str, Callable[[], RefreshResult]]], progress: Progress
+) -> str:
+    counts = {"updated": 0, "skipped": 0, "failed": 0}
+    total = len(steps)
+    progress.update(0, total, "Starting")
+    for i, (label, step) in enumerate(steps):
+        progress.update(i, total, f"Refreshing {label}")
+        try:
+            result = step()
+            # Never leave a transaction open between steps: progress updates use their
+            # own connection, and SQLite allows one writer at a time.
+            s.commit()
+        except Exception as e:  # unexpected bug: record it, keep going
+            s.rollback()
+            result = RefreshResult("?", label, "failed", f"{e.__class__.__name__}: {e}")
+        counts[result.outcome] += 1
+        if result.outcome == "failed":
+            progress.error(f"{label}: {result.message}")
+    progress.update(total, total)
+    return (
+        f"{counts['updated']} updated, {counts['skipped']} already fresh, {counts['failed']} failed"
+    )
+
+
+FUND_JOB_KIND = "fundamentals_refresh"
+
+
+def fundamentals_step(
+    session: Session, ticker: str, label: str | None, force: bool = False
+) -> RefreshResult:
+    """Refresh one stock's Yahoo fundamentals, then recompute its stored metrics for medians."""
+    from app.analysis.fundamental import analyse_fundamentals
+    from app.data.provider import CachedProvider
+
+    res = refresh_fundamentals(session, ticker, label, force=force)
+    if res.outcome != "failed":
+        analyse_fundamentals(session, CachedProvider(session), ticker, label=label, fetch=False)
+    return res
+
+
+def peer_targets(session: Session, holdings: list[tuple[str, str]], max_peers: int) -> list[str]:
+    """Nifty 500 stocks sharing an NSE industry with a holding: already-cached peers first."""
+    from app.data.indices import load_nifty500, nifty500_by_symbol
+    from app.models.tables import FundamentalsRaw
+
+    held = {t for t, _ in holdings}
+    by_sym = nifty500_by_symbol()
+    industries = {
+        by_sym[t.removesuffix(".NS")].industry
+        for t, _ in holdings
+        if t.removesuffix(".NS") in by_sym
+    }
+    cached = {r.ticker for r in session.exec(select(FundamentalsRaw))}
+    out: list[str] = []
+    for ind in sorted(industries):
+        peers = [f"{c.symbol}.NS" for c in load_nifty500() if c.industry == ind]
+        peers = [p for p in peers if p not in held]
+        peers.sort(key=lambda p: (p not in cached, p))
+        out.extend(peers[:max_peers])
+    return out
+
+
+def fundamentals_refresh(force: bool = False, peers: bool = True) -> JobFn:
+    def run(progress: Progress) -> str:
+        from app.core.profiles import get_profiles
+
+        with Session(get_engine()) as s:
+            holdings = [(t.code, t.label) for t in stock_targets(s)]
+            steps: list[tuple[str, Callable[[], RefreshResult]]] = [
+                (label, partial(fundamentals_step, s, code, label, force))
+                for code, label in holdings
+            ]
+            if peers:
+                max_peers = get_profiles().fundamental.sector_max_peers
+                for code in peer_targets(s, holdings, max_peers):
+                    steps.append((f"peer {code}", partial(fundamentals_step, s, code, None, force)))
+            return _run_steps(s, steps, progress)
 
     return run

@@ -8,7 +8,7 @@ from sqlmodel import Session
 from app.api.convert import imported_out
 from app.core.db import get_session
 from app.core.profiles import get_profiles
-from app.importers import cas, groww, manual
+from app.importers import cas, groww, manual, screener
 from app.importers.groww import NeedsMapping, UserMapping, field_specs
 from app.importers.tabular import ImportFileError
 from app.models.schemas import (
@@ -17,6 +17,7 @@ from app.models.schemas import (
     ImportedOut,
     ManualMFIn,
     NeedsMappingOut,
+    ScreenerImportedOut,
 )
 
 router = APIRouter(prefix="/import", tags=["import"])
@@ -42,7 +43,9 @@ def _user_mapping(raw: str | None) -> UserMapping | None:
     return UserMapping(m.header_row, m.columns, m.remember)
 
 
-def _needs_mapping_out(kind: Literal["stocks", "mf"], n: NeedsMapping) -> NeedsMappingOut:
+def _needs_mapping_out(
+    kind: Literal["stocks", "mf", "screener"], n: NeedsMapping
+) -> NeedsMappingOut:
     m = n.mapping
     return NeedsMappingOut(
         kind=kind,
@@ -120,6 +123,34 @@ def import_mf_manual(body: ManualMFIn, session: Session = Depends(get_session)) 
     return imported_out(session, result)
 
 
+@router.post("/screener", response_model=ScreenerImportedOut | NeedsMappingOut)
+async def import_screener(
+    file: UploadFile = File(
+        ..., description="Screener.in screen export (.csv/.xlsx) or company 'Export to Excel'"
+    ),
+    mapping: str | None = Form(None, description="ColumnMappingIn JSON, for a screen export"),
+    symbol: str | None = Form(None, description="NSE symbol, if a company file isn't matched"),
+    session: Session = Depends(get_session),
+) -> ScreenerImportedOut | NeedsMappingOut:
+    """Upload a file you exported from Screener.in yourself (the app never visits the site)."""
+    content = await _read(file)
+    try:
+        result = screener.import_screener(
+            session, content, file.filename or "upload.csv", _user_mapping(mapping), symbol
+        )
+    except (ImportFileError, ValueError) as e:
+        raise HTTPException(400, str(e)) from None
+    if isinstance(result, NeedsMapping):
+        return _needs_mapping_out("screener", result)
+    return ScreenerImportedOut(
+        kind=result.kind,
+        upload_id=result.upload_id,
+        matched=[{"symbol": s, "name": n} for s, n in result.matched],
+        unmatched=result.unmatched,
+        warnings=result.warnings,
+    )
+
+
 @router.get("/fields/{kind}", response_model=list[FieldSpecOut])
-def import_fields(kind: Literal["stocks", "mf"]) -> list[FieldSpecOut]:
+def import_fields(kind: Literal["stocks", "mf", "screener"]) -> list[FieldSpecOut]:
     return [FieldSpecOut.model_validate(f) for f in field_specs(kind)]

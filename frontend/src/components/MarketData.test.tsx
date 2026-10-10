@@ -24,8 +24,9 @@ const status: MarketStatus = {
     { kind: "stock", code: "ITC.NS", label: "ITC", price: null, previous: null, change_pct: null, as_of: null, source: null, freshness: { status: "unavailable", reason: "No data. Last attempt failed: HTTP 503" } },
     { kind: "mf", code: "118989", label: "HDFC Mid Cap", price: 219.816, previous: 217.078, change_pct: 1.26, as_of: "2026-10-08", source: "amfi", freshness: { status: "stale", reason: "Data from 08 Oct 2026, never refreshed." } },
   ],
-  schedule: { enabled: true, prices: "Mon–Fri 16:00 IST", navs: "Daily 23:30 IST" },
+  schedule: { enabled: true, prices: "Mon–Fri 16:00 IST", navs: "Daily 23:30 IST", fundamentals: "Weekly, Sat 10:00 IST" },
   last_job: null,
+  last_fundamentals_job: null,
   notes: ["Prices are end-of-day closes from Yahoo Finance."],
 };
 

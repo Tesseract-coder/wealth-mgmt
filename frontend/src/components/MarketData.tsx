@@ -54,6 +54,21 @@ export function MarketData() {
     mutationFn: (force: boolean) => marketApi.refresh("all", force),
     onSuccess: (j) => setJobId(j.id),
   });
+  const [fundJobId, setFundJobId] = useState<number | null>(null);
+  const lastFund = status.data?.last_fundamentals_job;
+  const fundTracked = fundJobId ?? (isActive(lastFund) ? (lastFund?.id ?? null) : null);
+  const fundJob = useQuery({
+    queryKey: ["job", fundTracked],
+    queryFn: () => marketApi.job(fundTracked as number),
+    enabled: fundTracked !== null,
+    refetchInterval: (q) => (isActive(q.state.data) || !q.state.data ? 2000 : false),
+  });
+  const refreshFund = useMutation({
+    mutationFn: () => marketApi.refresh("fundamentals"),
+    onSuccess: (j) => setFundJobId(j.id),
+  });
+  const fundRunning = isActive(fundJob.data) || refreshFund.isPending;
+  const shownFund: Job | null | undefined = fundJob.data ?? lastFund;
 
   if (status.isError) return <Alert tone="error">Could not load market data status: {status.error.message}</Alert>;
   if (!status.data) return <Card title="Market data">Loading…</Card>;
@@ -77,6 +92,14 @@ export function MarketData() {
           >
             Force re-download
           </Button>
+          <Button
+            variant="secondary"
+            disabled={fundRunning}
+            title="Your holdings' fundamentals plus sector peers for medians. Can take 10–30 minutes the first time."
+            onClick={() => refreshFund.mutate()}
+          >
+            {fundRunning ? "Fetching fundamentals…" : "Refresh fundamentals + peers"}
+          </Button>
         </div>
       }
     >
@@ -88,13 +111,15 @@ export function MarketData() {
         ))}
         <span className="text-slate-500">
           {s.schedule.enabled
-            ? `Auto-refresh: prices ${s.schedule.prices}, NAVs ${s.schedule.navs}`
+            ? `Auto-refresh: prices ${s.schedule.prices}, NAVs ${s.schedule.navs}, fundamentals ${s.schedule.fundamentals}`
             : "Auto-refresh is off"}
         </span>
       </div>
 
       {refresh.isError && <Alert tone="error">{refresh.error.message}</Alert>}
       {shownJob && <JobLine job={shownJob} />}
+      {shownFund && <JobLine job={shownFund} title="Fundamentals" />}
+      {refreshFund.isError && <Alert tone="error">{refreshFund.error.message}</Alert>}
 
       {(["benchmark", "stock", "mf"] as const).map((kind) => {
         const rows = s.quotes.filter((q) => q.kind === kind);
@@ -169,7 +194,7 @@ export function MarketData() {
   );
 }
 
-function JobLine({ job }: { job: Job }) {
+function JobLine({ job, title = "Last refresh" }: { job: Job; title?: string }) {
   const pct = job.total ? Math.round((job.done / job.total) * 100) : 0;
   const when = job.finished_at ?? job.started_at ?? job.created_at;
   return (
@@ -185,7 +210,7 @@ function JobLine({ job }: { job: Job }) {
         </div>
       ) : (
         <div className="text-slate-600 dark:text-slate-400">
-          Last refresh ({job.trigger}) {job.status === "failed" ? "failed" : "finished"} {formatFreshness(new Date(when))}:{" "}
+          {title} ({job.trigger}) {job.status === "failed" ? "failed" : "finished"} {formatFreshness(new Date(when))}:{" "}
           {job.message}
         </div>
       )}

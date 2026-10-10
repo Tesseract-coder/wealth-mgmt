@@ -187,6 +187,45 @@ technical:
   delivery_lookback_sessions: 21    # NSE bhavcopy files fetched: the latest + periods.delivery_avg before it
 
 # ---------------------------------------------------------------------------
+# 7.2 Fundamental engine. Percentages are in percent (15 = 15%).
+# ---------------------------------------------------------------------------
+fundamental:
+  # Sectors (NSE industry or Yahoo sector names) where debt/equity, current ratio, EV/EBITDA,
+  # ROCE and gross-margin tests don't apply: lending is a bank's business, not a risk signal.
+  financial_sectors: ["Financial Services", "Banks", "Insurance"]
+  sector_min_peers: 5            # fewer cached peers than this ⇒ no sector median
+  sector_max_peers: 40           # peers fetched per sector by the peer refresh
+  refresh_day: "sat"             # weekly fundamentals + peers refresh (Yahoo updates quarterly)
+  refresh_time_ist: "10:00"
+  screener_max_age_days: 120     # Screener.in uploads older than this are ignored (one quarter + slack)
+  cross_check_tolerance: 0.25    # our P/E, P/B, EV/EBITDA vs Yahoo's own: differ by more ⇒ shown as a data warning
+  thresholds:
+    valuation_cheap_ratio: 0.8   # P/E, P/B, EV/EBITDA ≤ 0.8 × sector median ⇒ cheaper than peers
+    valuation_rich_ratio: 1.2    # ≥ 1.2 × sector median ⇒ pricier than peers
+    peg_cheap: 1.0
+    peg_rich: 2.0
+    roe_good: 15
+    roe_poor: 8
+    roce_good: 15
+    roce_poor: 8
+    margin_trend_flat_pp: 1.0    # 3-year margin change within ±1 percentage point ⇒ stable
+    growth_good: 15              # revenue / profit CAGR
+    growth_poor: 0
+    quarter_yoy_good: 10
+    quarter_yoy_poor: 0
+    debt_equity_low: 0.3         # the upper limit comes from your risk level (max_debt_to_equity)
+    interest_coverage_good: 5
+    interest_coverage_poor: 2
+    current_ratio_good: 1.5
+    current_ratio_poor: 1.0
+    dividend_yield_high: 3
+    fscore_strong: 7
+    fscore_weak: 3
+    promoter_change_pp: 1.0      # promoter stake change (percentage points) worth flagging
+    pledge_warn_pct: 10          # pledge above this is a warning (severe: signals.severe_flags)
+    institution_change_pp: 1.0   # FII / DII stake change worth flagging
+
+# ---------------------------------------------------------------------------
 # Importers (fuzzy-match scores are 0–100)
 # ---------------------------------------------------------------------------
 importing:

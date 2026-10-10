@@ -14,7 +14,8 @@ A personal, locally-run dashboard that analyses your **Groww** stock and mutual 
 | 2 | Groww/CAS/manual import, column mapper, ticker resolution, snapshots | ✅ |
 | 3 | Market data: Yahoo prices, mfapi/AMFI NAVs, NSE lists, caching, rate limits, freshness, daily schedule | ✅ |
 | 4 | Technical engine: trend/momentum/volatility/volume/structure indicators, plain-English readings, delivery % | ✅ |
-| 5–11 | Fundamentals, signals, UI, screener, Google Sheets, polish | ⏳ |
+| 5 | Fundamental engine: valuation, profitability, growth, health, ownership, Piotroski F-score, sector medians, Screener.in uploads | ✅ |
+| 6–11 | Scores and signals, UI, screener, Google Sheets, polish | ⏳ |
 
 ## Quick start (no Docker)
 
@@ -51,9 +52,13 @@ See [docs/GROWW_EXPORT_GUIDE.md](docs/GROWW_EXPORT_GUIDE.md). To try the app wit
 
 Free sources only: Yahoo Finance (delayed end-of-day prices), mfapi.in and AMFI (NAVs), NSE archives (symbol lists, Nifty 500). Everything is cached in SQLite, rate-limited per source, and labelled **fresh / stale / unavailable** with a reason. The **Status** page shows this and has a **Refresh now** button. Refreshes run automatically Mon–Fri at 16:00 IST (prices) and daily at 23:30 IST (NAVs), and on startup for anything stale. See [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md).
 
-## Technical readings
+## Analysis
 
-The **Technicals** page shows, for each holding or any NSE stock, every indicator from the spec on your style's timeframes, grouped into bullish / bearish / neutral readings with the numbers behind each. How each one is calculated and read is in [docs/SCORING_METHOD.md](docs/SCORING_METHOD.md).
+The **Analysis** page has two tabs for each holding or any NSE stock:
+- **Technical:** every indicator from the spec on your style's timeframes, grouped into bullish / bearish / neutral readings with the numbers behind each.
+- **Fundamental:** valuation (vs sector medians), profitability, growth, financial health, ownership and the Piotroski F-score, each with its basis.
+
+Upload Screener.in exports (Import → Screener.in data) for ownership data and 10-year history. [docs/SCORING_METHOD.md](docs/SCORING_METHOD.md) explains every calculation.
 
 ## Configuration
 
