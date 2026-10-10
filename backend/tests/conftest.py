@@ -17,8 +17,12 @@ from app.jobs import runner
 
 
 @pytest.fixture(autouse=True)
-def _no_waiting(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    """Tests never sleep for rate limits or backoff, and never reach the network."""
+def _no_waiting(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[None]:
+    """Tests never sleep for rate limits or backoff, never reach the network, and never read
+    thresholds you edited in Settings."""
+    monkeypatch.setenv("PROFILES_OVERRIDE_PATH", str(tmp_path / "profiles.local.yaml"))
+    get_settings.cache_clear()
+    profiles._profiles = None
     rate_limit.reset_limiters()
     for source in ("yahoo", "mfapi", "nse", "amfi"):
         rate_limit._limiters[source] = rate_limit.RateLimiter(1e9, sleep=lambda _: None)
@@ -43,6 +47,7 @@ def _isolate(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path / 'test.db'}")
     monkeypatch.setenv("REFERENCE_DATA_DIR", str(tmp_path / "reference"))
     monkeypatch.setenv("SCHEDULER_ENABLED", "false")
+    monkeypatch.setenv("PROFILES_OVERRIDE_PATH", str(tmp_path / "profiles.local.yaml"))
     get_settings.cache_clear()
     db._engine = None
     profiles._profiles = None

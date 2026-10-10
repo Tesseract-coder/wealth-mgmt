@@ -1,9 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { api, type RiskKey, type StyleKey } from "../api/client";
-import { HoldingSignalsView } from "../components/SignalView";
-import { Card, inputClass } from "../components/ui";
+import { api, signalApi, type RiskKey, type StyleKey } from "../api/client";
+import { HoldingsTable } from "../components/HoldingsTable";
+import { Alert, Card, inputClass } from "../components/ui";
 import { analysisQuery } from "./Technical";
+
+function HoldingsData({ style, risk }: { style: StyleKey | null; risk: RiskKey | null }) {
+  const q = useQuery({ queryKey: ["signal-holdings", style, risk], queryFn: () => signalApi.holdings(style, risk) });
+  if (q.isError) return <Alert tone="error">{q.error.message}</Alert>;
+  if (!q.data) return <Card>Scoring your holdings…</Card>;
+  return <HoldingsTable d={q.data} linkQuery={analysisQuery(style)} />;
+}
 
 /** Every stock holding with its signal, scores, weight and suggested action. */
 export function Holdings() {
@@ -55,7 +62,7 @@ export function Holdings() {
           </label>
         </div>
       </div>
-      {ready ? <HoldingSignalsView style={style} risk={risk} linkQuery={analysisQuery(style)} /> : <Card>Loading…</Card>}
+      {ready ? <HoldingsData style={style} risk={risk} /> : <Card>Loading…</Card>}
     </div>
   );
 }

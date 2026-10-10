@@ -37,6 +37,28 @@ class ProfileIn(BaseModel):
     gsheet_url: str | None = None
 
 
+class ThresholdOut(BaseModel):
+    path: str
+    group: str
+    label: str
+    unit: Literal["fraction", "score", "x", "cr", "ratio"]
+    nullable: bool
+    value: float | None
+    default: float | None
+    edited: bool
+
+
+class ThresholdsOut(BaseModel):
+    items: list[ThresholdOut]
+    override_file: str
+    edited: int
+    note: str
+
+
+class ThresholdsIn(BaseModel):
+    values: dict[str, float | None]
+
+
 # --------------------------------------------------------------------------- import / portfolio
 
 
@@ -566,8 +588,13 @@ class HoldingSignalOut(BaseModel):
     confidence: ConfidenceOut | None
     weight: float | None
     max_weight: float
+    quantity: float | None
+    avg_price: float | None
+    price: float | None
+    invested: float | None
     value: float | None
     pnl: float | None
+    pnl_pct: float | None
     sector: str | None
     flags: list[FlagOut]
     top_bullish: list[str]
@@ -757,6 +784,7 @@ class SliceOut(BaseModel):
     label: str
     value: float
     weight: float
+    limited: bool = True
 
 
 class SnapshotPointOut(BaseModel):
@@ -797,4 +825,40 @@ class PortfolioSummaryOut(BaseModel):
     performance_basis: str
     snapshots: list[SnapshotPointOut]
     notes: list[str]
+    disclaimer: str
+
+
+# --------------------------------------------------------------------------- dashboard (Phase 8)
+
+
+class RollingSeriesOut(BaseModel):
+    years: int
+    starts: list[date]
+    fund: list[float]
+    benchmark: list[float]
+
+
+class FundChartOut(BaseModel):
+    code: str
+    benchmark: BenchmarkOut | None
+    dates: list[date]
+    fund: list[float]
+    bench: list[float | None]
+    rolling: list[RollingSeriesOut]
+    notes: list[str]
+
+
+class ActionOut(BaseModel):
+    severity: Literal["high", "medium", "low"]
+    kind: Literal["stock", "fund", "portfolio", "data"]
+    subject: str
+    title: str
+    detail: str
+    link: str | None
+
+
+class ActionsOut(BaseModel):
+    style_label: str
+    risk_label: str
+    actions: list[ActionOut]
     disclaimer: str

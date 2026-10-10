@@ -67,6 +67,7 @@ export interface AppConfig {
   version: number;
   styles: Record<StyleKey, StyleConfig>;
   risk_levels: Record<RiskKey, RiskConfig>;
+  technical?: { thresholds: { rsi_overbought: number; rsi_oversold: number } };
   disclaimer: string;
 }
 
@@ -605,8 +606,13 @@ export interface HoldingSignal {
   confidence: ConfidenceLevel | null;
   weight: number | null;
   max_weight: number;
+  quantity: number | null;
+  avg_price: number | null;
+  price: number | null;
+  invested: number | null;
   value: number | null;
   pnl: number | null;
+  pnl_pct: number | null;
   sector: string | null;
   flags: Flag[];
   top_bullish: string[];
@@ -758,6 +764,8 @@ export interface Slice {
   label: string;
   value: number;
   weight: number;
+  /** false for groups that aren't a sector (funds, ETFs): no sector limit */
+  limited?: boolean;
 }
 
 export interface PortfolioSummary {
@@ -808,3 +816,107 @@ export const fundApi = {
 export const summaryApi = {
   get: () => request<PortfolioSummary>("/portfolio/summary"),
 };
+
+// --------------------------------------------------------------------------- charts & dashboard
+
+export type ChartInterval = "1d" | "1wk" | "1mo";
+
+export interface Bar {
+  t: string;
+  open: number | null;
+  high: number | null;
+  low: number | null;
+  close: number;
+  adj_close?: number | null;
+  volume: number | null;
+}
+
+export interface PriceSeries {
+  ticker: string;
+  interval: string;
+  source: string;
+  delayed: boolean;
+  last_complete: boolean;
+  freshness: Freshness;
+  fetch_error: string | null;
+  bars: Bar[];
+}
+
+export interface IndicatorSeries {
+  ticker: string;
+  interval: string;
+  t: string[];
+  columns: Record<string, (number | null)[]>;
+}
+
+export interface FundChart {
+  code: string;
+  benchmark: { ticker: string; label: string } | null;
+  dates: string[];
+  fund: number[];
+  bench: (number | null)[];
+  rolling: { years: number; starts: string[]; fund: number[]; benchmark: number[] }[];
+  notes: string[];
+}
+
+export type Severity = "high" | "medium" | "low";
+
+export interface ActionItem {
+  severity: Severity;
+  kind: "stock" | "fund" | "portfolio" | "data";
+  subject: string;
+  title: string;
+  detail: string;
+  link: string | null;
+}
+
+export interface Actions {
+  style_label: string;
+  risk_label: string;
+  actions: ActionItem[];
+  disclaimer: string;
+}
+
+export interface Threshold {
+  path: string;
+  group: string;
+  label: string;
+  unit: "fraction" | "score" | "x" | "cr" | "ratio";
+  nullable: boolean;
+  value: number | null;
+  default: number | null;
+  edited: boolean;
+}
+
+export interface Thresholds {
+  items: Threshold[];
+  override_file: string;
+  edited: number;
+  note: string;
+}
+
+export const chartApi = {
+  prices: (ticker: string, interval: ChartInterval, start?: string) =>
+    request<PriceSeries>(
+      `/market/prices/${encodeURIComponent(ticker)}?interval=${interval}${start ? `&start=${start}` : ""}`,
+    ),
+  indicators: (ticker: string, interval: ChartInterval, start?: string) =>
+    request<IndicatorSeries>(
+      `/analysis/technical/${encodeURIComponent(ticker)}/series?interval=${interval}${start ? `&start=${start}` : ""}`,
+    ),
+  fund: (code: string, years = 5) => request<FundChart>(`/analysis/mf/${encodeURIComponent(code)}/chart?years=${years}`),
+};
+
+export const dashboardApi = {
+  actions: () => request<Actions>("/portfolio/actions"),
+  thresholds: () => request<Thresholds>("/settings/thresholds"),
+  saveThresholds: (values: Record<string, number | null>) =>
+    request<Thresholds>("/settings/thresholds", { method: "PUT", body: JSON.stringify({ values }) }),
+  resetThresholds: () => request<Thresholds>("/settings/thresholds", { method: "DELETE" }),
+};
+
+/** Plain links: the browser downloads the file. */
+export const EXPORTS = [
+  { href: `${BASE}/export/stocks.csv`, label: "Stock signals (CSV)" },
+  { href: `${BASE}/export/funds.csv`, label: "Fund signals (CSV)" },
+] as const;

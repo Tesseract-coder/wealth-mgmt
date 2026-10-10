@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { summaryApi, type PortfolioSummary, type Slice } from "../api/client";
+import { useState } from "react";
+import { summaryApi, type PortfolioSummary } from "../api/client";
+import { AllocationDonut, ComparisonLine, SectorBars } from "../charts/PortfolioCharts";
 import { formatDate, formatINR } from "../lib/format";
 import { Alert, Card } from "./ui";
 
@@ -17,37 +19,16 @@ function Kpi({ label, value, sub, tone }: { label: string; value: string; sub?: 
   );
 }
 
-function Bars({ title, items }: { title: string; items: Slice[] }) {
-  return (
-    <div>
-      <h3 className="mb-1 text-sm font-semibold">{title}</h3>
-      <ul className="space-y-1 text-sm">
-        {items.map((s) => (
-          <li key={s.key}>
-            <div className="flex justify-between gap-2">
-              <span className="truncate">{s.label}</span>
-              <span className="tabular-nums text-slate-600 dark:text-slate-400">{(s.weight * 100).toFixed(1)}%</span>
-            </div>
-            <div className="h-1.5 rounded bg-slate-200 dark:bg-slate-800" aria-hidden="true">
-              <div className="h-1.5 rounded bg-slate-600 dark:bg-slate-300" style={{ width: `${Math.min(100, s.weight * 100)}%` }} />
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
 const tone = (v: number | null | undefined) => (v == null ? undefined : v >= 0 ? "up" : "down");
 
-export function PortfolioSummaryCard() {
+export function PortfolioSummaryCard({ sectorLimit }: { sectorLimit?: number | null }) {
   const q = useQuery({ queryKey: ["portfolio-summary"], queryFn: summaryApi.get });
   if (q.isError) return <Alert tone="error">{q.error.message}</Alert>;
   if (!q.data) return <Card title="Portfolio">Loading…</Card>;
-  return <PortfolioSummaryBody s={q.data} />;
+  return <PortfolioSummaryBody s={q.data} sectorLimit={sectorLimit} />;
 }
 
-export function PortfolioSummaryBody({ s }: { s: PortfolioSummary }) {
+export function PortfolioSummaryBody({ s, sectorLimit }: { s: PortfolioSummary; sectorLimit?: number | null }) {
   if (s.total_value <= 0)
     return (
       <Alert tone="info">
@@ -78,25 +59,34 @@ export function PortfolioSummaryBody({ s }: { s: PortfolioSummary }) {
           ))}
         </ul>
       )}
-      <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Bars title="Top holdings" items={s.by_holding.slice(0, 8)} />
-        <Bars title="Sector" items={s.by_sector} />
-        <Bars title="Market cap" items={s.by_mcap} />
-        <Bars title="Asset class" items={s.by_asset_class} />
+      <div className="mt-4 grid gap-6 lg:grid-cols-2">
+        <AllocationPicker s={s} />
+        <SectorBars items={s.by_sector} limit={sectorLimit ?? null} />
       </div>
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <div className="text-sm">
-          <h3 className="mb-1 font-semibold">Risk and performance</h3>
-          <p>
+          <h3 className="mb-1 font-semibold">Value vs Nifty 50</h3>
+          {last > 0 ? (
+            <>
+              <ComparisonLine
+                dates={s.performance_dates}
+                series={[
+                  { name: "Portfolio", values: s.performance_portfolio },
+                  { name: "Nifty 50", values: s.performance_nifty, dashed: true },
+                ]}
+              />
+              <p className="mt-1">
+                Since {formatDate(s.performance_dates[0])}: portfolio {pct((s.performance_portfolio[last] ?? 100) - 100)}, Nifty 50{" "}
+                {pct((s.performance_nifty[last] ?? 100) - 100)}
+                <span className="block text-xs text-slate-500">Growth of 100. {s.performance_basis}</span>
+              </p>
+            </>
+          ) : (
+            <p className="text-slate-500">Not enough price history yet. Run Refresh now in Settings.</p>
+          )}
+          <p className="mt-3">
             Portfolio beta {s.beta?.toFixed(2) ?? "—"} <span className="text-xs text-slate-500">({s.beta_basis})</span>
           </p>
-          {last > 0 && (
-            <p className="mt-1">
-              Since {formatDate(s.performance_dates[0])}: portfolio {pct((s.performance_portfolio[last] ?? 100) - 100)}, Nifty 50{" "}
-              {pct((s.performance_nifty[last] ?? 100) - 100)}
-              <span className="block text-xs text-slate-500">{s.performance_basis}</span>
-            </p>
-          )}
           {s.notes.map((n) => (
             <p key={n} className="mt-1 text-xs text-slate-500">
               {n}
@@ -141,5 +131,35 @@ export function PortfolioSummaryBody({ s }: { s: PortfolioSummary }) {
         )}
       </div>
     </Card>
+  );
+}
+
+const DIMENSIONS = [
+  { key: "by_holding", label: "Holding" },
+  { key: "by_asset_class", label: "Asset class" },
+  { key: "by_mcap", label: "Market cap" },
+] as const;
+
+function AllocationPicker({ s }: { s: PortfolioSummary }) {
+  const [dim, setDim] = useState<(typeof DIMENSIONS)[number]["key"]>("by_holding");
+  const label = DIMENSIONS.find((d) => d.key === dim)?.label ?? "";
+  return (
+    <div>
+      <div role="tablist" aria-label="Allocation by" className="mb-2 flex gap-1 text-xs">
+        {DIMENSIONS.map((d) => (
+          <button
+            key={d.key}
+            type="button"
+            role="tab"
+            aria-selected={dim === d.key}
+            onClick={() => setDim(d.key)}
+            className={`rounded px-2 py-1 ${dim === d.key ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900" : "border border-slate-300 dark:border-slate-700"}`}
+          >
+            {d.label}
+          </button>
+        ))}
+      </div>
+      <AllocationDonut items={s[dim]} title={`Allocation by ${label.toLowerCase()}`} />
+    </div>
   );
 }

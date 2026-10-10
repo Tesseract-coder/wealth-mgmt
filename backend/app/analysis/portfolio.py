@@ -7,7 +7,7 @@ instead of filling the gap.
 """
 
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date, datetime, timedelta
 
 import pandas as pd
@@ -32,6 +32,11 @@ class Slice:
     label: str
     value: float
     weight: float
+    limited: bool = True  # False for groups that aren't a sector (funds, ETFs, unknown)
+
+
+# Sector slices that hold several sectors at once: the sector limit doesn't apply.
+NOT_A_SECTOR = ("Mutual funds", "Unknown", "Index ETFs")
 
 
 @dataclass(frozen=True)
@@ -339,10 +344,7 @@ def summarise(
             )
     for name, v in sectors.items():
         w = v / total if total else 0
-        if (
-            not name.startswith(("Mutual funds", "Unknown", "Index ETFs"))
-            and w > risk.max_weight_per_sector
-        ):
+        if not name.startswith(NOT_A_SECTOR) and w > risk.max_weight_per_sector:
             warnings.append(
                 f"{name} is {w * 100:.1f}% of your portfolio, above your "
                 f"{risk.max_weight_per_sector * 100:g}% sector limit"
@@ -468,7 +470,10 @@ def summarise(
         xirr_coverage=round(cov, 3),
         xirr_basis=xbasis,
         by_holding=by_holding,
-        by_sector=_slices(dict(sectors), total),
+        by_sector=[
+            replace(x, limited=not x.key.startswith(NOT_A_SECTOR))
+            for x in _slices(dict(sectors), total)
+        ],
         by_mcap=_slices(dict(mcaps), total),
         by_asset_class=_slices(dict(classes), total),
         warnings=warnings,

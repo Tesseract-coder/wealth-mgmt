@@ -17,7 +17,8 @@ A personal, locally-run dashboard that analyses your **Groww** stock and mutual 
 | 5 | Fundamental engine: valuation, profitability, growth, health, ownership, Piotroski F-score, sector medians, Screener.in uploads | ✅ |
 | 6 | Scores and signals: style-weighted composite, confidence, red flags, Buy/Hold/Sell with reasons, ATR stop-loss and targets, position sizing, tax note, signal history | ✅ |
 | 7 | Mutual funds (XIRR, CAGR, rolling returns vs benchmark, risk, Regular vs Direct, cost, overlap, Continue/Review/Switch) and portfolio analytics (P&L, day change, XIRR, allocation, beta, correlation, vs Nifty 50) | ✅ |
-| 8–11 | Full dashboard UI with charts, screener, Google Sheets, polish | ⏳ |
+| 8 | Dashboard: onboarding, Overview (KPIs, allocation donut, sector bars, value vs Nifty 50, Action needed), sortable holdings table, candlestick charts with overlays and RSI/MACD panes, fund NAV and rolling-return charts, Settings with editable thresholds, CSV export, data-freshness line, mobile menu | ✅ |
+| 9–11 | Screener and watchlist, Google Sheets, polish | ⏳ |
 
 ## Quick start (no Docker)
 
@@ -52,24 +53,30 @@ See [docs/GROWW_EXPORT_GUIDE.md](docs/GROWW_EXPORT_GUIDE.md). To try the app wit
 
 ## Market data
 
-Free sources only: Yahoo Finance (delayed end-of-day prices), mfapi.in and AMFI (NAVs), NSE archives (symbol lists, Nifty 500). Everything is cached in SQLite, rate-limited per source, and labelled **fresh / stale / unavailable** with a reason. The **Status** page shows this and has a **Refresh now** button. Refreshes run automatically Mon–Fri at 16:00 IST (prices) and daily at 23:30 IST (NAVs), and on startup for anything stale. See [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md).
+Free sources only: Yahoo Finance (delayed end-of-day prices), mfapi.in and AMFI (NAVs), NSE archives (symbol lists, Nifty 500). Everything is cached in SQLite, rate-limited per source, and labelled **fresh / stale / unavailable** with a reason. **Settings → Data refresh** shows this and has a **Refresh now** button; every page shows when prices were last updated. Refreshes run automatically Mon–Fri at 16:00 IST (prices) and daily at 23:30 IST (NAVs), and on startup for anything stale. See [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md).
+
+## Dashboard
+
+On first run you choose an investing style and risk level (Medium by default); change them later in **Settings**. The **Overview** shows value, invested, P&L, XIRR and day change, an allocation donut, sector bars against your sector limit, your value vs Nifty 50, and an **Action needed** list sorted by severity, each item linking to its reasons.
 
 ## Analysis
 
-The **Holdings** page gives every stock a **Buy / Hold / Sell** signal with its composite, technical and fundamental scores, confidence, weight vs your limit, the rule that fired and a suggested quantity. Switch style or risk level to see the same holdings another way.
+The **Holdings** page is a sortable, filterable table that gives every stock a **Buy / Hold / Sell** signal with its composite, technical and fundamental scores, confidence, weight vs your limit, the rule that fired and a suggested quantity. Switch style or risk level to see the same holdings another way.
 
 The **Analysis** page has three tabs for each holding or any NSE stock:
-- **Signal:** the signal and why; the top 3 bullish and bearish reasons, each with the points it adds to the score; red flags; the ATR stop-loss and targets (nearest resistance, 2R, 3R); position size; a tax note (STCG/LTCG); and the signal history.
+- **Signal:** a candlestick chart (daily/weekly/monthly, 6M–5Y) with overlays you can toggle (moving averages, Bollinger bands, Supertrend, support/resistance, stop-loss and targets, volume) and RSI and MACD panes; the signal and why; the top 3 bullish and bearish reasons, each with the points it adds to the score; red flags; the ATR stop-loss and targets (nearest resistance, 2R, 3R); position size; a tax note (STCG/LTCG); and the signal history; and the fundamentals against sector medians.
 - **Technical:** every indicator from the spec on your style's timeframes, grouped into bullish / bearish / neutral readings with the numbers behind each.
 - **Fundamental:** valuation (vs sector medians), profitability, growth, financial health, ownership and the Piotroski F-score, each with its basis.
 
-The **Mutual funds** page gives each fund a **Continue / Review / Switch** signal from its returns vs its category benchmark (1/3/5-year and rolling), risk (volatility, Sharpe, Sortino, max drawdown), Regular vs Direct cost gap, expense ratio (you enter it) and overlap with your other funds (upload AMC portfolio files under Import → Fund portfolios). The **Overview** page shows your portfolio's value, P&L, day change, XIRR, allocation, concentration warnings, beta, correlations and performance vs Nifty 50.
+The **Mutual funds** page gives each fund a NAV-vs-benchmark chart, rolling-return charts and a **Continue / Review / Switch** signal from its returns vs its category benchmark (1/3/5-year and rolling), risk (volatility, Sharpe, Sortino, max drawdown), Regular vs Direct cost gap, expense ratio (you enter it) and overlap with your other funds (upload AMC portfolio files under Import → Fund portfolios). The **Overview** page shows your portfolio's value, P&L, day change, XIRR, allocation, concentration warnings, beta, correlations and performance vs Nifty 50.
 
 Upload Screener.in exports (Import → Screener.in data) for ownership data and 10-year history. [docs/SCORING_METHOD.md](docs/SCORING_METHOD.md) explains every calculation.
 
 ## Configuration
 
 - **`backend/config/profiles.yaml`**: every threshold (styles, risk levels, signal bands, screener limits, tax rates). It is validated at startup, so a typo stops the app with a clear message instead of producing wrong signals.
+- **Settings → Thresholds**: edit the risk limits, buy threshold, signal bands and style weights in the browser. Changes are checked against the whole config, apply at once, and are saved in `backend/var/profiles.local.yaml` (layered over `profiles.yaml`; **Reset** deletes it).
+- **Settings → Export**: download your stock and fund signals as CSV. Each file ends with the date and the disclaimer.
 - **`.env`**: paths, ports and log level. Secrets (the Google service-account JSON) go in `secrets/`, which is gitignored.
 
 Your data lives in `backend/var/app.db` (or the `appdata` Docker volume). It is never committed.

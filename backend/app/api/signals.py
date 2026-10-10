@@ -173,8 +173,15 @@ def holdings_signals(
                 confidence=s.score.confidence,
                 weight=None if s.weight is None else round(s.weight, 4),
                 max_weight=s.max_weight,
+                quantity=pos.quantity if pos else None,
+                avg_price=round(pos.avg_price, 2) if pos else None,
+                price=None if pos is None or pos.price is None else round(pos.price, 2),
+                invested=round(pos.invested, 2) if pos else None,
                 value=None if pos is None or pos.value is None else round(pos.value, 2),
                 pnl=None if pos is None or pos.pnl is None else round(pos.pnl, 2),
+                pnl_pct=None
+                if pos is None or pos.pnl is None or not pos.invested
+                else round(pos.pnl / pos.invested * 100, 2),
                 sector=s.sector,
                 flags=[FlagOut(**f.__dict__) for f in s.flags],
                 top_bullish=[r.text for r in s.bullish],

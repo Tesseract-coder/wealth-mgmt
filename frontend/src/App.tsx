@@ -3,15 +3,18 @@ import { Layout } from "./components/Layout";
 import { Holdings } from "./pages/Holdings";
 import { Import } from "./pages/Import";
 import { MutualFunds } from "./pages/MutualFunds";
+import { Onboarding } from "./pages/Onboarding";
+import { Overview } from "./pages/Overview";
 import { Placeholder } from "./pages/Placeholder";
-import { Status } from "./pages/Status";
+import { Settings } from "./pages/Settings";
 import { Technical } from "./pages/Technical";
 
 export function App() {
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route index element={<Status />} />
+        <Route index element={<Overview />} />
+        <Route path="onboarding" element={<Onboarding />} />
         <Route path="import" element={<Import />} />
         <Route path="holdings" element={<Holdings />} />
         <Route path="analysis" element={<Technical />} />
@@ -21,7 +24,7 @@ export function App() {
         <Route path="mutual-funds/:code" element={<MutualFunds />} />
         <Route path="screener" element={<Placeholder title="Screener" phase={9} />} />
         <Route path="watchlist" element={<Placeholder title="Watchlist" phase={9} />} />
-        <Route path="settings" element={<Placeholder title="Settings" phase={8} />} />
+        <Route path="settings" element={<Settings />} />
         <Route path="*" element={<Placeholder title="Not found" phase={0} />} />
       </Route>
     </Routes>

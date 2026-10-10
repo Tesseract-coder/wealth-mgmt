@@ -233,6 +233,9 @@ def test_portfolio_summary(client: TestClient, monkeypatch: pytest.MonkeyPatch) 
         assert sum(x["weight"] for x in s[k]) == pytest.approx(1.0, abs=0.01), k
     classes = {x["label"] for x in s["by_asset_class"]}
     assert {"Stocks & ETFs", "Equity funds"} <= classes
+    funds_slice = next(x for x in s["by_sector"] if x["key"].startswith("Mutual funds"))
+    assert funds_slice["limited"] is False  # not a sector: no sector limit
+    assert any(x["limited"] for x in s["by_sector"])
     assert s["xirr"] is not None and s["xirr"] > 0
     assert 0 < s["xirr_coverage"] < 0.5  # only the manual fund is dated
     assert "Partial" in s["xirr_basis"] and "lump sum" in s["xirr_basis"]

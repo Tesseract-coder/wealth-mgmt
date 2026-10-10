@@ -411,7 +411,7 @@ export function HoldingSignalsTable({ d, linkQuery = "" }: { d: HoldingSignals; 
       <Card title={`Signals · ${d.style_label} style (technical ${Math.round(d.technical_weight * 100)}%), ${d.risk_label} risk`}>
         <p className="mb-3 text-sm text-slate-500">
           Portfolio {formatINR(d.total_value, 0)} ({d.weight_base === "portfolio" ? `stocks ${formatINR(d.stock_value, 0)} + funds ${formatINR(d.fund_value, 0)}` : "stocks only"}). Uses cached data
-          only: run <b>Refresh now</b> on the Overview page first. Sorted by what needs attention.
+          only: run <b>Refresh now</b> in Settings → Data refresh first. Sorted by what needs attention.
         </p>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">

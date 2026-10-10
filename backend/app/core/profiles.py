@@ -3,7 +3,7 @@
 import logging
 from datetime import time
 from pathlib import Path
-from typing import Literal, get_args
+from typing import Any, Literal, get_args
 
 import yaml
 from pydantic import BaseModel, Field, ValidationError, model_validator
@@ -482,17 +482,36 @@ class ConfigError(RuntimeError):
     pass
 
 
-def load_profiles(path: Path) -> Profiles:
+def deep_merge(base: dict[str, Any], over: dict[str, Any]) -> dict[str, Any]:
+    out = dict(base)
+    for k, v in over.items():
+        out[k] = (
+            deep_merge(out[k], v) if isinstance(v, dict) and isinstance(out.get(k), dict) else v
+        )
+    return out
+
+
+def read_yaml(path: Path) -> dict[str, Any]:
     try:
         raw = yaml.safe_load(path.read_text(encoding="utf-8"))
     except FileNotFoundError as e:
         raise ConfigError(f"Config file not found: {path}") from e
     except yaml.YAMLError as e:
         raise ConfigError(f"Config file {path} is not valid YAML: {e}") from e
+    if not isinstance(raw, dict):
+        raise ConfigError(f"Config file {path} must be a mapping")
+    return raw
+
+
+def load_profiles(path: Path, override: Path | None = None) -> Profiles:
+    raw = read_yaml(path)
+    if override is not None and override.exists():
+        raw = deep_merge(raw, read_yaml(override))
     try:
         return Profiles.model_validate(raw)
     except ValidationError as e:
-        raise ConfigError(f"Config file {path} failed validation:\n{e}") from e
+        where = f"{path} + {override}" if override is not None and override.exists() else path
+        raise ConfigError(f"Config file {where} failed validation:\n{e}") from e
 
 
 _profiles: Profiles | None = None
@@ -501,7 +520,9 @@ _profiles: Profiles | None = None
 def get_profiles() -> Profiles:
     global _profiles
     if _profiles is None:
-        _profiles = load_profiles(get_settings().profiles_path)
+        _profiles = load_profiles(
+            get_settings().profiles_path, get_settings().profiles_override_path
+        )
         logger.info("Loaded config from %s", get_settings().profiles_path)
     return _profiles
 

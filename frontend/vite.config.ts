@@ -7,6 +7,21 @@ const backend = process.env.VITE_BACKEND_URL ?? "http://localhost:8000";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  build: {
+    rollupOptions: {
+      output: {
+        // Chart libraries in their own cached chunks.
+        manualChunks: (id) =>
+          id.includes("node_modules/lightweight-charts") || id.includes("node_modules/fancy-canvas")
+            ? "candles"
+            : /node_modules\/(recharts|d3-|victory-vendor|@reduxjs|immer|reselect|es-toolkit)/.test(id)
+              ? "recharts"
+              : id.includes("node_modules")
+                ? "vendor"
+                : undefined,
+      },
+    },
+  },
   server: {
     host: true,
     port: 5173,

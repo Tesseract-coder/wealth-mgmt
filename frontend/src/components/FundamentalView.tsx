@@ -44,14 +44,14 @@ export function formatMetric(m: Pick<Metric, "value" | "unit">): string {
   }
 }
 
-export function FundamentalReportView({ ticker }: { ticker: string }) {
-  const q = useQuery({ queryKey: ["fundamental", ticker], queryFn: () => fundamentalApi.report(ticker) });
+export function FundamentalReportView({ ticker, metricsOnly = false, enabled = true }: { ticker: string; metricsOnly?: boolean; enabled?: boolean }) {
+  const q = useQuery({ queryKey: ["fundamental", ticker], queryFn: () => fundamentalApi.report(ticker), enabled });
   if (q.isError) return <Alert tone="error">{q.error.message}</Alert>;
   if (!q.data) return <Card>Loading fundamentals for {ticker}… (the first look downloads them from Yahoo Finance)</Card>;
-  return <FundamentalBody r={q.data} />;
+  return <FundamentalBody r={q.data} metricsOnly={metricsOnly} />;
 }
 
-export function FundamentalBody({ r }: { r: FundamentalReport }) {
+export function FundamentalBody({ r, metricsOnly = false }: { r: FundamentalReport; metricsOnly?: boolean }) {
   const byKey = new Map(r.metrics.map((m) => [m.key, m]));
   return (
     <div className="space-y-4">
@@ -102,7 +102,7 @@ export function FundamentalBody({ r }: { r: FundamentalReport }) {
         </div>
       </Card>
 
-      {r.fscore && (
+      {!metricsOnly && r.fscore && (
         <Card title={`Piotroski F-score: ${r.fscore.score === null ? `not scored (${r.fscore.computable}/9 tests have data)` : `${r.fscore.score}/9`}`}>
           <ul className="grid gap-1 text-sm sm:grid-cols-2">
             {r.fscore.tests.map((t) => (
@@ -117,6 +117,7 @@ export function FundamentalBody({ r }: { r: FundamentalReport }) {
         </Card>
       )}
 
+      {!metricsOnly && (
       <Card title="Readings">
         <Readings observations={r.observations} />
         {r.unavailable.length > 0 && (
@@ -125,6 +126,7 @@ export function FundamentalBody({ r }: { r: FundamentalReport }) {
           </div>
         )}
       </Card>
+      )}
     </div>
   );
 }
@@ -169,7 +171,7 @@ export function FundamentalHoldings() {
   return (
     <Card title="Your holdings: fundamentals">
       <p className="mb-3 text-sm text-slate-500">
-        Cached data only. Run <b>Refresh fundamentals + peers</b> on the Overview page to fill gaps and sector medians.
+        Cached data only. Run <b>Refresh fundamentals + peers</b> in Settings → Data refresh to fill gaps and sector medians.
       </p>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">

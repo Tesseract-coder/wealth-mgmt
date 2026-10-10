@@ -115,11 +115,13 @@ class Rolling:
     last_start: date
 
 
-def rolling_vs(fund: pd.Series, bench: pd.Series, years: int, step_days: int) -> Rolling | None:
-    """Rolling `years`-year CAGR of the fund vs the benchmark, a window starting every step."""
+def rolling_rows(
+    fund: pd.Series, bench: pd.Series, years: int, step_days: int
+) -> list[tuple[date, float, float]]:
+    """(window start, fund CAGR, benchmark CAGR) for each `years`-year window, one per step."""
     f, b = _dates(fund), _dates(bench)
     if len(f) < 2 or len(b) < 2:
-        return None
+        return []
     first = max(f.index[0], b.index[0])
     last = min(f.index[-1], b.index[-1])
     starts = pd.date_range(first, last - pd.DateOffset(years=years), freq=f"{step_days}D")
@@ -135,6 +137,12 @@ def rolling_vs(fund: pd.Series, bench: pd.Series, years: int, step_days: int) ->
         bc = cagr(bv0[1], bv1[1], days)
         if fc is not None and bc is not None:
             rows.append((st.date(), fc, bc))
+    return rows
+
+
+def rolling_vs(fund: pd.Series, bench: pd.Series, years: int, step_days: int) -> Rolling | None:
+    """Rolling `years`-year CAGR of the fund vs the benchmark, a window starting every step."""
+    rows = rolling_rows(fund, bench, years, step_days)
     if not rows:
         return None
     fcs = np.array([x[1] for x in rows])

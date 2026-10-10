@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { fundApi, type FundReport, type FundSignalKey, type MFHoldingsAnalysis, type RiskStats } from "../api/client";
+import { FundCharts } from "../charts/FundCharts";
 import { formatDate, formatINR } from "../lib/format";
 import { FreshnessBadge } from "./MarketData";
 import { Alert, Button, Card, inputClass } from "./ui";
@@ -51,7 +52,7 @@ export function FundHoldingsBody({ d }: { d: MFHoldingsAnalysis }) {
         </Alert>
       ))}
       <Card title="Your funds">
-        <p className="mb-3 text-sm text-slate-500">Cached NAVs only: run Refresh now on the Overview page first. Returns are a year (CAGR).</p>
+        <p className="mb-3 text-sm text-slate-500">Cached NAVs only: run Refresh now in Settings → Data refresh first. Returns are a year (CAGR).</p>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left text-xs uppercase text-slate-500">
@@ -173,10 +174,10 @@ export function FundReportView({ code }: { code: string }) {
   const q = useQuery({ queryKey: ["mf", code], queryFn: () => fundApi.report(code) });
   if (q.isError) return <Alert tone="error">{q.error.message}</Alert>;
   if (!q.data) return <Card>Analysing… (the first look downloads the NAV history and benchmark)</Card>;
-  return <FundReportBody f={q.data} />;
+  return <FundReportBody f={q.data} charts={<FundCharts code={code} />} />;
 }
 
-export function FundReportBody({ f }: { f: FundReport }) {
+export function FundReportBody({ f, charts }: { f: FundReport; charts?: ReactNode }) {
   const h = f.holding;
   return (
     <div className="space-y-4">
@@ -221,6 +222,8 @@ export function FundReportBody({ f }: { f: FundReport }) {
           </p>
         ))}
       </Card>
+
+      {charts}
 
       {h && (
         <Card title="Your investment">

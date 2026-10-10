@@ -44,7 +44,13 @@ function mockFetch() {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string) => {
-      const body = url.includes("/analysis/technical/holdings")
+      const body = url.includes("/series")
+        ? { ticker: "RELIANCE.NS", interval: "1d", t: [], columns: {} }
+        : url.includes("/market/prices/")
+          ? { ticker: "RELIANCE.NS", interval: "1d", source: "yahoo", delayed: true, last_complete: true, freshness: { status: "fresh", reason: "" }, fetch_error: null, bars: [] }
+          : url.includes("/market/status")
+            ? { generated_at: "", summary: { fresh: 0, stale: 0, unavailable: 0 }, references: [], quotes: [], schedule: {}, last_job: null, last_fundamentals_job: null, notes: [] }
+            : url.includes("/analysis/technical/holdings")
         ? summary
         : url.includes("/analysis/technical/")
           ? report

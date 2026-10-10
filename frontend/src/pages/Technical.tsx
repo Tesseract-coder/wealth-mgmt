@@ -13,7 +13,9 @@ import {
 } from "../api/client";
 import { FreshnessBadge } from "../components/MarketData";
 import { FundamentalHoldings, FundamentalReportView } from "../components/FundamentalView";
-import { HoldingSignalsView, StockSignalView } from "../components/SignalView";
+import { HoldingSignalsView } from "../components/SignalView";
+import { StockDetail } from "../components/StockDetail";
+import { PriceChart } from "../charts/PriceChart";
 import { Alert, Card, inputClass } from "../components/ui";
 import { useDebounced } from "../hooks/useDebounced";
 import { formatDate, formatINR } from "../lib/format";
@@ -41,7 +43,7 @@ export function DirectionTag({ d }: { d: Direction }) {
   );
 }
 
-/** Signal, technical and fundamental views of a holding or any NSE stock (charts: Phase 8). */
+/** Signal (with chart), technical and fundamental views of a holding or any NSE stock. */
 type View = "signal" | "technical" | "fundamental";
 const VIEWS: { key: View; label: string }[] = [
   { key: "signal", label: "Signal" },
@@ -135,7 +137,7 @@ export function Technical() {
         !styleKnown ? (
           <Card>Loading…</Card>
         ) : ticker ? (
-          <StockSignalView ticker={ticker} style={style} />
+          <StockDetail ticker={ticker} style={style} fundamentalLink={`/analysis/${encodeURIComponent(ticker)}${analysisQuery(style, "fundamental")}`} />
         ) : (
           <HoldingSignalsView style={style} linkQuery={analysisQuery(style)} />
         )
@@ -219,7 +221,7 @@ function HoldingsSummary({ style }: { style: StyleKey | null }) {
   return (
     <Card title="Your holdings">
       <p className="mb-3 text-sm text-slate-500">
-        Uses cached prices only. If a row says Unavailable, run <b>Refresh now</b> on the Overview page.
+        Uses cached prices only. If a row says Unavailable, run <b>Refresh now</b> in Settings → Data refresh.
       </p>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -282,6 +284,7 @@ function Report({ ticker, style }: { ticker: string; style: StyleKey | null }) {
           {n}
         </Alert>
       ))}
+      <PriceChart ticker={ticker} sr={r.timeframes.find((t) => t.interval === "1d")?.analysis.levels ?? r.context.levels} />
       {r.timeframes.map((tf) => (
         <TimeframeCard key={tf.interval} tf={tf} isIndex={ticker.startsWith("^")} />
       ))}

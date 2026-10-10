@@ -5,10 +5,12 @@ from datetime import date
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, UploadFile
 from sqlmodel import Session
 
+from app.analysis.actions import action_list
 from app.analysis.mf import (
     FundReport,
     analyse_fund,
     analyse_holdings,
+    fund_chart,
     fund_peers,
     held_funds,
     load_fund_portfolio,
@@ -28,8 +30,11 @@ from app.importers.groww import NeedsMapping
 from app.importers.reference import scheme_resolver
 from app.importers.tabular import ImportFileError
 from app.models.schemas import (
+    ActionOut,
+    ActionsOut,
     BenchmarkOut,
     ExpenseRatioIn,
+    FundChartOut,
     FundPortfolioImportedOut,
     FundReasonOut,
     FundReportOut,
@@ -42,6 +47,7 @@ from app.models.schemas import (
     PortfolioSummaryOut,
     RiskStatsOut,
     RollingOut,
+    RollingSeriesOut,
     SchemeRefOut,
     SliceOut,
     SnapshotPointOut,
@@ -172,6 +178,29 @@ def mf_report(
     return fund_out(r)
 
 
+@router.get("/analysis/mf/{scheme_code}/chart", response_model=FundChartOut)
+def mf_chart(
+    scheme_code: str = Path(pattern=CODE),
+    years: int = Query(5, ge=1, le=30, description="How far back the NAV chart goes"),
+    session: Session = Depends(get_session),
+) -> FundChartOut:
+    """NAV vs benchmark (growth of 100) and rolling returns, from cached data."""
+    if scheme_code not in scheme_resolver().by_code:
+        raise HTTPException(404, f"AMFI scheme code {scheme_code} not found")
+    c = fund_chart(CachedProvider(session), scheme_code, years)
+    return FundChartOut(
+        code=c.code,
+        benchmark=BenchmarkOut(ticker=c.benchmark.ticker, label=c.benchmark.label)
+        if c.benchmark
+        else None,
+        dates=c.dates,
+        fund=c.fund,
+        bench=c.bench,
+        rolling=[RollingSeriesOut(**r.__dict__) for r in c.rolling],
+        notes=c.notes,
+    )
+
+
 @router.put("/analysis/mf/{scheme_code}/expense-ratio", response_model=FundReportOut)
 def put_expense_ratio(
     body: ExpenseRatioIn,
@@ -231,5 +260,17 @@ def portfolio_summary(session: Session = Depends(get_session)) -> PortfolioSumma
         snapshots=[
             SnapshotPointOut(created_at=c, kind=k, total_value=v) for c, k, v in s.snapshots
         ],
+        disclaimer=get_profiles().disclaimer,
+    )
+
+
+@router.get("/portfolio/actions", response_model=ActionsOut)
+def portfolio_actions(session: Session = Depends(get_session)) -> ActionsOut:
+    """Everything that needs a look, most severe first, under your saved style and risk."""
+    acts, style_label, risk_label = action_list(session, CachedProvider(session))
+    return ActionsOut(
+        style_label=style_label,
+        risk_label=risk_label,
+        actions=[ActionOut(**a.__dict__) for a in acts],
         disclaimer=get_profiles().disclaimer,
     )

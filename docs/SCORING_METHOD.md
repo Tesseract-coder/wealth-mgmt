@@ -148,7 +148,7 @@ Yahoo publishes its own P/E, P/B and EV/EBITDA, and the app calculates the same 
 
 ### Sector medians
 
-Medians are taken over **cached peers**: other stocks in the same NSE industry whose fundamentals have been fetched. You need at least `sector_min_peers` (5) peers, otherwise the report says "no sector median" and gives the count. **Refresh fundamentals + peers** (Overview page, or automatically every Saturday 10:00 IST) fetches up to `sector_max_peers` (40) Nifty 500 peers for each industry you hold. Medians cover P/E, P/B, EV/EBITDA, ROE, ROCE, operating margin, debt/equity and 3-year revenue growth.
+Medians are taken over **cached peers**: other stocks in the same NSE industry whose fundamentals have been fetched. You need at least `sector_min_peers` (5) peers, otherwise the report says "no sector median" and gives the count. **Refresh fundamentals + peers** (Settings → Data refresh, or automatically every Saturday 10:00 IST) fetches up to `sector_max_peers` (40) Nifty 500 peers for each industry you hold. Medians cover P/E, P/B, EV/EBITDA, ROE, ROCE, operating margin, debt/equity and 3-year revenue growth.
 
 ### Piotroski F-score
 

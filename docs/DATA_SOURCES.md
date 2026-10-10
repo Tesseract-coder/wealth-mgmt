@@ -61,6 +61,11 @@ All of these settings live in the `data:` section of `backend/config/profiles.ya
 | `PUT /analysis/mf/{amfi_code}/expense-ratio` `{"expense_ratio_pct": 0.65}` | Save a fund's TER from its factsheet |
 | `POST /import/fund-portfolio` (file, `amfi_code`, optional `as_of`, `sheet`, `mapping`) | A fund's holdings from the AMC's monthly portfolio file, for overlap |
 | `GET /portfolio/summary` | Value, P&L, day change, XIRR, allocation, concentration, beta, correlation, performance vs Nifty 50 |
+| `GET /portfolio/actions` | The Overview's "Action needed" list: signals, red flags and fund switches, most severe first |
+| `GET /analysis/mf/{code}/chart` | NAV vs benchmark (growth of 100) and rolling-return series, from cache |
+| `GET /market/prices/{ticker}`, `GET /analysis/technical/{ticker}/series` | Candles and indicator lines for the stock chart |
+| `GET/PUT/DELETE /settings/thresholds` | Thresholds editable in Settings (saved to `backend/var/profiles.local.yaml`) |
+| `GET /export/stocks.csv`, `GET /export/funds.csv` | Signals as CSV, ending with the date and the disclaimer |
 
 ## Mutual fund benchmarks
 

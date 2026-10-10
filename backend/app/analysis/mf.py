@@ -14,7 +14,15 @@ from typing import Literal
 import pandas as pd
 from sqlmodel import Session, col, select
 
-from app.analysis.returns import RiskStats, Rolling, risk_stats, rolling_vs, trailing_cagr, xirr
+from app.analysis.returns import (
+    RiskStats,
+    Rolling,
+    risk_stats,
+    rolling_rows,
+    rolling_vs,
+    trailing_cagr,
+    xirr,
+)
 from app.core.formatting import now_ist
 from app.core.profiles import AssetClass, MFBenchmark, MFConfig, get_profiles
 from app.data.amfi import Scheme
@@ -629,3 +637,82 @@ def mf_refresh_targets(session: Session) -> tuple[list[tuple[str, str]], list[tu
         if b:
             benches[b.ticker] = b.label
     return list(navs.items()), list(benches.items())
+
+
+# ---------------------------------------------------------------------------- charts
+
+
+@dataclass
+class RollingSeries:
+    years: int
+    starts: list[date]
+    fund: list[float]
+    benchmark: list[float]
+
+
+@dataclass
+class FundChart:
+    code: str
+    benchmark: MFBenchmark | None
+    dates: list[date]
+    fund: list[float]  # growth of 100
+    bench: list[float | None]  # growth of 100, same dates; None before the index's history
+    rolling: list[RollingSeries]
+    notes: list[str]
+
+
+def fund_chart(provider: DataProvider, code: str, years: int) -> FundChart:
+    """NAV vs benchmark (both rebased to 100) over the last `years`, plus rolling-return
+    series for the configured windows. Cached data only."""
+    cfg = get_profiles().mf
+    scheme = scheme_resolver().by_code.get(code)
+    bench = benchmark_for(scheme.name, scheme.category, cfg) if scheme else None
+    navs = provider.nav_history(code)
+    notes: list[str] = []
+    if not len(navs):
+        return FundChart(code, bench, [], [], [], [], ["No NAV history downloaded yet"])
+    navs = navs.copy()
+    navs.index = pd.to_datetime(navs.index)
+    cut = navs.index[-1] - pd.DateOffset(years=years)
+    shown = navs.loc[navs.index >= cut]
+    bclose = pd.Series(dtype=float)
+    if bench is not None:
+        bdf = provider.daily(bench.ticker).frame
+        if not bdf.empty:
+            bclose = bdf["close"].dropna()
+            bclose.index = pd.to_datetime(bclose.index)
+        else:
+            notes.append(f"{bench.label} prices not downloaded yet")
+    else:
+        notes.append("No benchmark for this category")
+    bvals: list[float | None] = []
+    if len(bclose):
+        aligned = bclose.reindex(shown.index.union(bclose.index)).ffill().reindex(shown.index)
+        valid = aligned.dropna()
+        if len(valid):
+            # Rebase the fund and index at the first date both have.
+            t0 = valid.index[0]
+            shown = shown.loc[shown.index >= t0]
+            aligned = aligned.loc[shown.index]
+            bvals = [round(float(v / aligned.iloc[0] * 100), 2) for v in aligned]
+    fund = [round(float(v / shown.iloc[0] * 100), 2) for v in shown]
+    if not bvals:
+        bvals = [None] * len(fund)
+    rolling = []
+    if len(bclose):
+        for y in cfg.rolling_windows_years:
+            rows = rolling_rows(navs, bclose, y, cfg.rolling_step_days)
+            if rows:
+                rolling.append(
+                    RollingSeries(
+                        y,
+                        [r[0] for r in rows],
+                        [round(r[1], 2) for r in rows],
+                        [round(r[2], 2) for r in rows],
+                    )
+                )
+    if bench is not None:
+        notes.append(
+            f"{bench.label} is a price index (no dividends), so it understates the index return"
+        )
+    return FundChart(code, bench, [d.date() for d in shown.index], fund, bvals, rolling, notes)

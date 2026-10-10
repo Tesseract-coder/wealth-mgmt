@@ -137,14 +137,14 @@ describe("HoldingSignalsTable", () => {
     holdings: [
       {
         ticker: "TCS.NS", label: "TCS", signal: "hold", signal_label: "Hold", rule: "Composite 52 is between 45 and 70",
-        composite: 52, technical: 40, fundamental: 80, confidence: "medium", weight: 0.05, max_weight: 0.12, value: 20000,
+        composite: 52, technical: 40, fundamental: 80, confidence: "medium", weight: 0.05, max_weight: 0.12, quantity: 5, avg_price: 3980, price: 4000, invested: 19900, value: 20000, pnl_pct: 0.5,
         pnl: 100, sector: "IT", flags: [], top_bullish: ["ROE 48%"], top_bearish: [], stop: 2100, stop_breached: false,
         rebalance: { action: "none", quantity: 0, value: null, target_weight: null, text: "No change suggested." },
         price_freshness: { status: "fresh", reason: "ok" },
       },
       {
         ticker: "SBIN.NS", label: "SBI", signal: "sell", signal_label: "Sell / Exit", rule: "Severe red flag: closed below stop",
-        composite: 40, technical: 16, fundamental: 94, confidence: "high", weight: 0.148, max_weight: 0.12, value: 57000,
+        composite: 40, technical: 16, fundamental: 94, confidence: "high", weight: 0.148, max_weight: 0.12, quantity: 60, avg_price: 750, price: 950, invested: 45000, value: 57000, pnl_pct: 26.7,
         pnl: 12000, sector: "Financial Services", flags: [{ key: "stop_breached", severe: true, text: "Closed below the stop" }],
         top_bullish: [], top_bearish: ["ADX 30: sellers in control"], stop: 977, stop_breached: true,
         rebalance: { action: "exit", quantity: 60, value: 57000, target_weight: 0, text: "Sell all 60 shares to exit." },
