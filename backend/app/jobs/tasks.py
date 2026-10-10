@@ -43,14 +43,21 @@ def market_refresh(scope: Scope = "all", force: bool = False) -> JobFn:
                 steps.append(
                     (REFERENCE_FILES[key].label, partial(refresh_reference, s, key, force=force))
                 )
+            twins, fund_benches = _mf_extras(s) if scope in ("all", "prices", "navs") else ([], [])
             if scope in ("all", "prices"):
                 for t in benchmark_targets() + stock_targets(s):
                     steps.append((t.label, partial(refresh_daily, s, t.code, t.label, force=force)))
+                known = {t.code for t in benchmark_targets()}
+                for ticker, label in fund_benches:
+                    if ticker not in known:
+                        steps.append((label, partial(refresh_daily, s, ticker, label, force=force)))
             if scope in ("all", "prices"):
                 steps.append(("NSE delivery data", partial(refresh_delivery, s, force=force)))
             if scope in ("all", "navs"):
                 for t in fund_targets(s):
                     steps.append((t.label, partial(refresh_nav, s, t.code, t.label, force=force)))
+                for code, label in twins:  # Direct plans of your Regular funds, for the cost gap
+                    steps.append((label, partial(refresh_nav, s, code, label, force=force)))
 
             if scope == "all":
                 for t in stock_targets(s):
@@ -65,6 +72,12 @@ def market_refresh(scope: Scope = "all", force: bool = False) -> JobFn:
             return _run_steps(s, steps, progress)
 
     return run
+
+
+def _mf_extras(s: Session) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
+    from app.analysis.mf import mf_refresh_targets
+
+    return mf_refresh_targets(s)
 
 
 def _run_steps(

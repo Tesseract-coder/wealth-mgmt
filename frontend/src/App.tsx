@@ -2,6 +2,7 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { Holdings } from "./pages/Holdings";
 import { Import } from "./pages/Import";
+import { MutualFunds } from "./pages/MutualFunds";
 import { Placeholder } from "./pages/Placeholder";
 import { Status } from "./pages/Status";
 import { Technical } from "./pages/Technical";
@@ -16,7 +17,8 @@ export function App() {
         <Route path="analysis" element={<Technical />} />
         <Route path="analysis/:ticker" element={<Technical />} />
         <Route path="technical/*" element={<LegacyTechnical />} />
-        <Route path="mutual-funds" element={<Placeholder title="Mutual Funds" phase={8} />} />
+        <Route path="mutual-funds" element={<MutualFunds />} />
+        <Route path="mutual-funds/:code" element={<MutualFunds />} />
         <Route path="screener" element={<Placeholder title="Screener" phase={9} />} />
         <Route path="watchlist" element={<Placeholder title="Watchlist" phase={9} />} />
         <Route path="settings" element={<Placeholder title="Settings" phase={8} />} />

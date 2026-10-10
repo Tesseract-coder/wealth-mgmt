@@ -124,7 +124,7 @@ class FieldSpecOut(BaseModel):
 
 class NeedsMappingOut(BaseModel):
     status: Literal["needs_mapping"] = "needs_mapping"
-    kind: Literal["stocks", "mf", "screener"]
+    kind: Literal["stocks", "mf", "screener", "fund_portfolio"]
     header_row: int  # 0-based
     headers: list[str]
     detected: dict[str, int]
@@ -611,3 +611,190 @@ class SignalHistoryOut(BaseModel):
     technical: float | None
     fundamental: float | None
     confidence: ConfidenceOut | None
+
+
+# --------------------------------------------------------------------------- mutual funds
+
+FundSignalKey = Literal["continue", "review", "switch", "no_signal"]
+
+
+class RiskStatsOut(BaseModel):
+    start: date
+    end: date
+    years: float
+    cagr: float | None
+    volatility: float
+    sharpe: float | None
+    sortino: float | None
+    max_drawdown: float
+    drawdown_peak: date
+    drawdown_trough: date
+
+
+class RollingOut(BaseModel):
+    years: int
+    windows: int
+    fund_avg: float
+    bench_avg: float
+    avg_excess: float
+    beat_share: float
+    worst_excess: float
+    best_excess: float
+    first_start: date
+    last_start: date
+
+
+class FundReasonOut(BaseModel):
+    direction: Literal["bullish", "bearish", "neutral"]
+    text: str
+
+
+class OverlapOut(BaseModel):
+    code: str
+    name: str
+    pct: float
+    common: int
+    approximate: bool
+    note: str
+
+
+class MyFundHoldingOut(BaseModel):
+    units: float
+    invested: float | None
+    value: float | None
+    pnl: float | None
+    folios: list[str]
+    first_purchase: date | None
+    xirr: float | None
+    xirr_basis: str
+    xirr_approximate: bool
+
+
+class BenchmarkOut(BaseModel):
+    ticker: str
+    label: str
+
+
+class SchemeRefOut(BaseModel):
+    code: str
+    name: str
+
+
+class PeriodReturnOut(BaseModel):
+    years: int
+    fund: float | None
+    benchmark: float | None
+
+
+class FundReportOut(BaseModel):
+    code: str
+    name: str
+    amc: str | None
+    category: str | None
+    asset_class: Literal["equity", "debt", "hybrid", "other"]
+    plan: str | None
+    option: str | None
+    nav: float | None
+    nav_date: date | None
+    previous_nav: float | None
+    nav_freshness: FreshnessOut
+    history_start: date | None
+    holding: MyFundHoldingOut | None
+    returns: list[PeriodReturnOut]
+    benchmark: BenchmarkOut | None
+    risk: RiskStatsOut | None
+    benchmark_risk: RiskStatsOut | None
+    rolling: list[RollingOut]
+    direct_twin: SchemeRefOut | None
+    direct_gap_pp: float | None
+    direct_gap_basis: str
+    expense_ratio_pct: float | None
+    overlaps: list[OverlapOut]
+    segment_peers: list[str]
+    signal: FundSignalKey
+    signal_label: str
+    rule: str
+    reasons: list[FundReasonOut]
+    notes: list[str]
+    unavailable: list[str]
+    fetch_errors: list[str]
+    disclaimer: str
+
+
+class OverlapMatrixOut(BaseModel):
+    codes: list[str]
+    names: list[str]
+    pct: list[list[float | None]]  # None: no holdings uploaded for one of the pair
+    approximate: bool
+
+
+class MFHoldingsAnalysisOut(BaseModel):
+    funds: list[FundReportOut]
+    overlap: OverlapMatrixOut
+    warnings: list[str]
+    disclaimer: str
+
+
+class ExpenseRatioIn(BaseModel):
+    expense_ratio_pct: float | None = Field(None, ge=0, le=5)
+
+
+class FundPortfolioImportedOut(BaseModel):
+    status: Literal["imported"] = "imported"
+    upload_id: int
+    amfi_code: str
+    scheme_name: str
+    rows: int
+    total_weight_pct: float
+    warnings: list[str]
+
+
+# --------------------------------------------------------------------------- portfolio
+
+
+class SliceOut(BaseModel):
+    key: str
+    label: str
+    value: float
+    weight: float
+
+
+class SnapshotPointOut(BaseModel):
+    created_at: ISTDatetime
+    kind: str
+    total_value: float | None
+
+
+class PortfolioSummaryOut(BaseModel):
+    as_of: date | None
+    total_value: float
+    stock_value: float
+    fund_value: float
+    invested: float | None
+    invested_note: str | None
+    pnl: float | None
+    pnl_pct: float | None
+    day_change: float | None
+    day_change_pct: float | None
+    day_change_note: str | None
+    xirr: float | None
+    xirr_coverage: float
+    xirr_basis: str
+    by_holding: list[SliceOut]
+    by_sector: list[SliceOut]
+    by_mcap: list[SliceOut]
+    by_asset_class: list[SliceOut]
+    warnings: list[str]
+    beta: float | None
+    beta_coverage: float
+    beta_basis: str
+    correlation_labels: list[str]
+    correlation: list[list[float | None]]
+    correlation_basis: str
+    performance_dates: list[date]
+    performance_portfolio: list[float]
+    performance_nifty: list[float]
+    performance_basis: str
+    snapshots: list[SnapshotPointOut]
+    notes: list[str]
+    disclaimer: str

@@ -44,7 +44,7 @@ def _user_mapping(raw: str | None) -> UserMapping | None:
 
 
 def _needs_mapping_out(
-    kind: Literal["stocks", "mf", "screener"], n: NeedsMapping
+    kind: Literal["stocks", "mf", "screener", "fund_portfolio"], n: NeedsMapping
 ) -> NeedsMappingOut:
     m = n.mapping
     return NeedsMappingOut(
@@ -152,5 +152,7 @@ async def import_screener(
 
 
 @router.get("/fields/{kind}", response_model=list[FieldSpecOut])
-def import_fields(kind: Literal["stocks", "mf", "screener"]) -> list[FieldSpecOut]:
+def import_fields(
+    kind: Literal["stocks", "mf", "screener", "fund_portfolio"],
+) -> list[FieldSpecOut]:
     return [FieldSpecOut.model_validate(f) for f in field_specs(kind)]

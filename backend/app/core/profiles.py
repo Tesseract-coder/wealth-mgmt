@@ -125,6 +125,70 @@ class RebalanceConfig(BaseModel):
     min_trade_value_inr: float = Field(ge=0)
 
 
+class MFBenchmark(BaseModel):
+    match: list[str] = Field(min_length=1)
+    ticker: str
+    label: str
+
+
+class MFSignalRules(BaseModel):
+    review_rolling_excess_pp: float
+    switch_rolling_excess_pp: float
+    switch_max_beat_share: float = Field(ge=0, le=1)
+    review_1y_excess_pp: float
+    regular_plan_switch: bool
+
+    @model_validator(mode="after")
+    def ordered(self) -> "MFSignalRules":
+        if self.switch_rolling_excess_pp > self.review_rolling_excess_pp:
+            raise ValueError(
+                "mf.signals.switch_rolling_excess_pp must not exceed review_rolling_excess_pp"
+            )
+        return self
+
+
+AssetClass = Literal["equity", "debt", "hybrid", "other"]
+
+
+class MFConfig(BaseModel):
+    risk_free_rate_pct: float = Field(ge=0, lt=50)
+    risk_stats_years: int = Field(ge=1)
+    min_history_days: int = Field(ge=30)
+    rolling_windows_years: list[int] = Field(min_length=1)
+    rolling_step_days: int = Field(ge=1)
+    benchmarks: list[MFBenchmark]
+    asset_classes: dict[Literal["debt", "hybrid", "other"], list[str]]
+    overlap_high_pct: float = Field(gt=0, le=100)
+    overlap_min_coverage_pct: float = Field(gt=0, le=100)
+    portfolio_max_age_days: int = Field(gt=0)
+    duplicate_category_max: int = Field(ge=1)
+    expense_ratio_high_pct: dict[Literal["equity", "debt", "other"], float]
+    signals: MFSignalRules
+
+    @model_validator(mode="after")
+    def windows_valid(self) -> "MFConfig":
+        if any(y <= 0 for y in self.rolling_windows_years):
+            raise ValueError("mf.rolling_windows_years must be positive")
+        return self
+
+
+class PortfolioConfig(BaseModel):
+    large_cap_min_cr: float = Field(gt=0)
+    mid_cap_min_cr: float = Field(gt=0)
+    correlation_top_n: int = Field(ge=2)
+    correlation_lookback_sessions: int = Field(gt=20)
+    performance_min_days: int = Field(ge=1)
+    performance_fallback_days: int = Field(ge=30)
+    xirr_min_coverage: float = Field(ge=0, le=1)
+    top_n_concentration: int = Field(ge=1)
+
+    @model_validator(mode="after")
+    def caps_ordered(self) -> "PortfolioConfig":
+        if self.mid_cap_min_cr >= self.large_cap_min_cr:
+            raise ValueError("portfolio.mid_cap_min_cr must be below large_cap_min_cr")
+        return self
+
+
 class ScreenerConfig(BaseModel):
     default_universe: str
     min_avg_daily_traded_value_cr: float
@@ -386,6 +450,8 @@ class Profiles(BaseModel):
     confidence: Confidence
     scoring: ScoringConfig
     rebalance: RebalanceConfig
+    mf: MFConfig
+    portfolio: PortfolioConfig
     screener: ScreenerConfig
     data: DataConfig
     technical: TechnicalConfig

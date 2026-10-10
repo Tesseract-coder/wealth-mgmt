@@ -16,7 +16,8 @@ A personal, locally-run dashboard that analyses your **Groww** stock and mutual 
 | 4 | Technical engine: trend/momentum/volatility/volume/structure indicators, plain-English readings, delivery % | ✅ |
 | 5 | Fundamental engine: valuation, profitability, growth, health, ownership, Piotroski F-score, sector medians, Screener.in uploads | ✅ |
 | 6 | Scores and signals: style-weighted composite, confidence, red flags, Buy/Hold/Sell with reasons, ATR stop-loss and targets, position sizing, tax note, signal history | ✅ |
-| 7–11 | MF and portfolio analytics, full UI, screener, Google Sheets, polish | ⏳ |
+| 7 | Mutual funds (XIRR, CAGR, rolling returns vs benchmark, risk, Regular vs Direct, cost, overlap, Continue/Review/Switch) and portfolio analytics (P&L, day change, XIRR, allocation, beta, correlation, vs Nifty 50) | ✅ |
+| 8–11 | Full dashboard UI with charts, screener, Google Sheets, polish | ⏳ |
 
 ## Quick start (no Docker)
 
@@ -61,6 +62,8 @@ The **Analysis** page has three tabs for each holding or any NSE stock:
 - **Signal:** the signal and why; the top 3 bullish and bearish reasons, each with the points it adds to the score; red flags; the ATR stop-loss and targets (nearest resistance, 2R, 3R); position size; a tax note (STCG/LTCG); and the signal history.
 - **Technical:** every indicator from the spec on your style's timeframes, grouped into bullish / bearish / neutral readings with the numbers behind each.
 - **Fundamental:** valuation (vs sector medians), profitability, growth, financial health, ownership and the Piotroski F-score, each with its basis.
+
+The **Mutual funds** page gives each fund a **Continue / Review / Switch** signal from its returns vs its category benchmark (1/3/5-year and rolling), risk (volatility, Sharpe, Sortino, max drawdown), Regular vs Direct cost gap, expense ratio (you enter it) and overlap with your other funds (upload AMC portfolio files under Import → Fund portfolios). The **Overview** page shows your portfolio's value, P&L, day change, XIRR, allocation, concentration warnings, beta, correlations and performance vs Nifty 50.
 
 Upload Screener.in exports (Import → Screener.in data) for ownership data and 10-year history. [docs/SCORING_METHOD.md](docs/SCORING_METHOD.md) explains every calculation.
 

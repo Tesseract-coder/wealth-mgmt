@@ -74,6 +74,22 @@ class SchemeResolver:
                     self.by_isin.setdefault(i, s)
         self._norm = [normalise_scheme(s.name) for s in schemes]
 
+    def direct_twin(self, scheme: Scheme) -> Scheme | None:
+        """The Direct plan of a Regular scheme: same AMC, same option, same normalised name."""
+        if scheme.plan != "regular":
+            return None
+        target = normalise_scheme(scheme.name)
+        for s, n in zip(self.schemes, self._norm, strict=True):
+            if (
+                n == target
+                and s.plan == "direct"
+                and s.option == scheme.option
+                and (s.amc == scheme.amc or not s.amc or not scheme.amc)
+                and s.code != scheme.code
+            ):
+                return s
+        return None
+
     def _candidates(self, plan: str | None, option: str | None) -> dict[int, str]:
         """Indices of schemes compatible with the requested plan/option (unknown = compatible)."""
         return {

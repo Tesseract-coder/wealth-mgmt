@@ -125,8 +125,10 @@ def test_refresh_job_covers_holdings_and_reports_failures(
     get_runner().wait(job_id, timeout=30)
     job = client.get(f"/jobs/{job_id}").json()
     assert job["status"] == "done"
-    # 2 benchmarks + 11 stocks via Yahoo; reference lists fail (no NSE/AMFI mock) but are kept
-    assert "^NSEI" in asked and "RELIANCE.NS" in asked and len(asked) == 13
+    # 2 benchmarks + 11 stocks + the small-cap fund's benchmark via Yahoo (the other funds'
+    # benchmarks are Nifty 50/500, already fetched); reference lists fail (no NSE/AMFI mock)
+    assert "^NSEI" in asked and "RELIANCE.NS" in asked and "NIFTYSMLCAP250.NS" in asked
+    assert len(asked) == 14
     assert any("ITC" in e for e in job["errors"])
     assert job["message"].endswith("failed") and job["done"] == job["total"]
 

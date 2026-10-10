@@ -1,5 +1,6 @@
-"""End-to-end: every FAKE file in sample_data/ imports through the API, then every holding
-gets a signal with reasons (market data and fundamentals faked, no network)."""
+"""End-to-end: every FAKE file in sample_data/ imports through the API, then every stock and
+fund gets a signal with reasons, and the portfolio summary builds (market data, NAVs and
+fundamentals faked, no network)."""
 
 import json
 from pathlib import Path
@@ -8,6 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.jobs.runner import get_runner
+from tests.unit.test_funds_api import _mfapi
 from tests.unit.test_signals_api import _fake_sources
 
 SAMPLES = Path(__file__).resolve().parents[3] / "sample_data"
@@ -45,6 +47,7 @@ def test_all_samples_import_and_get_signals(
 
     # Fetch prices and fundamentals for the holdings, then score them.
     _fake_sources(monkeypatch)
+    _mfapi(monkeypatch)
     job = client.post("/market/refresh", json={"scope": "all"}).json()
     get_runner().wait(job["id"], timeout=120)
     assert client.get(f"/jobs/{job['id']}").json()["status"] == "done"
@@ -60,3 +63,13 @@ def test_all_samples_import_and_get_signals(
     assert detail["bullish"] or detail["bearish"]
     assert detail["levels"]["targets"] and detail["tax"] is not None
     assert "SEBI-registered" in detail["disclaimer"]
+
+    # Every resolved fund gets a Continue / Review / Switch signal with reasons.
+    funds = client.get("/analysis/mf/holdings").json()
+    assert funds["funds"]
+    for f in funds["funds"]:
+        assert f["signal"] in ("continue", "review", "switch"), f
+        assert f["reasons"] and f["rule"]
+    summary = client.get("/portfolio/summary").json()
+    assert summary["total_value"] > 0 and summary["by_asset_class"]
+    assert "SEBI-registered" in summary["disclaimer"]

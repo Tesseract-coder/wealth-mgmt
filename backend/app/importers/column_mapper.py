@@ -243,7 +243,51 @@ SCREENER_FIELDS: tuple[FieldSpec, ...] = (
     FieldSpec("current_ratio", "Current ratio", ("current ratio",)),
 )
 
-FIELDS = {"stocks": STOCK_FIELDS, "mf": MF_FIELDS, "screener": SCREENER_FIELDS}
+FUND_PORTFOLIO_FIELDS: tuple[FieldSpec, ...] = (
+    FieldSpec(
+        "name",
+        "Company / instrument",
+        (
+            "name of the instrument",
+            "name of instrument",
+            "company name",
+            "company",
+            "issuer",
+            "security name",
+            "instrument",
+            "stock name",
+            "holding",
+            "name",
+        ),
+        True,
+    ),
+    FieldSpec("isin", "ISIN", ("isin", "isin code")),
+    FieldSpec(
+        "weight_pct",
+        "% of net assets",
+        (
+            "% to net assets",
+            "% to nav",
+            "% of net assets",
+            "% to aum",
+            "% of aum",
+            "weight",
+            "weightage",
+            "holding %",
+            "% holding",
+            "allocation",
+            "% allocation",
+        ),
+        True,
+    ),
+)
+
+FIELDS = {
+    "stocks": STOCK_FIELDS,
+    "mf": MF_FIELDS,
+    "screener": SCREENER_FIELDS,
+    "fund_portfolio": FUND_PORTFOLIO_FIELDS,
+}
 
 
 def normalise_header(text: str) -> str:

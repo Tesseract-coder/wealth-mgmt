@@ -159,6 +159,65 @@ rebalance:
   min_trade_value_inr: 1000      # smaller suggested trades are dropped as noise
 
 # ---------------------------------------------------------------------------
+# 7.5 Mutual funds. Returns in percent a year unless noted.
+# ---------------------------------------------------------------------------
+mf:
+  risk_free_rate_pct: 6.5          # for Sharpe/Sortino: roughly the 91-day T-bill yield. VERIFY and update.
+  risk_stats_years: 3              # volatility, Sharpe, Sortino, drawdown over this window (or all history if shorter)
+  min_history_days: 365            # less NAV history than this: no risk stats
+  rolling_windows_years: [1, 3]    # rolling CAGR windows compared with the benchmark
+  rolling_step_days: 7             # one window starting every N days
+  # Category benchmarks: first entry whose keywords appear in the fund's category (or name for
+  # index funds/ETFs) wins. Yahoo has price indices only, without dividends, so funds look
+  # ~1–1.5% a year better than against the official total-return index.
+  benchmarks:
+    - {match: ["nifty next 50", "next 50"], ticker: "^NSMIDCP", label: "Nifty Next 50"}
+    - {match: ["nifty 50", "nifty50", "sensex"], ticker: "^NSEI", label: "Nifty 50"}
+    - {match: ["nifty 500", "nifty500"], ticker: "^CRSLDX", label: "Nifty 500"}
+    - {match: ["bank"], ticker: "^NSEBANK", label: "Nifty Bank"}
+    - {match: ["small cap", "smallcap"], ticker: "NIFTYSMLCAP250.NS", label: "Nifty Smallcap 250"}
+    - {match: ["large & mid", "large and mid"], ticker: "^CRSLDX", label: "Nifty 500 (proxy for LargeMidcap 250)"}
+    - {match: ["mid cap", "midcap"], ticker: "NIFTYMIDCAP150.NS", label: "Nifty Midcap 150"}
+    - {match: ["large cap", "largecap"], ticker: "^NSEI", label: "Nifty 50"}
+    - {match: ["flexi cap", "multi cap", "elss", "focused", "value", "contra", "dividend yield", "tax saver"], ticker: "^CRSLDX", label: "Nifty 500"}
+  # Asset class from the AMFI category (first match wins; anything else is equity). Debt and
+  # "other" funds get no equity benchmark.
+  asset_classes:
+    debt: ["debt", "income", "liquid", "gilt", "money market", "overnight", "bond", "credit risk",
+           "duration", "floater", "floating", "banking and psu", "fixed maturity", "fmp"]
+    hybrid: ["hybrid", "arbitrage", "balanced", "asset allocation", "equity savings"]
+    other: ["fof overseas", "overseas", "international", "global", "gold", "silver", "fund of funds"]
+  overlap_high_pct: 50             # two of your funds sharing more than this ⇒ Review
+  overlap_min_coverage_pct: 90     # factsheet weights summing to less ⇒ overlap marked approximate
+  portfolio_max_age_days: 100      # factsheet holdings older than this ⇒ approximate
+  duplicate_category_max: 2        # more funds than this in one category ⇒ warning (e.g. 3 large-cap funds)
+  expense_ratio_high_pct:          # TER above this (from your input) ⇒ Review. Direct-plan levels.
+    equity: 1.0
+    debt: 0.5
+    other: 1.0
+  signals:
+    review_rolling_excess_pp: -1.0   # average rolling 3y excess return below this ⇒ Review
+    switch_rolling_excess_pp: -3.0   # …below this, and beating the benchmark in few windows ⇒ Switch
+    switch_max_beat_share: 0.3       # share of rolling 3y windows the fund beat the benchmark
+    review_1y_excess_pp: -5.0        # last year behind the benchmark by more ⇒ Review
+    regular_plan_switch: true        # Regular plan with a Direct twin ⇒ Switch (mind exit load and tax)
+
+# ---------------------------------------------------------------------------
+# 7.6 Portfolio analytics
+# ---------------------------------------------------------------------------
+portfolio:
+  # Market-cap buckets in ₹ crore. SEBI uses AMFI's half-yearly ranking (top 100 large,
+  # 101–250 mid); these cut-offs approximate it. VERIFY against AMFI's latest list.
+  large_cap_min_cr: 100000
+  mid_cap_min_cr: 33000
+  correlation_top_n: 10
+  correlation_lookback_sessions: 252
+  performance_min_days: 30         # fewer days since your first snapshot ⇒ show the last year instead
+  performance_fallback_days: 365
+  xirr_min_coverage: 0.5           # XIRR covering less of the portfolio than this is marked partial
+  top_n_concentration: 5           # "your top 5 holdings are X% of the portfolio"
+
+# ---------------------------------------------------------------------------
 # Screener
 # ---------------------------------------------------------------------------
 screener:

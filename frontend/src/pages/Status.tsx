@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { MarketData } from "../components/MarketData";
+import { PortfolioSummaryCard } from "../components/PortfolioSummary";
 
 /** Landing page: backend/config health plus market-data freshness. */
 export function Status() {
@@ -42,6 +43,7 @@ export function Status() {
           {Math.round(risk.max_weight_per_sector * 100)}% per sector, buy threshold ≥ {risk.buy_threshold}.
         </p>
       )}
+      <PortfolioSummaryCard />
       <MarketData />
     </div>
   );

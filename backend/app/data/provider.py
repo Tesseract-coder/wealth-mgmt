@@ -40,6 +40,10 @@ class DataProvider(Protocol):
 
     def latest_nav(self, code: str) -> LatestNav: ...
 
+    def ensure_nav(
+        self, code: str, label: str | None = None, force: bool = False
+    ) -> RefreshResult: ...
+
     def delivery(self, symbol: str, sessions: int) -> pd.DataFrame: ...
 
     def fundamentals(self, ticker: str) -> RawFundamentals | None: ...
@@ -82,6 +86,9 @@ class CachedProvider:
 
     def latest_nav(self, code: str) -> LatestNav:
         return navs.latest_nav(self.session, code)
+
+    def ensure_nav(self, code: str, label: str | None = None, force: bool = False) -> RefreshResult:
+        return navs.refresh_nav(self.session, code, label or code, force=force)
 
     def delivery(self, symbol: str, sessions: int) -> pd.DataFrame:
         return delivery.delivery_history(self.session, symbol, sessions)

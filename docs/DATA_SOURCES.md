@@ -56,6 +56,25 @@ All of these settings live in the `data:` section of `backend/config/profiles.ya
 | `GET /analysis/signals/holdings?style=&risk=` | Signals for every holding plus sector weights (cached data only; saved to the history) |
 | `GET /analysis/stock/{ticker}/history?style=` | Past daily signals |
 | `POST /import/screener` (file, optional `mapping`, optional `symbol`) | Upload a Screener.in screen or company export |
+| `GET /analysis/mf/{amfi_code}?fetch=true` | One fund: your XIRR, 1/3/5-year CAGR vs benchmark, rolling returns, risk, Regular vs Direct, cost, overlap, signal |
+| `GET /analysis/mf/holdings` | Every fund you hold with its signal, plus the overlap matrix (cached data only) |
+| `PUT /analysis/mf/{amfi_code}/expense-ratio` `{"expense_ratio_pct": 0.65}` | Save a fund's TER from its factsheet |
+| `POST /import/fund-portfolio` (file, `amfi_code`, optional `as_of`, `sheet`, `mapping`) | A fund's holdings from the AMC's monthly portfolio file, for overlap |
+| `GET /portfolio/summary` | Value, P&L, day change, XIRR, allocation, concentration, beta, correlation, performance vs Nifty 50 |
+
+## Mutual fund benchmarks
+
+Each fund is compared with the Yahoo index for its category (`mf.benchmarks`). For example:
+- large cap → Nifty 50 (`^NSEI`);
+- mid cap → Nifty Midcap 150 (`NIFTYMIDCAP150.NS`);
+- small cap → Nifty Smallcap 250 (`NIFTYSMLCAP250.NS`);
+- flexi/multi cap, ELSS and focused → Nifty 500 (`^CRSLDX`).
+
+Index funds are matched by name. Debt funds get no benchmark, because no free source carries debt indices.
+
+These are **price** indices: Yahoo has no total-return indices, so dividends are left out and funds look about 1–1.5% a year better than in their factsheets. The daily refresh also keeps these benchmarks fresh, along with the Direct plan of any Regular fund you hold (to measure the cost gap).
+
+**Not available free:** expense ratios (TER), which you can type in from the factsheet, and fund portfolio holdings, which you upload from the AMC's monthly portfolio file.
 
 ## Swapping a data source
 

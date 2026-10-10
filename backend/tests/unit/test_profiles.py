@@ -140,6 +140,10 @@ def test_delivery_lookback_covers_average(tmp_path: Path) -> None:
         ("rebalance", ["buy_target"], 1.5, "less than or equal to 1"),
         ("signals", ["target_r_multiples"], [2, -1], "target_r_multiples must be positive"),
         ("confidence", ["medium_min_coverage"], 0.9, "must not exceed high_min_coverage"),
+        ("mf", ["rolling_windows_years"], [0, 3], "rolling_windows_years must be positive"),
+        ("mf", ["signals", "switch_rolling_excess_pp"], 0, "must not exceed review_rolling"),
+        ("mf", ["asset_classes"], {"crypto": ["btc"]}, "asset_classes"),
+        ("portfolio", ["mid_cap_min_cr"], 200000, "mid_cap_min_cr must be below"),
     ],
 )
 def test_scoring_sections_validation(

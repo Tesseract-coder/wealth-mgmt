@@ -268,3 +268,31 @@ class SignalRecord(SQLModel, table=True):
     fundamental: float | None = None
     confidence: str | None = None
     recorded_at: datetime = Field(default_factory=utcnow)
+
+
+class FundInfo(SQLModel, table=True):
+    """Scheme facts no free API provides, entered by you (e.g. the TER from the factsheet)."""
+
+    amfi_code: str = Field(primary_key=True)
+    expense_ratio_pct: float | None = None
+    updated_at: datetime = Field(default_factory=utcnow)
+
+
+class FundPortfolioUpload(SQLModel, table=True):
+    """A fund's holdings from its AMC factsheet / monthly portfolio file, uploaded by you."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    amfi_code: str = Field(index=True)
+    filename: str
+    as_of: dt.date | None = None
+    rows: int = 0
+    total_weight_pct: float = 0.0
+    created_at: datetime = Field(default_factory=utcnow)
+
+
+class FundPortfolioRow(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    upload_id: int = Field(foreign_key="fundportfolioupload.id", index=True)
+    name: str
+    isin: str | None = None
+    weight_pct: float

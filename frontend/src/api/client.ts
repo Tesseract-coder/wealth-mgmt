@@ -186,7 +186,7 @@ export interface FieldSpec {
 
 export interface NeedsMapping {
   status: "needs_mapping";
-  kind: HoldingKind | "screener";
+  kind: HoldingKind | "screener" | "fund_portfolio";
   header_row: number;
   headers: string[];
   detected: Record<string, number>;
@@ -243,6 +243,15 @@ export const importApi = {
   },
   manualMf: (body: ManualMFIn) =>
     request<Imported>("/import/mf-manual", { method: "POST", body: JSON.stringify(body) }),
+  fundPortfolio: (file: File, amfiCode: string, opts: { asOf?: string; sheet?: string; mapping?: ColumnMappingIn }) => {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("amfi_code", amfiCode);
+    if (opts.asOf) form.append("as_of", opts.asOf);
+    if (opts.sheet) form.append("sheet", opts.sheet);
+    if (opts.mapping) form.append("mapping", JSON.stringify(opts.mapping));
+    return upload<FundPortfolioImported | NeedsMapping>("/import/fund-portfolio", form);
+  },
 };
 
 export const portfolioApi = {
@@ -650,4 +659,152 @@ export const signalApi = {
   stock: (ticker: string, style?: StyleKey | null, risk?: RiskKey | null) =>
     request<StockSignal>(`/analysis/stock/${encodeURIComponent(ticker)}${styleQuery(style, risk)}`),
   history: (ticker: string) => request<SignalHistoryRow[]>(`/analysis/stock/${encodeURIComponent(ticker)}/history`),
+};
+
+// ---------------------------------------------------------------- mutual funds & portfolio
+
+export type FundSignalKey = "continue" | "review" | "switch" | "no_signal";
+
+export interface RiskStats {
+  start: string;
+  end: string;
+  years: number;
+  cagr: number | null;
+  volatility: number;
+  sharpe: number | null;
+  sortino: number | null;
+  max_drawdown: number;
+  drawdown_peak: string;
+  drawdown_trough: string;
+}
+
+export interface RollingReturns {
+  years: number;
+  windows: number;
+  fund_avg: number;
+  bench_avg: number;
+  avg_excess: number;
+  beat_share: number;
+  worst_excess: number;
+  best_excess: number;
+  first_start: string;
+  last_start: string;
+}
+
+export interface FundReport {
+  code: string;
+  name: string;
+  amc: string | null;
+  category: string | null;
+  asset_class: "equity" | "debt" | "hybrid" | "other";
+  plan: string | null;
+  option: string | null;
+  nav: number | null;
+  nav_date: string | null;
+  previous_nav: number | null;
+  nav_freshness: Freshness;
+  history_start: string | null;
+  holding: {
+    units: number;
+    invested: number | null;
+    value: number | null;
+    pnl: number | null;
+    folios: string[];
+    first_purchase: string | null;
+    xirr: number | null;
+    xirr_basis: string;
+    xirr_approximate: boolean;
+  } | null;
+  returns: { years: number; fund: number | null; benchmark: number | null }[];
+  benchmark: { ticker: string; label: string } | null;
+  risk: RiskStats | null;
+  benchmark_risk: RiskStats | null;
+  rolling: RollingReturns[];
+  direct_twin: { code: string; name: string } | null;
+  direct_gap_pp: number | null;
+  direct_gap_basis: string;
+  expense_ratio_pct: number | null;
+  overlaps: { code: string; name: string; pct: number; common: number; approximate: boolean; note: string }[];
+  segment_peers: string[];
+  signal: FundSignalKey;
+  signal_label: string;
+  rule: string;
+  reasons: { direction: Direction; text: string }[];
+  notes: string[];
+  unavailable: string[];
+  fetch_errors: string[];
+  disclaimer: string;
+}
+
+export interface MFHoldingsAnalysis {
+  funds: FundReport[];
+  overlap: { codes: string[]; names: string[]; pct: (number | null)[][]; approximate: boolean };
+  warnings: string[];
+  disclaimer: string;
+}
+
+export interface FundPortfolioImported {
+  status: "imported";
+  upload_id: number;
+  amfi_code: string;
+  scheme_name: string;
+  rows: number;
+  total_weight_pct: number;
+  warnings: string[];
+}
+
+export interface Slice {
+  key: string;
+  label: string;
+  value: number;
+  weight: number;
+}
+
+export interface PortfolioSummary {
+  as_of: string | null;
+  total_value: number;
+  stock_value: number;
+  fund_value: number;
+  invested: number | null;
+  invested_note: string | null;
+  pnl: number | null;
+  pnl_pct: number | null;
+  day_change: number | null;
+  day_change_pct: number | null;
+  day_change_note: string | null;
+  xirr: number | null;
+  xirr_coverage: number;
+  xirr_basis: string;
+  by_holding: Slice[];
+  by_sector: Slice[];
+  by_mcap: Slice[];
+  by_asset_class: Slice[];
+  warnings: string[];
+  beta: number | null;
+  beta_coverage: number;
+  beta_basis: string;
+  correlation_labels: string[];
+  correlation: (number | null)[][];
+  correlation_basis: string;
+  performance_dates: string[];
+  performance_portfolio: number[];
+  performance_nifty: number[];
+  performance_basis: string;
+  snapshots: { created_at: string; kind: string; total_value: number | null }[];
+  notes: string[];
+  disclaimer: string;
+}
+
+export const fundApi = {
+  holdings: () => request<MFHoldingsAnalysis>("/analysis/mf/holdings"),
+  report: (code: string) => request<FundReport>(`/analysis/mf/${encodeURIComponent(code)}`),
+  setExpenseRatio: (code: string, pct: number | null) =>
+    request<FundReport>(`/analysis/mf/${encodeURIComponent(code)}/expense-ratio`, {
+      method: "PUT",
+      body: JSON.stringify({ expense_ratio_pct: pct }),
+    }),
+};
+
+export const summaryApi = {
+  get: () => request<PortfolioSummary>("/portfolio/summary"),
 };

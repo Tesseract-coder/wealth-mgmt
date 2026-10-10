@@ -79,7 +79,19 @@ With 10 years of results the app can work out 5-year growth, and it uses Screene
 
 Uploads older than 120 days are ignored. Re-export after each quarterly results season.
 
-## 4. Snapshots
+## 4. Fund portfolio holdings (optional, for fund overlap)
+
+To see how much your funds hold the same stocks, upload each fund's holdings under **Import → Fund portfolios**:
+1. Open your fund's AMC website and look for **Monthly portfolio** or **Portfolio disclosure**. Every AMC must publish one each month.
+2. Download the Excel file for the latest month. It often has one sheet per scheme: note your fund's sheet name.
+3. On the Fund portfolios tab:
+   1. Choose the fund.
+   2. Enter the portfolio date and the sheet name.
+   3. Upload the file.
+
+Columns such as *Name of the Instrument*, *ISIN* and *% to Net Assets* are found automatically. Totals and "Net current assets" rows are skipped, and weights given as fractions (0.052) are converted to percent. Overlap is marked **approximate** if the weights cover less than 90% of the fund, or if the holdings are over 100 days old.
+
+## 5. Snapshots
 
 Every import (and every manual change) is saved as a dated **snapshot**. The latest stock snapshot plus the latest mutual fund snapshot make up your current portfolio. Older snapshots are kept so later phases can chart your portfolio value and signals over time.
 
