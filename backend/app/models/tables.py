@@ -253,3 +253,18 @@ class ScreenerData(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=utcnow)
     fields_json: str = "{}"  # screen columns: {"pe": 21.2, "promoter_pct": 50.1, …}
     statements_json: str | None = None  # company export: {"annual": {...}, "quarterly": {...}}
+
+
+class SignalRecord(SQLModel, table=True):
+    """One day's signal for a holding under a style and risk level (the signal history)."""
+
+    ticker: str = Field(primary_key=True)
+    day: dt.date = Field(primary_key=True)
+    style: str = Field(primary_key=True)
+    risk: str = Field(primary_key=True)
+    signal: str
+    composite: float | None = None
+    technical: float | None = None
+    fundamental: float | None = None
+    confidence: str | None = None
+    recorded_at: datetime = Field(default_factory=utcnow)

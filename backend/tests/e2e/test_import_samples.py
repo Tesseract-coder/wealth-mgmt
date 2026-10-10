@@ -1,17 +1,21 @@
-"""End-to-end: every FAKE file in sample_data/ imports through the API.
-
-Phase 6 extends this to assert that each holding gets a signal with reasons.
-"""
+"""End-to-end: every FAKE file in sample_data/ imports through the API, then every holding
+gets a signal with reasons (market data and fundamentals faked, no network)."""
 
 import json
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
+
+from app.jobs.runner import get_runner
+from tests.unit.test_signals_api import _fake_sources
 
 SAMPLES = Path(__file__).resolve().parents[3] / "sample_data"
 
 
-def test_all_samples_import(client: TestClient) -> None:
+def test_all_samples_import_and_get_signals(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     def up(url: str, name: str, **form: str) -> dict[str, object]:
         with open(SAMPLES / name, "rb") as f:
             r = client.post(url, files={"file": (name, f)}, data=form)
@@ -38,3 +42,21 @@ def test_all_samples_import(client: TestClient) -> None:
     holdings = client.get("/portfolio/holdings").json()
     assert holdings["stocks_snapshot"]["row_count"] == 4
     assert holdings["mf_snapshot"]["row_count"] == 4
+
+    # Fetch prices and fundamentals for the holdings, then score them.
+    _fake_sources(monkeypatch)
+    job = client.post("/market/refresh", json={"scope": "all"}).json()
+    get_runner().wait(job["id"], timeout=120)
+    assert client.get(f"/jobs/{job['id']}").json()["status"] == "done"
+    client.put("/settings/profile", json={"style": "swing", "risk": "medium"})
+    body = client.get("/analysis/signals/holdings").json()
+    assert body["style"] == "swing" and len(body["holdings"]) == 4
+    for h in body["holdings"]:
+        assert h["signal"] != "no_signal", h
+        assert h["composite"] is not None and h["confidence"] is not None
+        assert h["top_bullish"] or h["top_bearish"]
+        assert h["rule"] and h["stop"] is not None
+    detail = client.get("/analysis/stock/RELIANCE.NS", params={"fetch": False}).json()
+    assert detail["bullish"] or detail["bearish"]
+    assert detail["levels"]["targets"] and detail["tax"] is not None
+    assert "SEBI-registered" in detail["disclaimer"]

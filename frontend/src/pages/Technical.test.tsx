@@ -75,7 +75,7 @@ afterEach(() => vi.unstubAllGlobals());
 describe("Technical page", () => {
   it("groups readings by direction with text labels, shows gaps and fetch errors", async () => {
     mockFetch();
-    renderAt("/analysis/RELIANCE.NS");
+    renderAt("/analysis/RELIANCE.NS?view=technical");
     expect(await screen.findByText(/13\.6% below its 200-day SMA/)).toBeInTheDocument();
     expect(screen.getAllByText(/▼ Bearish/).length).toBeGreaterThan(0); // never colour alone
     expect(screen.getByText("Stochastic %K 15.0: oversold")).toBeInTheDocument();
@@ -87,7 +87,7 @@ describe("Technical page", () => {
 
   it("lists holdings with their data status", async () => {
     mockFetch();
-    renderAt("/analysis");
+    renderAt("/analysis?view=technical");
 
     expect(await screen.findByText("Tata Consultancy")).toBeInTheDocument();
     expect(screen.getByText("Unavailable")).toBeInTheDocument();

@@ -11,6 +11,8 @@ defaults:
 # ---------------------------------------------------------------------------
 # 5.1 Investing styles
 # technical_weight + fundamental_weight must equal 1.0
+# stop_breach_exits: a close below the ATR trailing stop forces Sell / Exit. When false the
+# breach is a red flag (blocks Buy) but not an exit: long-term holders ride out pullbacks.
 # ---------------------------------------------------------------------------
 styles:
   intraday:
@@ -38,6 +40,7 @@ styles:
     timeframes: ["1wk", "1mo"]
     technical_weight: 0.2
     fundamental_weight: 0.8
+    stop_breach_exits: false
   custom:
     label: "Custom"
     horizon: "user-defined"
@@ -87,10 +90,73 @@ signals:
   severe_flags:
     max_pledge_pct: 25         # pledge above this % = severe red flag → Sell
     consecutive_loss_years: 2  # with rising debt = severe red flag
+  stop_loss_lookback_bars: 22  # trailing stop = highest high of the last N bars − ATR multiple × ATR
+  target_r_multiples: [2, 3]   # targets at entry + 2R and + 3R, where R = ATR multiple × ATR
 
 confidence:
-  high_min_coverage: 0.8       # share of inputs available
+  high_min_coverage: 0.8       # share of the score's inputs that had data
   medium_min_coverage: 0.5
+  stale_caps_at: medium        # stale prices or fundamentals: confidence is at most this
+
+# ---------------------------------------------------------------------------
+# 7.3 Scoring. Each sub-score is 0–100, built from the engine's readings:
+#   sub-score = 50 + 50 × Σ(direction × weight) / Σ(weight)
+# where direction is +1 bullish, −1 bearish, 0 neutral. All bullish → 100, all bearish → 0,
+# balanced or all neutral → 50. A sub-score with no readings is "no data": it is left out
+# and the rest re-weighted, and the gap lowers confidence instead of the score.
+# ---------------------------------------------------------------------------
+scoring:
+  technical_weights:           # sub-score weights inside the technical score (re-normalised)
+    trend: 0.30
+    momentum: 0.20
+    volume: 0.15
+    structure: 0.15
+    relative_strength: 0.20
+    volatility: 0.0            # volatility sets the stop-loss distance; it isn't a direction
+    pattern: 0.0               # candlestick patterns: shown as reasons only, not scored
+  fundamental_weights:
+    valuation: 0.20
+    profitability: 0.20
+    growth: 0.20
+    health: 0.20
+    quality: 0.10
+    ownership: 0.10
+  # Categories that don't apply to lenders/insurers; missing them doesn't cut confidence.
+  financial_exempt: ["health", "quality"]
+  primary_timeframe_weight: 0.6  # the style's first timeframe; the rest share what's left
+  minor_weight: 0.5              # weak evidence (candles, Bollinger stretch, small signs)
+  neutral_weight: 0.5            # a neutral reading pulls its sub-score toward 50 this much
+  # Readings that describe rather than judge (ATR size, the level map): not scored.
+  info_only: ["atr", "hist_vol", "levels", "pe_value", "pb_value", "ev_ebitda_value",
+              "fscore_partial"]
+  # Stronger evidence counts more (default 1.0).
+  reading_weights:
+    golden_cross: 2.0
+    death_cross: 2.0
+    adx_strong_trend: 1.5
+    breakout: 1.5
+    breakdown: 1.5
+    debt_above_limit: 2.0
+    loss_making: 2.0
+    fscore_strong: 1.5
+    fscore_weak: 1.5
+    pledge_high: 1.5
+    pledge_severe: 3.0
+    promoter_selling: 1.5
+  beta_lookback_sessions: 252    # beta vs Nifty 50 from a year of daily returns
+  beta_min_sessions: 120
+
+# ---------------------------------------------------------------------------
+# 7.4 Position sizing. Weights are shares of the whole portfolio (stocks + mutual funds)
+# unless weight_base is "stocks". Suggested quantities: adds use new money, trims take
+# money out (so the rest of the portfolio's weights stay comparable).
+# ---------------------------------------------------------------------------
+rebalance:
+  weight_base: portfolio         # "portfolio" (stocks + funds) or "stocks"
+  strong_buy_target: 1.0         # Strong Buy: add up to this × max weight per stock
+  buy_target: 0.75               # Buy: add up to this × max weight per stock
+  reduce_keep: 0.5               # Reduce on a weak score: trim to this share of the position
+  min_trade_value_inr: 1000      # smaller suggested trades are dropped as noise
 
 # ---------------------------------------------------------------------------
 # Screener

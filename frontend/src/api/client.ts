@@ -449,3 +449,205 @@ export const fundamentalApi = {
   report: (ticker: string) => request<FundamentalReport>(`/analysis/fundamental/${encodeURIComponent(ticker)}`),
   holdings: () => request<FundamentalSummary[]>("/analysis/fundamental/holdings"),
 };
+
+// ---------------------------------------------------------------- scores & signals
+
+export type SignalKey = "strong_buy" | "buy" | "hold" | "reduce" | "sell" | "no_signal";
+export type ConfidenceLevel = "high" | "medium" | "low";
+
+export interface Reading {
+  source: "technical" | "fundamental";
+  key: string;
+  category: string;
+  direction: Direction;
+  text: string;
+  minor: boolean;
+  weight: number;
+  points: number;
+  timeframes: string[];
+}
+
+export interface SubScore {
+  category: string;
+  score: number | null;
+  weight: number;
+  bullish: number;
+  bearish: number;
+  neutral: number;
+}
+
+export interface TimeframeScore {
+  interval: string;
+  score: number | null;
+  coverage: number;
+  weight: number;
+  subscores: SubScore[];
+}
+
+export interface SideScore {
+  score: number | null;
+  coverage: number;
+  applicable: boolean;
+  subscores: SubScore[];
+  timeframes: TimeframeScore[];
+  notes: string[];
+}
+
+export interface Scores {
+  composite: number | null;
+  technical: SideScore;
+  fundamental: SideScore;
+  technical_weight: number;
+  fundamental_weight: number;
+  coverage: number;
+  confidence: ConfidenceLevel | null;
+  confidence_reason: string;
+}
+
+export interface Flag {
+  key: string;
+  severe: boolean;
+  text: string;
+}
+
+export interface PriceLevels {
+  interval: string;
+  close: number;
+  as_of: string;
+  atr: number;
+  multiple: number;
+  trailing_stop: number;
+  entry_stop: number;
+  stop_breached: boolean;
+  risk_per_share: number;
+  targets: { label: string; price: number; pct: number }[];
+  basis: string;
+}
+
+export interface Rebalance {
+  action: "add" | "trim" | "exit" | "none";
+  quantity: number;
+  value: number | null;
+  target_weight: number | null;
+  text: string;
+}
+
+export interface TaxNote {
+  holding_days: number | null;
+  term: "short" | "long" | "mixed" | "unknown";
+  long_term_from: string | null;
+  text: string[];
+  verify_note: string;
+}
+
+export interface Position {
+  quantity: number;
+  avg_price: number;
+  invested: number;
+  price: number | null;
+  price_source: string;
+  value: number | null;
+  pnl: number | null;
+  pnl_pct: number | null;
+  lots: { quantity: number; avg_price: number; purchase_date: string | null }[];
+}
+
+export interface StockSignal {
+  ticker: string;
+  label: string;
+  style: StyleKey;
+  style_label: string;
+  risk: RiskKey;
+  risk_label: string;
+  signal: SignalKey;
+  signal_label: string;
+  rule: string;
+  scores: Scores;
+  bullish: Reading[];
+  bearish: Reading[];
+  readings: Reading[];
+  flags: Flag[];
+  levels: PriceLevels | null;
+  beta: number | null;
+  beta_basis: string;
+  position: Position | null;
+  weight: number | null;
+  max_weight: number;
+  sector: string | null;
+  sector_weight: number | null;
+  max_sector_weight: number;
+  rebalance: Rebalance;
+  tax: TaxNote | null;
+  price_freshness: Freshness;
+  fundamental_freshness: Freshness;
+  notes: string[];
+  disclaimer: string;
+}
+
+export interface HoldingSignal {
+  ticker: string;
+  label: string;
+  signal: SignalKey;
+  signal_label: string;
+  rule: string;
+  composite: number | null;
+  technical: number | null;
+  fundamental: number | null;
+  confidence: ConfidenceLevel | null;
+  weight: number | null;
+  max_weight: number;
+  value: number | null;
+  pnl: number | null;
+  sector: string | null;
+  flags: Flag[];
+  top_bullish: string[];
+  top_bearish: string[];
+  rebalance: Rebalance;
+  stop: number | null;
+  stop_breached: boolean;
+  price_freshness: Freshness;
+}
+
+export interface HoldingSignals {
+  style: StyleKey;
+  style_label: string;
+  risk: RiskKey;
+  risk_label: string;
+  technical_weight: number;
+  weight_base: "portfolio" | "stocks";
+  total_value: number;
+  stock_value: number;
+  fund_value: number;
+  sectors: { sector: string; weight: number; limit: number; over: boolean }[];
+  holdings: HoldingSignal[];
+  notes: string[];
+  disclaimer: string;
+}
+
+export interface SignalHistoryRow {
+  day: string;
+  style: string;
+  risk: string;
+  signal: SignalKey;
+  signal_label: string;
+  composite: number | null;
+  technical: number | null;
+  fundamental: number | null;
+  confidence: ConfidenceLevel | null;
+}
+
+function styleQuery(style?: StyleKey | null, risk?: RiskKey | null): string {
+  const p = new URLSearchParams();
+  if (style) p.set("style", style);
+  if (risk) p.set("risk", risk);
+  const s = p.toString();
+  return s ? `?${s}` : "";
+}
+
+export const signalApi = {
+  holdings: (style?: StyleKey | null, risk?: RiskKey | null) =>
+    request<HoldingSignals>(`/analysis/signals/holdings${styleQuery(style, risk)}`),
+  stock: (ticker: string, style?: StyleKey | null, risk?: RiskKey | null) =>
+    request<StockSignal>(`/analysis/stock/${encodeURIComponent(ticker)}${styleQuery(style, risk)}`),
+  history: (ticker: string) => request<SignalHistoryRow[]>(`/analysis/stock/${encodeURIComponent(ticker)}/history`),
+};

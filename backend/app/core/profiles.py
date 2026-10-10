@@ -24,6 +24,7 @@ class Style(BaseModel):
     timeframes: list[str]
     technical_weight: float = Field(ge=0, le=1)
     fundamental_weight: float = Field(ge=0, le=1)
+    stop_breach_exits: bool = True
     note: str | None = None
 
     @model_validator(mode="after")
@@ -54,17 +55,74 @@ class SignalRules(BaseModel):
     hold_floor: float
     reduce_floor: float
     severe_flags: SevereFlags
+    stop_loss_lookback_bars: int = Field(ge=1)
+    target_r_multiples: list[float] = Field(min_length=1)
 
     @model_validator(mode="after")
     def bands_ordered(self) -> "SignalRules":
         if not self.reduce_floor < self.hold_floor:
             raise ValueError("reduce_floor must be below hold_floor")
+        if any(r <= 0 for r in self.target_r_multiples):
+            raise ValueError("signals.target_r_multiples must be positive")
         return self
+
+
+ConfidenceLevel = Literal["high", "medium", "low"]
 
 
 class Confidence(BaseModel):
     high_min_coverage: float = Field(ge=0, le=1)
     medium_min_coverage: float = Field(ge=0, le=1)
+    stale_caps_at: Literal["medium", "low"]
+
+    @model_validator(mode="after")
+    def ordered(self) -> "Confidence":
+        if self.medium_min_coverage > self.high_min_coverage:
+            raise ValueError("confidence.medium_min_coverage must not exceed high_min_coverage")
+        return self
+
+
+TechCategory = Literal[
+    "trend", "momentum", "volatility", "volume", "structure", "relative_strength", "pattern"
+]
+FundCategory = Literal["valuation", "profitability", "growth", "health", "quality", "ownership"]
+
+
+class ScoringConfig(BaseModel):
+    technical_weights: dict[TechCategory, float]
+    fundamental_weights: dict[FundCategory, float]
+    financial_exempt: list[FundCategory]
+    primary_timeframe_weight: float = Field(gt=0, le=1)
+    minor_weight: float = Field(ge=0)
+    neutral_weight: float = Field(ge=0)
+    info_only: list[str]
+    reading_weights: dict[str, float]
+    beta_lookback_sessions: int = Field(gt=10)
+    beta_min_sessions: int = Field(gt=10)
+
+    @model_validator(mode="after")
+    def weights_valid(self) -> "ScoringConfig":
+        for name, have, keys in (
+            ("technical_weights", self.technical_weights, get_args(TechCategory)),
+            ("fundamental_weights", self.fundamental_weights, get_args(FundCategory)),
+        ):
+            if missing := set(keys) - set(have):
+                raise ValueError(f"scoring.{name} is missing {sorted(missing)}")
+            if any(v < 0 for v in have.values()) or sum(have.values()) <= 0:
+                raise ValueError(f"scoring.{name} must be non-negative and not all zero")
+        if any(v < 0 for v in self.reading_weights.values()):
+            raise ValueError("scoring.reading_weights must be non-negative")
+        if self.beta_min_sessions > self.beta_lookback_sessions:
+            raise ValueError("scoring.beta_min_sessions must not exceed beta_lookback_sessions")
+        return self
+
+
+class RebalanceConfig(BaseModel):
+    weight_base: Literal["portfolio", "stocks"]
+    strong_buy_target: float = Field(gt=0, le=1)
+    buy_target: float = Field(gt=0, le=1)
+    reduce_keep: float = Field(ge=0, lt=1)
+    min_trade_value_inr: float = Field(ge=0)
 
 
 class ScreenerConfig(BaseModel):
@@ -326,6 +384,8 @@ class Profiles(BaseModel):
     risk_levels: dict[RiskKey, RiskLevel]
     signals: SignalRules
     confidence: Confidence
+    scoring: ScoringConfig
+    rebalance: RebalanceConfig
     screener: ScreenerConfig
     data: DataConfig
     technical: TechnicalConfig

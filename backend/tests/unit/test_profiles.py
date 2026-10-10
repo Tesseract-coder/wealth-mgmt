@@ -127,3 +127,29 @@ def test_benchmarks_need_nifty50(tmp_path: Path) -> None:
 def test_delivery_lookback_covers_average(tmp_path: Path) -> None:
     with pytest.raises(ConfigError, match="delivery_avg \\+ 1"):
         load_profiles(_variant(tmp_path, "technical", ["delivery_lookback_sessions"], 20))
+
+
+@pytest.mark.parametrize(
+    ("section", "path", "value", "match"),
+    [
+        ("scoring", ["technical_weights"], {"trend": 1.0}, "technical_weights is missing"),
+        ("scoring", ["fundamental_weights", "growth"], -0.1, "non-negative"),
+        ("scoring", ["beta_min_sessions"], 400, "beta_min_sessions must not exceed"),
+        ("scoring", ["reading_weights", "golden_cross"], -1, "reading_weights"),
+        ("rebalance", ["weight_base"], "everything", "weight_base"),
+        ("rebalance", ["buy_target"], 1.5, "less than or equal to 1"),
+        ("signals", ["target_r_multiples"], [2, -1], "target_r_multiples must be positive"),
+        ("confidence", ["medium_min_coverage"], 0.9, "must not exceed high_min_coverage"),
+    ],
+)
+def test_scoring_sections_validation(
+    tmp_path: Path, section: str, path: list[str], value: object, match: str
+) -> None:
+    with pytest.raises(ConfigError, match=match):
+        load_profiles(_variant(tmp_path, section, path, value))
+
+
+def test_long_term_style_rides_out_stops() -> None:
+    s = load_profiles(REAL).styles
+    assert not s["long_term"].stop_breach_exits
+    assert all(s[k].stop_breach_exits for k in ("intraday", "swing", "positional", "custom"))

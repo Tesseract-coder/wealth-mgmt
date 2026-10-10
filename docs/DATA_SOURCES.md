@@ -52,6 +52,9 @@ All of these settings live in the `data:` section of `backend/config/profiles.ya
 | `GET /analysis/technical/{ticker}/series?interval=&start=` | Indicator lines for charts |
 | `GET /analysis/fundamental/{ticker}?fetch=true` | Fundamental metrics, F-score and readings |
 | `GET /analysis/fundamental/holdings` | A short fundamentals summary per holding (cached data only) |
+| `GET /analysis/stock/{ticker}?style=&risk=&fetch=true` | Signal, scores, reasons, flags, stop-loss/targets, position size and tax note for one stock |
+| `GET /analysis/signals/holdings?style=&risk=` | Signals for every holding plus sector weights (cached data only; saved to the history) |
+| `GET /analysis/stock/{ticker}/history?style=` | Past daily signals |
 | `POST /import/screener` (file, optional `mapping`, optional `symbol`) | Upload a Screener.in screen or company export |
 
 ## Swapping a data source

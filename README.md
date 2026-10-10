@@ -15,7 +15,8 @@ A personal, locally-run dashboard that analyses your **Groww** stock and mutual 
 | 3 | Market data: Yahoo prices, mfapi/AMFI NAVs, NSE lists, caching, rate limits, freshness, daily schedule | ✅ |
 | 4 | Technical engine: trend/momentum/volatility/volume/structure indicators, plain-English readings, delivery % | ✅ |
 | 5 | Fundamental engine: valuation, profitability, growth, health, ownership, Piotroski F-score, sector medians, Screener.in uploads | ✅ |
-| 6–11 | Scores and signals, UI, screener, Google Sheets, polish | ⏳ |
+| 6 | Scores and signals: style-weighted composite, confidence, red flags, Buy/Hold/Sell with reasons, ATR stop-loss and targets, position sizing, tax note, signal history | ✅ |
+| 7–11 | MF and portfolio analytics, full UI, screener, Google Sheets, polish | ⏳ |
 
 ## Quick start (no Docker)
 
@@ -54,7 +55,10 @@ Free sources only: Yahoo Finance (delayed end-of-day prices), mfapi.in and AMFI 
 
 ## Analysis
 
-The **Analysis** page has two tabs for each holding or any NSE stock:
+The **Holdings** page gives every stock a **Buy / Hold / Sell** signal with its composite, technical and fundamental scores, confidence, weight vs your limit, the rule that fired and a suggested quantity. Switch style or risk level to see the same holdings another way.
+
+The **Analysis** page has three tabs for each holding or any NSE stock:
+- **Signal:** the signal and why; the top 3 bullish and bearish reasons, each with the points it adds to the score; red flags; the ATR stop-loss and targets (nearest resistance, 2R, 3R); position size; a tax note (STCG/LTCG); and the signal history.
 - **Technical:** every indicator from the spec on your style's timeframes, grouped into bullish / bearish / neutral readings with the numbers behind each.
 - **Fundamental:** valuation (vs sector medians), profitability, growth, financial health, ownership and the Piotroski F-score, each with its basis.
 

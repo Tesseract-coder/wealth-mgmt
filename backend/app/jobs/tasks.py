@@ -1,4 +1,5 @@
-"""Refresh jobs. Market data: reference lists → prices → delivery → NAVs → holdings' fundamentals.
+"""Refresh jobs. Market data: reference lists → prices → delivery → NAVs → holdings' fundamentals
+→ today's signals (saved to the signal history).
 Fundamentals (weekly): holdings plus Nifty 500 peers in the same NSE industry, for medians.
 
 Each step skips anything that is already fresh unless `force` is set, so the job is cheap to
@@ -59,6 +60,8 @@ def market_refresh(scope: Scope = "all", force: bool = False) -> JobFn:
                             partial(fundamentals_step, s, t.code, t.label, force),
                         )
                     )
+            if scope in ("all", "prices") and stock_targets(s):
+                steps.append(("signal history", partial(signals_step, s)))
             return _run_steps(s, steps, progress)
 
     return run
@@ -90,6 +93,12 @@ def _run_steps(
 
 
 FUND_JOB_KIND = "fundamentals_refresh"
+
+
+def signals_step(session: Session) -> RefreshResult:
+    from app.analysis.signals import record_holdings_step
+
+    return record_holdings_step(session)
 
 
 def fundamentals_step(

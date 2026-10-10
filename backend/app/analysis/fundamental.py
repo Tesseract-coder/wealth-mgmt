@@ -20,7 +20,7 @@ from sqlmodel import Session, col, select
 
 from app.analysis.statements import Statements, fill_missing, from_rows, from_yahoo
 from app.core.formatting import format_inr, now_ist
-from app.core.profiles import FundamentalConfig, RiskLevel, get_profiles
+from app.core.profiles import FundamentalConfig, FundCategory, RiskLevel, get_profiles
 from app.data.freshness import Freshness, as_utc
 from app.data.indices import nifty500_by_symbol
 from app.data.provider import DataProvider
@@ -28,7 +28,7 @@ from app.importers.reference import ticker_resolver
 from app.models.tables import FundamentalMetrics, ScreenerData, utcnow
 
 Direction = Literal["bullish", "bearish", "neutral"]
-Category = Literal["valuation", "profitability", "growth", "health", "quality", "ownership"]
+Category = FundCategory
 
 # Metrics compared against the sector median, and whether lower is better.
 PEER_METRICS: dict[str, bool] = {
@@ -109,6 +109,7 @@ class FundamentalReport:
     unavailable: list[str]
     notes: list[str] = field(default_factory=list)
     fetch_errors: list[str] = field(default_factory=list)
+    applicable: bool = True  # False for ETFs and indices
 
 
 # ---------------------------------------------------------------------------- helpers
@@ -1085,6 +1086,7 @@ def analyse_fundamentals(
             None,
             [],
             [f"Fundamentals (not applicable to {what})"],
+            applicable=False,
         )
     if fetch:
         res = provider.ensure_fundamentals(ticker, label)

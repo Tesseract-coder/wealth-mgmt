@@ -405,3 +405,209 @@ class FundamentalSummaryOut(BaseModel):
     bearish: int
     top_bullish: list[str]
     top_bearish: list[str]
+
+
+# --------------------------------------------------------------------------- scores & signals
+
+SignalKey = Literal["strong_buy", "buy", "hold", "reduce", "sell", "no_signal"]
+ConfidenceOut = Literal["high", "medium", "low"]
+
+
+class ReadingOut(BaseModel):
+    source: Literal["technical", "fundamental"]
+    key: str
+    category: str
+    direction: Literal["bullish", "bearish", "neutral"]
+    text: str
+    minor: bool
+    weight: float
+    points: float = Field(description="Points this reading adds to the composite score")
+    timeframes: list[str]
+
+
+class SubScoreOut(BaseModel):
+    category: str
+    score: float | None
+    weight: float
+    bullish: int
+    bearish: int
+    neutral: int
+
+
+class TimeframeScoreOut(BaseModel):
+    interval: str
+    score: float | None
+    coverage: float
+    weight: float
+    subscores: list[SubScoreOut]
+
+
+class SideScoreOut(BaseModel):
+    score: float | None
+    coverage: float
+    applicable: bool
+    subscores: list[SubScoreOut]
+    timeframes: list[TimeframeScoreOut]
+    notes: list[str]
+
+
+class ScoresOut(BaseModel):
+    composite: float | None
+    technical: SideScoreOut
+    fundamental: SideScoreOut
+    technical_weight: float
+    fundamental_weight: float
+    coverage: float
+    confidence: ConfidenceOut | None
+    confidence_reason: str
+
+
+class FlagOut(BaseModel):
+    key: str
+    severe: bool
+    text: str
+
+
+class TargetOut(BaseModel):
+    label: str
+    price: float
+    pct: float
+
+
+class PriceLevelsOut(BaseModel):
+    interval: str
+    close: float
+    as_of: str
+    atr: float
+    multiple: float
+    trailing_stop: float
+    entry_stop: float
+    stop_breached: bool
+    risk_per_share: float
+    targets: list[TargetOut]
+    basis: str
+
+
+class LotOut(BaseModel):
+    quantity: float
+    avg_price: float
+    purchase_date: date | None
+
+
+class PositionOut(BaseModel):
+    quantity: float
+    avg_price: float
+    invested: float
+    price: float | None
+    price_source: str
+    value: float | None
+    pnl: float | None
+    pnl_pct: float | None
+    lots: list[LotOut]
+
+
+class RebalanceOut(BaseModel):
+    action: Literal["add", "trim", "exit", "none"]
+    quantity: int
+    value: float | None
+    target_weight: float | None
+    text: str
+
+
+class TaxNoteOut(BaseModel):
+    holding_days: int | None
+    term: Literal["short", "long", "mixed", "unknown"]
+    long_term_from: date | None
+    text: list[str]
+    verify_note: str
+
+
+class StockSignalOut(BaseModel):
+    ticker: str
+    label: str
+    style: StyleKey
+    style_label: str
+    risk: RiskKey
+    risk_label: str
+    signal: SignalKey
+    signal_label: str
+    rule: str
+    scores: ScoresOut
+    bullish: list[ReadingOut]
+    bearish: list[ReadingOut]
+    readings: list[ReadingOut]
+    flags: list[FlagOut]
+    levels: PriceLevelsOut | None
+    beta: float | None
+    beta_basis: str
+    position: PositionOut | None
+    weight: float | None
+    max_weight: float
+    sector: str | None
+    sector_weight: float | None
+    max_sector_weight: float
+    rebalance: RebalanceOut
+    tax: TaxNoteOut | None
+    price_freshness: FreshnessOut
+    fundamental_freshness: FreshnessOut
+    notes: list[str]
+    disclaimer: str
+
+
+class HoldingSignalOut(BaseModel):
+    ticker: str
+    label: str
+    signal: SignalKey
+    signal_label: str
+    rule: str
+    composite: float | None
+    technical: float | None
+    fundamental: float | None
+    confidence: ConfidenceOut | None
+    weight: float | None
+    max_weight: float
+    value: float | None
+    pnl: float | None
+    sector: str | None
+    flags: list[FlagOut]
+    top_bullish: list[str]
+    top_bearish: list[str]
+    rebalance: RebalanceOut
+    stop: float | None
+    stop_breached: bool
+    price_freshness: FreshnessOut
+
+
+class SectorWeightOut(BaseModel):
+    sector: str
+    weight: float
+    limit: float
+    over: bool
+
+
+class HoldingSignalsOut(BaseModel):
+    style: StyleKey
+    style_label: str
+    risk: RiskKey
+    risk_label: str
+    technical_weight: float
+    weight_base: Literal["portfolio", "stocks"]
+    total_value: float
+    stock_value: float
+    fund_value: float
+    sectors: list[SectorWeightOut]
+    holdings: list[HoldingSignalOut]
+    notes: list[str]
+    disclaimer: str
+
+
+class SignalHistoryOut(BaseModel):
+    day: date
+    style: str
+    risk: str
+    signal: SignalKey
+    signal_label: str
+    composite: float | None
+    technical: float | None
+    fundamental: float | None
+    confidence: ConfidenceOut | None

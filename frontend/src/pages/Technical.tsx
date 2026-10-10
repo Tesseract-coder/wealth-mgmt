@@ -13,6 +13,7 @@ import {
 } from "../api/client";
 import { FreshnessBadge } from "../components/MarketData";
 import { FundamentalHoldings, FundamentalReportView } from "../components/FundamentalView";
+import { HoldingSignalsView, StockSignalView } from "../components/SignalView";
 import { Alert, Card, inputClass } from "../components/ui";
 import { useDebounced } from "../hooks/useDebounced";
 import { formatDate, formatINR } from "../lib/format";
@@ -40,14 +41,19 @@ export function DirectionTag({ d }: { d: Direction }) {
   );
 }
 
-/** Technical readings for a holding or any NSE stock (full stock detail with charts: Phase 8). */
-type View = "technical" | "fundamental";
+/** Signal, technical and fundamental views of a holding or any NSE stock (charts: Phase 8). */
+type View = "signal" | "technical" | "fundamental";
+const VIEWS: { key: View; label: string }[] = [
+  { key: "signal", label: "Signal" },
+  { key: "technical", label: "Technical" },
+  { key: "fundamental", label: "Fundamental" },
+];
 
 /** Query string for links within the page, keeping the chosen style and view. */
-export function analysisQuery(style: StyleKey | null, view: View = "technical"): string {
+export function analysisQuery(style: StyleKey | null, view: View = "signal"): string {
   const p = new URLSearchParams();
   if (style) p.set("style", style);
-  if (view !== "technical") p.set("view", view);
+  if (view !== "signal") p.set("view", view);
   const s = p.toString();
   return s ? `?${s}` : "";
 }
@@ -58,7 +64,8 @@ export function Technical() {
   const config = useQuery({ queryKey: ["config"], queryFn: api.config });
   const profile = useQuery({ queryKey: ["profile"], queryFn: api.profile });
   const style = (params.get("style") as StyleKey | null) ?? profile.data?.style ?? null;
-  const view: View = params.get("view") === "fundamental" ? "fundamental" : "technical";
+  const raw = params.get("view");
+  const view: View = raw === "fundamental" || raw === "technical" ? raw : "signal";
   const styleKnown = params.has("style") || profile.isSuccess || profile.isError;
   const update = (next: { style?: string | null; view?: View }) => {
     const p = new URLSearchParams(params);
@@ -67,8 +74,8 @@ export function Technical() {
       else p.delete("style");
     }
     if (next.view !== undefined) {
-      if (next.view === "fundamental") p.set("view", "fundamental");
-      else p.delete("view");
+      if (next.view === "signal") p.delete("view");
+      else p.set("view", next.view);
     }
     setParams(p);
   };
@@ -79,16 +86,15 @@ export function Technical() {
         <div>
           <h1 className="text-2xl font-semibold">Analysis</h1>
           <p className="text-sm text-slate-500">
-            Chart and company readings with the numbers behind each one. Scores and Buy/Hold/Sell signals come in a
-            later phase.
+            Buy / Hold / Sell signals with the scores and readings behind them, under any investing style.
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-3">
-          {view === "technical" && (
+          {view !== "fundamental" && (
             <label className="text-sm">
               <span className="mb-1 block text-slate-500">Style</span>
               <select className={inputClass} value={style ?? ""} onChange={(e) => update({ style: e.target.value || null })}>
-                <option value="">Daily only (no style chosen)</option>
+                <option value="">{view === "signal" ? "Your saved style" : "Daily only (no style chosen)"}</option>
                 {config.data &&
                   Object.entries(config.data.styles).map(([k, s]) => (
                     <option key={k} value={k}>
@@ -102,7 +108,7 @@ export function Technical() {
         </div>
       </div>
       <div role="tablist" className="flex gap-1 border-b border-slate-200 dark:border-slate-800">
-        {(["technical", "fundamental"] as const).map((v) => (
+        {VIEWS.map(({ key: v, label }) => (
           <button
             key={v}
             type="button"
@@ -113,7 +119,7 @@ export function Technical() {
               view === v ? "border-slate-900 font-medium dark:border-slate-100" : "border-transparent text-slate-500"
             }`}
           >
-            {v === "technical" ? "Technical" : "Fundamental"}
+            {label}
           </button>
         ))}
       </div>
@@ -125,7 +131,15 @@ export function Technical() {
           </Link>
         </div>
       )}
-      {view === "fundamental" ? (
+      {view === "signal" ? (
+        !styleKnown ? (
+          <Card>Loading…</Card>
+        ) : ticker ? (
+          <StockSignalView ticker={ticker} style={style} />
+        ) : (
+          <HoldingSignalsView style={style} linkQuery={analysisQuery(style)} />
+        )
+      ) : view === "fundamental" ? (
         ticker ? (
           <FundamentalReportView ticker={ticker} />
         ) : (

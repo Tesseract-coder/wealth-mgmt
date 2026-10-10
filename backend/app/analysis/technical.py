@@ -18,14 +18,12 @@ import pandas as pd
 from app.analysis import indicators as ind
 from app.analysis.structure import Level, candle_pattern, levels, nearest, recent_break
 from app.core.formatting import IST, format_inr
-from app.core.profiles import StyleKey, TechnicalConfig, get_profiles
+from app.core.profiles import StyleKey, TechCategory, TechnicalConfig, get_profiles
 from app.data.freshness import Freshness
 from app.data.provider import DataProvider
 
 Direction = Literal["bullish", "bearish", "neutral"]
-Category = Literal[
-    "trend", "momentum", "volatility", "volume", "structure", "relative_strength", "pattern"
-]
+Category = TechCategory
 Interval = Literal["15m", "1h", "1d", "1wk", "1mo"]
 INTRADAY: tuple[Interval, ...] = ("15m", "1h")
 

@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Layout } from "./components/Layout";
+import { Holdings } from "./pages/Holdings";
 import { Import } from "./pages/Import";
 import { Placeholder } from "./pages/Placeholder";
 import { Status } from "./pages/Status";
@@ -11,7 +12,7 @@ export function App() {
       <Route element={<Layout />}>
         <Route index element={<Status />} />
         <Route path="import" element={<Import />} />
-        <Route path="holdings" element={<Placeholder title="Holdings" phase={8} />} />
+        <Route path="holdings" element={<Holdings />} />
         <Route path="analysis" element={<Technical />} />
         <Route path="analysis/:ticker" element={<Technical />} />
         <Route path="technical/*" element={<LegacyTechnical />} />
@@ -28,5 +29,7 @@ export function App() {
 /** Phase 4 links pointed at /technical; keep them working. */
 function LegacyTechnical() {
   const { pathname, search } = useLocation();
-  return <Navigate replace to={pathname.replace(/^\/technical/, "/analysis") + search} />;
+  const p = new URLSearchParams(search);
+  if (!p.has("view")) p.set("view", "technical");
+  return <Navigate replace to={`${pathname.replace(/^\/technical/, "/analysis")}?${p.toString()}`} />;
 }

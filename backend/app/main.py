@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import analysis, imports, jobs, market, portfolio, reference, system
+from app.api import analysis, imports, jobs, market, portfolio, reference, signals, system
 from app.api import settings as settings_api
 from app.core.db import init_db
 from app.core.profiles import get_profiles
@@ -66,6 +66,7 @@ def create_app() -> FastAPI:
     app.include_router(market.router)
     app.include_router(jobs.router)
     app.include_router(analysis.router)
+    app.include_router(signals.router)
     return app
 
 
