@@ -130,6 +130,114 @@ class DataConfig(BaseModel):
         return parse_hhmm(self.nav_refresh_time_ist)
 
 
+class SupertrendPeriods(BaseModel):
+    period: int = Field(gt=1)
+    multiplier: float = Field(gt=0)
+
+
+class MacdPeriods(BaseModel):
+    fast: int = Field(gt=1)
+    slow: int = Field(gt=1)
+    signal: int = Field(gt=1)
+
+    @model_validator(mode="after")
+    def fast_below_slow(self) -> "MacdPeriods":
+        if self.fast >= self.slow:
+            raise ValueError("macd.fast must be below macd.slow")
+        return self
+
+
+class StochasticPeriods(BaseModel):
+    k: int = Field(gt=1)
+    smooth: int = Field(ge=1)
+    d: int = Field(ge=1)
+
+
+class BollingerPeriods(BaseModel):
+    period: int = Field(gt=1)
+    std: float = Field(gt=0)
+
+
+class TechnicalPeriods(BaseModel):
+    sma: list[int] = Field(min_length=1)
+    ema: list[int] = Field(min_length=2, max_length=2)
+    adx: int = Field(gt=1)
+    supertrend: SupertrendPeriods
+    rsi: int = Field(gt=1)
+    macd: MacdPeriods
+    stochastic: StochasticPeriods
+    roc: int = Field(gt=0)
+    bollinger: BollingerPeriods
+    atr: int = Field(gt=1)
+    hist_vol: int = Field(gt=1)
+    volume_avg: int = Field(gt=1)
+    obv_trend: int = Field(gt=2)
+    high_low_sessions: int = Field(gt=1)
+    relative_strength: dict[str, int]
+    delivery_avg: int = Field(gt=1)
+
+    @model_validator(mode="after")
+    def sma_has_trend_pair(self) -> "TechnicalPeriods":
+        if not {50, 200} <= set(self.sma):
+            raise ValueError("technical.periods.sma must include 50 and 200 (golden/death cross)")
+        if self.ema[0] >= self.ema[1]:
+            raise ValueError("technical.periods.ema must be [fast, slow]")
+        return self
+
+
+class TechnicalThresholds(BaseModel):
+    rsi_overbought: float = Field(gt=0, lt=100)
+    rsi_oversold: float = Field(gt=0, lt=100)
+    rsi_neutral_band: tuple[float, float]
+    stoch_overbought: float = Field(gt=0, lt=100)
+    stoch_oversold: float = Field(gt=0, lt=100)
+    adx_trending: float = Field(gt=0)
+    adx_weak: float = Field(gt=0)
+    cross_lookback_bars: int = Field(ge=1)
+    volume_surge: float = Field(gt=1)
+    near_52w_pct: float = Field(gt=0)
+    squeeze_lookback_bars: int = Field(gt=1)
+    delivery_surge: float = Field(gt=1)
+    obv_slope_min: float = Field(ge=0)
+    candle_doji_body: float = Field(gt=0, lt=1)
+    candle_hammer_shadow: float = Field(gt=0)
+
+    @model_validator(mode="after")
+    def ordered(self) -> "TechnicalThresholds":
+        lo, hi = self.rsi_neutral_band
+        if not self.rsi_oversold < lo <= hi < self.rsi_overbought:
+            raise ValueError("need rsi_oversold < rsi_neutral_band < rsi_overbought")
+        if not self.stoch_oversold < self.stoch_overbought:
+            raise ValueError("stoch_oversold must be below stoch_overbought")
+        if not self.adx_weak <= self.adx_trending:
+            raise ValueError("adx_weak must not exceed adx_trending")
+        return self
+
+
+class SupportResistance(BaseModel):
+    lookback_bars: int = Field(gt=10)
+    pivot_window: int = Field(ge=1)
+    cluster_pct: float = Field(gt=0)
+    min_touches: int = Field(ge=1)
+    breakout_buffer_pct: float = Field(ge=0)
+    breakout_window_bars: int = Field(ge=1)
+
+
+class TechnicalConfig(BaseModel):
+    periods: TechnicalPeriods
+    thresholds: TechnicalThresholds
+    support_resistance: SupportResistance
+    delivery_lookback_sessions: int = Field(gt=0)
+
+    @model_validator(mode="after")
+    def enough_delivery_history(self) -> "TechnicalConfig":
+        if self.delivery_lookback_sessions < self.periods.delivery_avg + 1:
+            raise ValueError(
+                "technical.delivery_lookback_sessions must be at least periods.delivery_avg + 1"
+            )
+        return self
+
+
 class ImportConfig(BaseModel):
     header_scan_rows: int = Field(gt=0)
     column_match_min_score: float = Field(ge=0, le=100)
@@ -164,6 +272,7 @@ class Profiles(BaseModel):
     confidence: Confidence
     screener: ScreenerConfig
     data: DataConfig
+    technical: TechnicalConfig
     importing: ImportConfig
     tax: TaxConfig
     disclaimer: str
@@ -176,6 +285,8 @@ class Profiles(BaseModel):
             raise ValueError(
                 f"missing styles {sorted(missing_styles)} / risk levels {sorted(missing_risks)}"
             )
+        if "nifty50" not in self.data.benchmarks:
+            raise ValueError("data.benchmarks must include nifty50 (used for relative strength)")
         for risk in self.risk_levels.values():
             if risk.buy_threshold + self.signals.strong_buy_margin > 100:
                 raise ValueError("buy_threshold + strong_buy_margin exceeds 100")

@@ -116,11 +116,6 @@ def refresh(body: RefreshIn) -> JobOut:
     return job_out(job)
 
 
-def _label(session: Session, key: str, fallback: str) -> str:
-    st = store.get_status(session, key)
-    return st.label if st and st.label else fallback
-
-
 @router.get("/prices/{ticker}", response_model=PriceSeriesOut)
 def prices(
     ticker: str = Path(pattern=TICKER, description="Yahoo ticker, e.g. RELIANCE.NS, ^NSEI"),
@@ -134,7 +129,7 @@ def prices(
     ticker = ticker.upper()
     fetch_error = None
     if interval in ("15m", "1h"):
-        res = refresh_intraday(session, ticker, interval, ticker)
+        res = refresh_intraday(session, ticker, interval)
         fetch_error = res.message if res.outcome == "failed" else None
         bars = get_intraday(session, ticker, interval)
         out = [
@@ -151,7 +146,7 @@ def prices(
     else:
         st = store.get_status(session, price_key(ticker))
         if refresh or st is None or st.last_date is None:
-            res = refresh_daily(session, ticker, _label(session, price_key(ticker), ticker))
+            res = refresh_daily(session, ticker)
             fetch_error = res.message if res.outcome == "failed" else None
         bars = get_daily(session, ticker, interval, start)  # type: ignore[arg-type]
         out = [

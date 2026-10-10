@@ -100,13 +100,12 @@ def test_market_status_empty_portfolio(client: TestClient) -> None:
     assert all(
         q["freshness"]["status"] == "unavailable" and q["price"] is None for q in body["quotes"]
     )
-    assert {x["key"] for x in body["references"]} == {
-        "nse_equity",
-        "nse_etf",
-        "nifty500",
-        "amfi_navall",
-    }
-    assert all(x["origin"] == "bundled" for x in body["references"])
+    refs = {x["key"]: x for x in body["references"]}
+    assert set(refs) == {"nse_equity", "nse_etf", "nifty500", "amfi_navall", "nse_delivery"}
+    assert all(
+        refs[k]["origin"] == "bundled" for k in ("nse_equity", "nse_etf", "nifty500", "amfi_navall")
+    )
+    assert refs["nse_delivery"]["freshness"]["status"] == "unavailable"
     assert body["schedule"]["enabled"] is False and body["last_job"] is None
 
 
@@ -207,3 +206,53 @@ def test_nav_endpoint(client: TestClient) -> None:
 
 def test_get_missing_job_404(client: TestClient) -> None:
     assert client.get("/jobs/999").status_code == 404
+
+
+def test_job_with_skipped_steps_does_not_lock_the_database(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Regression: a skipped step that renamed a series left a write transaction open, and the
+    job's progress update (a second connection) then waited 30 s and failed: 'database is locked'."""
+    import time
+
+    from sqlmodel import Session
+
+    from app.core.db import get_engine
+    from app.models.tables import SeriesStatus
+
+    with open(f"{SAMPLES}/groww_stocks_holdings.xlsx", "rb") as f:
+        client.post("/import/groww-stocks", files={"file": f})
+    _fake_yahoo(monkeypatch)
+    first = client.post("/market/refresh", json={"scope": "prices"}).json()["id"]
+    get_runner().wait(first, timeout=30)
+    with Session(get_engine()) as s:  # rename every series so the next run has a real change
+        for st in s.exec(select(SeriesStatus).where(SeriesStatus.kind == "price")):
+            st.label = "renamed"
+        s.commit()
+    started = time.monotonic()
+    second = client.post("/market/refresh", json={"scope": "prices"}).json()["id"]
+    get_runner().wait(second, timeout=60)
+    job = client.get(f"/jobs/{second}").json()
+    assert job["status"] == "done", job["message"]
+    assert "13 already fresh" in job["message"]
+    assert time.monotonic() - started < 10
+
+
+def test_analysis_does_not_rename_holding_series(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from sqlmodel import Session
+
+    from app.core.db import get_engine
+    from app.models.tables import SeriesStatus
+
+    with open(f"{SAMPLES}/groww_stocks_holdings.xlsx", "rb") as f:
+        client.post("/import/groww-stocks", files={"file": f})
+    _fake_yahoo(monkeypatch)
+    job = client.post("/market/refresh", json={"scope": "prices"}).json()["id"]
+    get_runner().wait(job, timeout=30)
+    client.get("/analysis/technical/RELIANCE.NS", params={"fetch": "true", "refresh": "true"})
+    client.get("/market/prices/RELIANCE.NS", params={"refresh": "true"})
+    with Session(get_engine()) as s:
+        st = s.get(SeriesStatus, "price:RELIANCE.NS")
+        assert st and st.label == "Reliance Industries Ltd"

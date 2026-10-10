@@ -2,6 +2,7 @@ from collections.abc import Iterator
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
+import httpx
 import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
@@ -27,6 +28,11 @@ def _no_waiting(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
         raise AssertionError("test tried to call Yahoo Finance; patch app.data.yahoo._download")
 
     monkeypatch.setattr("app.data.yahoo._download", offline)
+
+    def no_network(req: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError(f"network disabled in tests ({req.url})")
+
+    http.set_client(httpx.Client(transport=httpx.MockTransport(no_network)))
     yield
     rate_limit.reset_limiters()
     http.set_client(None)

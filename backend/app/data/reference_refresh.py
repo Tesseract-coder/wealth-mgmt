@@ -17,7 +17,14 @@ from app.core.profiles import ReferenceKey, get_profiles
 from app.core.settings import get_settings
 from app.data import amfi, indices, nse, store
 from app.data.files import REFERENCE_FILES, bundled_as_of, locate
-from app.data.freshness import Freshness, as_utc, assess_age, expected_session, ready_at
+from app.data.freshness import (
+    Freshness,
+    as_utc,
+    assess_age,
+    assess_series,
+    expected_session,
+    ready_at,
+)
 from app.data.http import FetchError, get_bytes
 from app.data.store import RefreshResult
 from app.importers import reference as resolvers
@@ -99,7 +106,7 @@ def refresh_reference(
 
 @dataclass(frozen=True)
 class ReferenceStatus:
-    key: ReferenceKey
+    key: str
     label: str
     source: str
     origin: str  # "refreshed" | "bundled"
@@ -136,4 +143,25 @@ def reference_status(session: Session, now: datetime | None = None) -> list[Refe
         as_of = as_utc(when).astimezone(IST).date() if when else None
         rows = st.rows if st and origin == "refreshed" else None
         out.append(ReferenceStatus(key, f.label, f.source, origin, as_of, rows, fr))
+    st = store.get_status(session, "ref:nse_delivery")
+    fr = assess_series(
+        last_date=st.last_date if st else None,
+        last_success_at=st.last_success_at if st else None,
+        last_error=st.last_error if st else None,
+        now=now,
+        ready=cfg.price_ready,
+        stale_after_hours=cfg.stale_after_hours,
+        max_missing=cfg.max_missing_sessions,
+    )
+    out.append(
+        ReferenceStatus(
+            "nse_delivery",
+            "NSE delivery data (bhavcopy)",
+            "nse",
+            "refreshed",
+            st.last_date if st else None,
+            None,
+            fr,
+        )
+    )
     return out

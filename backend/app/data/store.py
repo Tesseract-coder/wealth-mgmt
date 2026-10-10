@@ -158,12 +158,16 @@ def get_status(session: Session, key: str) -> SeriesStatus | None:
     return session.get(SeriesStatus, key)
 
 
-def status_row(session: Session, key: str, kind: str, source: str, label: str) -> SeriesStatus:
+def status_row(
+    session: Session, key: str, kind: str, source: str, label: str | None
+) -> SeriesStatus:
+    """Get or create a status row. label=None keeps the existing label (callers that only know
+    the ticker shouldn't overwrite a holding's name)."""
     st = session.get(SeriesStatus, key)
     if st is None:
-        st = SeriesStatus(key=key, kind=kind, source=source, label=label)
+        st = SeriesStatus(key=key, kind=kind, source=source, label=label or key.split(":", 1)[-1])
         session.add(st)
-    else:
+    elif label is not None and st.label != label:
         st.label = label
     return st
 

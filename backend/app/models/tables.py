@@ -196,3 +196,24 @@ class Job(SQLModel, table=True):
     total: int = 0
     message: str | None = None
     errors: str | None = None  # JSON list of strings
+
+
+class DeliveryStat(SQLModel, table=True):
+    """Per-symbol delivery data from NSE's daily full bhavcopy (EQ series only)."""
+
+    symbol: str = Field(primary_key=True)
+    date: dt.date = Field(primary_key=True)
+    close: float | None = None
+    traded_qty: float | None = None
+    turnover_lacs: float | None = None  # ₹ lakh
+    deliv_qty: float | None = None
+    deliv_pct: float | None = None
+
+
+class BhavcopyDay(SQLModel, table=True):
+    """Which bhavcopy files we have fetched; 'missing' = NSE has no file (holiday)."""
+
+    date: dt.date = Field(primary_key=True)
+    status: str  # "ok" | "missing"
+    rows: int = 0
+    fetched_at: datetime = Field(default_factory=utcnow)

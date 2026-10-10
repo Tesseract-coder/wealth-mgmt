@@ -11,6 +11,7 @@ from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
 from typing import Any
 
+from sqlalchemy.exc import OperationalError
 from sqlmodel import Session, col, select
 
 from app.core.db import get_engine
@@ -30,22 +31,30 @@ class Progress:
         self.errors: list[str] = []
 
     def update(self, done: int, total: int, message: str | None = None) -> None:
-        with Session(get_engine()) as s:
-            job = s.get(Job, self.job_id)
-            if job:
-                job.done, job.total = done, total
-                if message is not None:
-                    job.message = message
-                s.commit()
+        def apply(job: Job) -> None:
+            job.done, job.total = done, total
+            if message is not None:
+                job.message = message
+
+        self._write(apply)
 
     def error(self, message: str) -> None:
         self.errors.append(message)
         if len(self.errors) <= MAX_ERRORS:
+            errors = json.dumps(self.errors[:MAX_ERRORS])
+            self._write(lambda job: setattr(job, "errors", errors))
+
+    def _write(self, apply: Callable[[Job], None]) -> None:
+        """Progress is best-effort: a busy database must never fail the job itself.
+        The final status and errors are written again when the job ends."""
+        try:
             with Session(get_engine()) as s:
                 job = s.get(Job, self.job_id)
                 if job:
-                    job.errors = json.dumps(self.errors[:MAX_ERRORS])
+                    apply(job)
                     s.commit()
+        except OperationalError as e:
+            logger.warning("Job %s: progress not recorded (%s)", self.job_id, e.orig)
 
 
 JobFn = Callable[[Progress], str | None]

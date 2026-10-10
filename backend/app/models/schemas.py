@@ -267,3 +267,72 @@ class NavSeriesOut(BaseModel):
 class RefreshIn(BaseModel):
     scope: Literal["all", "reference", "prices", "navs"] = "all"
     force: bool = False
+
+
+# --------------------------------------------------------------------------- technical analysis
+
+
+class ObservationOut(BaseModel):
+    key: str
+    category: str
+    direction: Literal["bullish", "bearish", "neutral"]
+    text: str
+    value: float | None
+    minor: bool
+
+
+class LevelOut(BaseModel):
+    price: float
+    touches: int
+    kind: Literal["support", "resistance"]
+
+
+class FrameAnalysisOut(BaseModel):
+    values: dict[str, float | None]
+    observations: list[ObservationOut]
+    unavailable: list[str]
+    levels: list[LevelOut]
+
+
+class TimeframeOut(BaseModel):
+    interval: str
+    bars: int
+    as_of: str | None
+    last_close: float | None
+    last_complete: bool
+    freshness: FreshnessOut
+    analysis: FrameAnalysisOut
+    notes: list[str]
+
+
+class TechnicalReportOut(BaseModel):
+    ticker: str
+    label: str
+    style: StyleKey | None
+    timeframes: list[TimeframeOut]
+    context: FrameAnalysisOut
+    fetch_errors: list[str]
+    notes: list[str]
+    disclaimer: str
+
+
+class TechnicalSummaryOut(BaseModel):
+    """One row per holding: a tally of the latest readings (scoring comes in Phase 6)."""
+
+    ticker: str
+    label: str
+    interval: str
+    as_of: str | None
+    freshness: FreshnessOut
+    bullish: int
+    bearish: int
+    neutral: int
+    top_bullish: list[str]
+    top_bearish: list[str]
+
+
+class IndicatorSeriesOut(BaseModel):
+    ticker: str
+    interval: str
+    t: list[str]
+    columns: dict[str, list[float | None]]

@@ -90,3 +90,40 @@ def test_data_cutoff_times() -> None:
     d = load_profiles(REAL).data
     assert (d.price_ready.hour, d.price_ready.minute) == (16, 0)
     assert (d.nav_ready.hour, d.nav_ready.minute) == (23, 30)
+
+
+def _variant(tmp_path: Path, section: str, path: list[str], value: object) -> Path:
+    raw = yaml.safe_load(REAL.read_text())
+    node = raw[section]
+    for k in path[:-1]:
+        node = node[k]
+    node[path[-1]] = value
+    return _write(tmp_path, raw)
+
+
+@pytest.mark.parametrize(
+    ("path", "value", "match"),
+    [
+        (["periods", "sma"], [20, 50], "must include 50 and 200"),
+        (["periods", "ema"], [21, 9], r"\[fast, slow\]"),
+        (["periods", "macd"], {"fast": 26, "slow": 12, "signal": 9}, "fast must be below"),
+        (["thresholds", "rsi_neutral_band"], [25, 55], "rsi_oversold < rsi_neutral_band"),
+        (["thresholds", "adx_weak"], 30, "adx_weak must not exceed adx_trending"),
+        (["thresholds", "volume_surge"], 0.5, "greater than 1"),
+    ],
+)
+def test_technical_section_validation(
+    tmp_path: Path, path: list[str], value: object, match: str
+) -> None:
+    with pytest.raises(ConfigError, match=match):
+        load_profiles(_variant(tmp_path, "technical", path, value))
+
+
+def test_benchmarks_need_nifty50(tmp_path: Path) -> None:
+    with pytest.raises(ConfigError, match="nifty50"):
+        load_profiles(_variant(tmp_path, "data", ["benchmarks"], {"nifty500": "^CRSLDX"}))
+
+
+def test_delivery_lookback_covers_average(tmp_path: Path) -> None:
+    with pytest.raises(ConfigError, match="delivery_avg \\+ 1"):
+        load_profiles(_variant(tmp_path, "technical", ["delivery_lookback_sessions"], 20))

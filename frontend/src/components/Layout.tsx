@@ -6,6 +6,7 @@ export const NAV = [
   { to: "/", label: "Overview" },
   { to: "/import", label: "Import" },
   { to: "/holdings", label: "Holdings" },
+  { to: "/technical", label: "Technicals" },
   { to: "/mutual-funds", label: "Mutual Funds" },
   { to: "/screener", label: "Screener" },
   { to: "/watchlist", label: "Watchlist" },

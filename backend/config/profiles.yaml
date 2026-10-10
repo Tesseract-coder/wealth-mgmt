@@ -140,6 +140,53 @@ data:
     nifty500: "^CRSLDX"
 
 # ---------------------------------------------------------------------------
+# 7.1 Technical engine: indicator periods and how readings are interpreted.
+# Periods are in bars of the timeframe being analysed (days on 1d, weeks on 1wk …).
+# ---------------------------------------------------------------------------
+technical:
+  periods:
+    sma: [20, 50, 200]
+    ema: [9, 21]
+    adx: 14
+    supertrend: {period: 10, multiplier: 3}
+    rsi: 14
+    macd: {fast: 12, slow: 26, signal: 9}
+    stochastic: {k: 14, smooth: 3, d: 3}
+    roc: 20
+    bollinger: {period: 20, std: 2}
+    atr: 14
+    hist_vol: 20
+    volume_avg: 20
+    obv_trend: 20
+    high_low_sessions: 252          # 52 weeks of daily bars
+    relative_strength: {3m: 63, 6m: 126}   # sessions, vs the nifty50 benchmark
+    delivery_avg: 20                # sessions
+  thresholds:
+    rsi_overbought: 70
+    rsi_oversold: 30
+    rsi_neutral_band: [45, 55]      # RSI inside this band reads as neutral momentum
+    stoch_overbought: 80
+    stoch_oversold: 20
+    adx_trending: 25                # ADX at or above this = a trend worth following
+    adx_weak: 20                    # below this = no clear trend
+    cross_lookback_bars: 10         # a cross this recent is reported as "fresh"
+    volume_surge: 1.5               # volume / 20-bar average
+    near_52w_pct: 5                 # within this % of the 52-week high/low
+    squeeze_lookback_bars: 120      # Bollinger bandwidth at its lowest in this window = squeeze
+    delivery_surge: 1.2             # delivery % / its 20-session average
+    obv_slope_min: 0.02             # |OBV trend| (share of average volume per bar) below this is flat
+    candle_doji_body: 0.1           # body ≤ this share of the day's range
+    candle_hammer_shadow: 2.0       # lower shadow ≥ this × body
+  support_resistance:
+    lookback_bars: 250
+    pivot_window: 5                 # bars each side for a swing high/low
+    cluster_pct: 1.5                # pivots within this % of each other form one level
+    min_touches: 2
+    breakout_buffer_pct: 1.0        # close must clear the level by this much
+    breakout_window_bars: 3         # breakouts in the last N bars are reported
+  delivery_lookback_sessions: 21    # NSE bhavcopy files fetched: the latest + periods.delivery_avg before it
+
+# ---------------------------------------------------------------------------
 # Importers (fuzzy-match scores are 0–100)
 # ---------------------------------------------------------------------------
 importing:

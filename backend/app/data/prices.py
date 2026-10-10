@@ -66,11 +66,17 @@ def _split_suspected(session: Session, ticker: str, fresh: pd.DataFrame) -> bool
 
 
 def refresh_daily(
-    session: Session, ticker: str, label: str, *, force: bool = False, now: datetime | None = None
+    session: Session,
+    ticker: str,
+    label: str | None = None,
+    *,
+    force: bool = False,
+    now: datetime | None = None,
 ) -> RefreshResult:
     now = now or now_ist()
     key = price_key(ticker)
     st = store.status_row(session, key, "price", "yahoo", label)
+    label = st.label or ticker
     if not force and daily_freshness(st, now).status == "fresh":
         return RefreshResult(key, label, "skipped", "Already up to date")
 
@@ -163,7 +169,7 @@ def refresh_intraday(
     session: Session,
     ticker: str,
     interval: IntradayInterval,
-    label: str,
+    label: str | None = None,
     *,
     force: bool = False,
     now: datetime | None = None,
@@ -171,6 +177,7 @@ def refresh_intraday(
     now = now or now_ist()
     key = intraday_key(ticker, interval)
     st = store.status_row(session, key, "intraday", "yahoo", label)
+    label = st.label or ticker
     if not force and intraday_freshness(st, now).status == "fresh":
         return RefreshResult(key, label, "skipped", "Already up to date")
     st.last_attempt_at = store.to_utc(now)

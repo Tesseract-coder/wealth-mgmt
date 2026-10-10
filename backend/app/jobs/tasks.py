@@ -12,6 +12,7 @@ from sqlmodel import Session
 
 from app.core.db import get_engine
 from app.core.profiles import ReferenceKey
+from app.data.delivery import refresh_delivery
 from app.data.files import REFERENCE_FILES
 from app.data.navs import refresh_nav
 from app.data.prices import refresh_daily
@@ -42,6 +43,8 @@ def market_refresh(scope: Scope = "all", force: bool = False) -> JobFn:
             if scope in ("all", "prices"):
                 for t in benchmark_targets() + stock_targets(s):
                     steps.append((t.label, partial(refresh_daily, s, t.code, t.label, force=force)))
+            if scope in ("all", "prices"):
+                steps.append(("NSE delivery data", partial(refresh_delivery, s, force=force)))
             if scope in ("all", "navs"):
                 for t in fund_targets(s):
                     steps.append((t.label, partial(refresh_nav, s, t.code, t.label, force=force)))
@@ -53,6 +56,9 @@ def market_refresh(scope: Scope = "all", force: bool = False) -> JobFn:
                 progress.update(i, total, f"Refreshing {label}")
                 try:
                     result = step()
+                    # Never leave a transaction open between steps: progress updates use their
+                    # own connection, and SQLite allows one writer at a time.
+                    s.commit()
                 except Exception as e:  # unexpected bug: record it, keep going
                     s.rollback()
                     result = RefreshResult("?", label, "failed", f"{e.__class__.__name__}: {e}")

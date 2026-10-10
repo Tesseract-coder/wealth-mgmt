@@ -318,3 +318,67 @@ export const marketApi = {
 
 export const isActive = (job: Job | null | undefined): boolean =>
   job?.status === "queued" || job?.status === "running";
+
+// --------------------------------------------------------------------------- technical analysis
+
+export type Direction = "bullish" | "bearish" | "neutral";
+
+export interface Observation {
+  key: string;
+  category: string;
+  direction: Direction;
+  text: string;
+  value: number | null;
+  minor: boolean;
+}
+
+export interface FrameAnalysis {
+  values: Record<string, number | null>;
+  observations: Observation[];
+  unavailable: string[];
+  levels: { price: number; touches: number; kind: "support" | "resistance" }[];
+}
+
+export interface TimeframeReport {
+  interval: string;
+  bars: number;
+  as_of: string | null;
+  last_close: number | null;
+  last_complete: boolean;
+  freshness: Freshness;
+  analysis: FrameAnalysis;
+  notes: string[];
+}
+
+export interface TechnicalReport {
+  ticker: string;
+  label: string;
+  style: StyleKey | null;
+  timeframes: TimeframeReport[];
+  context: FrameAnalysis;
+  fetch_errors: string[];
+  notes: string[];
+  disclaimer: string;
+}
+
+export interface TechnicalSummary {
+  ticker: string;
+  label: string;
+  interval: string;
+  as_of: string | null;
+  freshness: Freshness;
+  bullish: number;
+  bearish: number;
+  neutral: number;
+  top_bullish: string[];
+  top_bearish: string[];
+}
+
+export const analysisApi = {
+  technical: (ticker: string, style?: StyleKey | null) =>
+    request<TechnicalReport>(
+      `/analysis/technical/${encodeURIComponent(ticker)}${style ? `?style=${style}` : ""}`,
+    ),
+  holdings: (style?: StyleKey | null) =>
+    request<TechnicalSummary[]>(`/analysis/technical/holdings${style ? `?style=${style}` : ""}`),
+};

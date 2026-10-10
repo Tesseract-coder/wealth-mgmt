@@ -19,6 +19,7 @@ All sources are free and public. The app never logs in anywhere. Every number on
 | Latest NAVs + scheme list | AMFI `NAVAll.txt` | Daily 23:30 IST | Also used to match fund names to scheme codes. If it has a newer NAV than mfapi, the newer one is used. |
 | Equity + ETF symbol lists | NSE archives `EQUITY_L.csv`, `eq_etfseclist.csv` | Weekly | Used to match ISINs / names to symbols. |
 | Nifty 500 constituents + industry | NSE archives `ind_nifty500list.csv` | Weekly | Sector weights (Phase 7) and the screener universe (Phase 9). |
+| Delivery % and traded value | NSE archives `sec_bhavdata_full_DDMMYYYY.csv` (one file per session, all stocks) | With prices | The last 21 sessions are kept (`technical.delivery_lookback_sessions`). The first download takes 2–3 minutes at NSE's rate limit; after that it's one file a day. Days with no file (holidays) are remembered. |
 
 BSE-only stocks are fetched as `SYMBOL.BO`. Yahoo knows BSE stocks by trading symbol, not by the numeric scrip code, and its BSE history can have gaps.
 
@@ -44,3 +45,10 @@ All of these settings live in the `data:` section of `backend/config/profiles.ya
 | `GET /jobs/{id}`, `GET /jobs` | Job progress and errors |
 | `GET /market/prices/{ticker}?interval=1d\|1wk\|1mo\|15m\|1h&start=YYYY-MM-DD&refresh=false` | Cached bars (fetched on first request). Weekly/monthly bars are built from daily ones; `last_complete=false` means the final bar's week/month isn't over |
 | `GET /market/nav/{amfi_code}?start=&refresh=` | NAV history |
+| `GET /analysis/technical/{ticker}?style=&timeframes=&fetch=true` | Technical readings for one stock (style defaults to your saved one) |
+| `GET /analysis/technical/holdings?style=` | A short summary for every current holding (cached data only) |
+| `GET /analysis/technical/{ticker}/series?interval=&start=` | Indicator lines for charts |
+
+## Swapping a data source
+
+Analysis code never calls Yahoo, mfapi or NSE directly. It goes through the `DataProvider` interface in `backend/app/data/provider.py` (daily and intraday bars, NAV history, latest NAV, delivery history). `CachedProvider` is the default: the SQLite cache, filled from the free sources above. To use another source, such as a paid API or a broker's *read-only* data API, write a class with the same methods.

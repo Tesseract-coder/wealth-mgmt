@@ -1,0 +1,76 @@
+"""The one interface the analysis code uses for market data.
+
+Analysis modules depend on `DataProvider`, never on yfinance/mfapi/NSE directly, so a source can
+be swapped (a paid API, a broker's read-only API) by writing another implementation.
+`CachedProvider` serves the SQLite cache and fetches through the free sources when a series
+is missing or stale.
+"""
+
+from datetime import date
+from typing import Protocol
+
+import pandas as pd
+from sqlmodel import Session
+
+from app.data import delivery, navs, prices, store
+from app.data.navs import LatestNav
+from app.data.prices import Bars, DailyInterval, IntradayInterval
+from app.data.store import RefreshResult
+
+
+class DataProvider(Protocol):
+    def daily(
+        self, ticker: str, interval: DailyInterval = "1d", start: date | None = None
+    ) -> Bars: ...
+
+    def intraday(self, ticker: str, interval: IntradayInterval) -> Bars: ...
+
+    def ensure_daily(
+        self, ticker: str, label: str | None = None, force: bool = False
+    ) -> RefreshResult: ...
+
+    def ensure_intraday(
+        self, ticker: str, interval: IntradayInterval, force: bool = False
+    ) -> RefreshResult: ...
+
+    def nav_history(self, code: str, start: date | None = None) -> pd.Series: ...
+
+    def latest_nav(self, code: str) -> LatestNav: ...
+
+    def delivery(self, symbol: str, sessions: int) -> pd.DataFrame: ...
+
+
+class CachedProvider:
+    """SQLite cache backed by Yahoo Finance, mfapi.in, AMFI and NSE archives."""
+
+    def __init__(self, session: Session) -> None:
+        self.session = session
+
+    def daily(self, ticker: str, interval: DailyInterval = "1d", start: date | None = None) -> Bars:
+        return prices.get_daily(self.session, ticker, interval, start)
+
+    def intraday(self, ticker: str, interval: IntradayInterval) -> Bars:
+        return prices.get_intraday(self.session, ticker, interval)
+
+    def ensure_daily(
+        self, ticker: str, label: str | None = None, force: bool = False
+    ) -> RefreshResult:
+        """Fetch only when nothing is cached or the cache is stale (or force)."""
+        return prices.refresh_daily(self.session, ticker, label, force=force)
+
+    def ensure_intraday(
+        self, ticker: str, interval: IntradayInterval, force: bool = False
+    ) -> RefreshResult:
+        return prices.refresh_intraday(self.session, ticker, interval, force=force)
+
+    def nav_history(self, code: str, start: date | None = None) -> pd.Series:
+        pts = store.read_navs(self.session, code, start)
+        return pd.Series(
+            [p.nav for p in pts], index=pd.Index([p.date for p in pts], name="date"), name=code
+        )
+
+    def latest_nav(self, code: str) -> LatestNav:
+        return navs.latest_nav(self.session, code)
+
+    def delivery(self, symbol: str, sessions: int) -> pd.DataFrame:
+        return delivery.delivery_history(self.session, symbol, sessions)
