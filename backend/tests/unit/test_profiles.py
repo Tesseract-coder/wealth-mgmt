@@ -63,3 +63,30 @@ def test_invalid_yaml_rejected(tmp_path: Path) -> None:
 def test_missing_file_rejected(tmp_path: Path) -> None:
     with pytest.raises(ConfigError, match="not found"):
         load_profiles(tmp_path / "nope.yaml")
+
+
+def _data_variant(tmp_path: Path, **changes: object) -> Path:
+    raw = yaml.safe_load(REAL.read_text())
+    raw["data"].update(changes)
+    return _write(tmp_path, raw)
+
+
+@pytest.mark.parametrize(
+    ("changes", "match"),
+    [
+        ({"rate_limits_per_minute": {"yahoo": 60}}, "rate_limits_per_minute is missing"),
+        ({"rate_limits_per_minute": {"yahoo": 0, "mfapi": 1, "nse": 1, "amfi": 1}}, "positive"),
+        ({"refresh_time_ist": "15:00"}, "after market_close_ist"),
+        ({"nav_refresh_time_ist": "25:00"}, "nav_refresh_time_ist"),
+        ({"reference_min_rows": {"nse_equity": 1}}, "reference_min_rows is missing"),
+    ],
+)
+def test_data_section_validation(tmp_path: Path, changes: dict[str, object], match: str) -> None:
+    with pytest.raises(ConfigError, match=match):
+        load_profiles(_data_variant(tmp_path, **changes))
+
+
+def test_data_cutoff_times() -> None:
+    d = load_profiles(REAL).data
+    assert (d.price_ready.hour, d.price_ready.minute) == (16, 0)
+    assert (d.nav_ready.hour, d.nav_ready.minute) == (23, 30)

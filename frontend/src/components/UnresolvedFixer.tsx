@@ -88,12 +88,12 @@ function FixRow(props: {
           <span className="text-slate-500">Only on BSE?</span>
           <input
             className={`${inputClass} w-40`}
-            placeholder="BSE code, e.g. 500325"
+            placeholder="BSE symbol, e.g. TCS"
             value={bse}
             onChange={(e) => setBse(e.target.value)}
-            aria-label="BSE code"
+            aria-label="BSE symbol"
           />
-          <Button variant="secondary" disabled={!bse.trim() || fix.isPending} onClick={() => fix.mutate({ code: bse.trim(), exchange: "BSE" })}>
+          <Button variant="secondary" disabled={!bse.trim() || fix.isPending} onClick={() => fix.mutate({ code: bse.trim().toUpperCase(), exchange: "BSE" })}>
             Use BSE
           </Button>
         </div>

@@ -102,14 +102,42 @@ screener:
   request_delay_seconds: 0.5   # throttle between data requests
 
 # ---------------------------------------------------------------------------
-# Data sources
+# Data sources (all free). Times are IST. Yahoo Finance prices are delayed;
+# daily bars are stored only for completed sessions.
 # ---------------------------------------------------------------------------
 data:
   price_history_years: 5
-  stale_after_hours: 24
+  market_open_ist: "09:15"
+  market_close_ist: "15:30"
+  refresh_time_ist: "16:00"        # daily price refresh (Mon–Fri); a day's bar counts as final after this
+  nav_refresh_time_ist: "23:30"    # AMFI publishes NAVs by 11 PM; NAV refresh runs daily after that
+  refresh_on_startup: true         # catch up on stale data when the backend starts
+  stale_after_hours: 24            # data not refreshed for this long is marked stale
+  max_missing_sessions: 2          # weekdays a series may lag before it's flagged (covers exchange holidays)
+  reference_refresh_days: 7        # NSE symbol / Nifty 500 lists are re-downloaded this often
+  intraday_stale_after_minutes: 15
+  intraday_max_days:               # Yahoo's limits on intraday history
+    "15m": 59
+    "1h": 729
+  incremental_overlap_days: 7      # re-download this many recent days on each refresh
+  split_check_tolerance: 0.02      # overlapping closes differing more than this ⇒ split/bonus ⇒ full re-download
   fundamentals_stale_after_days: 7
-  max_requests_per_minute: 60
-  refresh_time_ist: "16:00"    # daily refresh after market close
+  http_timeout_seconds: 30
+  http_retries: 3
+  http_backoff_seconds: 2          # doubles on each retry
+  rate_limits_per_minute:          # requests per source; be polite to free services
+    yahoo: 60
+    mfapi: 60
+    nse: 10
+    amfi: 10
+  reference_min_rows:              # a downloaded list smaller than this is rejected as broken
+    nse_equity: 1000
+    nse_etf: 50
+    nifty500: 450
+    amfi_navall: 5000
+  benchmarks:                      # Yahoo Finance index tickers
+    nifty50: "^NSEI"
+    nifty500: "^CRSLDX"
 
 # ---------------------------------------------------------------------------
 # Importers (fuzzy-match scores are 0–100)

@@ -6,17 +6,16 @@ Handles both layouts AMFI has used:
 Lines without ';' are section headers: either a category ("Open Ended Schemes(Equity Scheme - …)")
 or an AMC name ("Axis Mutual Fund").
 
-Phase 2 reads the bundled copy; Phase 3 adds a daily live refresh.
+Reads the refreshed copy in var/reference/ when present, else the bundled one (see files.py).
 """
 
-import gzip
 import logging
 import re
 from dataclasses import dataclass
 from datetime import date, datetime
 from functools import lru_cache
 
-from app.core.settings import get_settings
+from app.data.files import read_text
 
 logger = logging.getLogger(__name__)
 
@@ -123,8 +122,6 @@ def parse_navall(text: str) -> list[Scheme]:
 
 @lru_cache
 def load_schemes() -> tuple[Scheme, ...]:
-    path = get_settings().fallback_data_dir / "NAVAll.txt.gz"
-    text = gzip.decompress(path.read_bytes()).decode("utf-8", errors="replace")
-    schemes = parse_navall(text)
-    logger.info("Loaded %d AMFI schemes from bundled NAVAll", len(schemes))
+    schemes = parse_navall(read_text("amfi_navall"))
+    logger.info("Loaded %d AMFI schemes", len(schemes))
     return tuple(schemes)

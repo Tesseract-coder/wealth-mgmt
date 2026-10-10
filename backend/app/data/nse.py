@@ -1,6 +1,6 @@
 """NSE securities master (equities + ETFs), used to resolve ISIN / company name → symbol.
 
-Phase 2 reads the bundled copies in data/fallback/. Phase 3 adds a live refresh with caching.
+Reads the refreshed copy in var/reference/ when present, else the bundled one (see files.py).
 """
 
 import csv
@@ -8,9 +8,8 @@ import io
 import logging
 from dataclasses import dataclass
 from functools import lru_cache
-from pathlib import Path
 
-from app.core.settings import get_settings
+from app.data.files import read_text
 
 logger = logging.getLogger(__name__)
 
@@ -63,17 +62,12 @@ def parse_etf_list(text: str) -> list[Security]:
     return out
 
 
-def _read(path: Path) -> str:
-    return path.read_text(encoding="utf-8", errors="replace")
-
-
 @lru_cache
 def load_securities() -> tuple[Security, ...]:
-    d = get_settings().fallback_data_dir
-    securities = parse_equity_list(_read(d / "EQUITY_L.csv"))
+    securities = parse_equity_list(read_text("nse_equity"))
     try:
-        securities += parse_etf_list(_read(d / "eq_etfseclist.csv"))
+        securities += parse_etf_list(read_text("nse_etf"))
     except FileNotFoundError:
-        logger.warning("ETF list missing from %s; ETFs will not resolve by ISIN", d)
-    logger.info("Loaded %d NSE securities from bundled lists", len(securities))
+        logger.warning("ETF list missing; ETFs will not resolve by ISIN")
+    logger.info("Loaded %d NSE securities", len(securities))
     return tuple(securities)

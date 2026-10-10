@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
+import { MarketData } from "../components/MarketData";
 
-/** Phase 1 landing page: proves the frontend ↔ backend ↔ SQLite ↔ config chain works. */
+/** Landing page: backend/config health plus market-data freshness. */
 export function Status() {
   const health = useQuery({ queryKey: ["health"], queryFn: api.health });
   const profile = useQuery({ queryKey: ["profile"], queryFn: api.profile });
@@ -10,7 +11,7 @@ export function Status() {
   if (health.isError) {
     return (
       <div role="alert" className="rounded border border-red-300 bg-red-50 p-4 text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
-        Backend unreachable. Start it with <code>make dev</code> and check http://localhost:8000/health.
+        Backend unreachable. Start it with <code>make dev</code> and check <code>/health</code> on the backend port (BACKEND_PORT in .env, default 8000).
       </div>
     );
   }
@@ -41,6 +42,7 @@ export function Status() {
           {Math.round(risk.max_weight_per_sector * 100)}% per sector, buy threshold ≥ {risk.buy_threshold}.
         </p>
       )}
+      <MarketData />
     </div>
   );
 }

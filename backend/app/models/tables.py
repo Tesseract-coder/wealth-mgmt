@@ -3,6 +3,7 @@
 Timestamps are stored in UTC and converted to IST at the API boundary (see ISTDatetime).
 """
 
+import datetime as dt
 from datetime import UTC, date, datetime
 
 from sqlmodel import Field, SQLModel
@@ -88,7 +89,7 @@ class MFTransaction(SQLModel, table=True):
 
     id: int | None = Field(default=None, primary_key=True)
     holding_id: int = Field(foreign_key="mfholding.id", index=True)
-    date: date
+    date: dt.date
     type: str
     description: str | None = None
     amount: float | None = None
@@ -123,3 +124,75 @@ class SchemeOverride(SQLModel, table=True):
     key: str = Field(index=True, unique=True)
     amfi_code: str
     created_at: datetime = Field(default_factory=utcnow)
+
+
+# --------------------------------------------------------------------------- market data cache
+
+
+class DailyBar(SQLModel, table=True):
+    """One completed trading session from Yahoo Finance. `close` is split-adjusted;
+    `adj_close` is also dividend-adjusted."""
+
+    ticker: str = Field(primary_key=True)  # Yahoo form: "RELIANCE.NS", "500325.BO", "^NSEI"
+    date: dt.date = Field(primary_key=True)
+    open: float | None = None
+    high: float | None = None
+    low: float | None = None
+    close: float
+    adj_close: float | None = None
+    volume: float | None = None
+
+
+class IntradayBar(SQLModel, table=True):
+    """Delayed intraday bars (15m / 1h), fetched on demand for the intraday style."""
+
+    ticker: str = Field(primary_key=True)
+    interval: str = Field(primary_key=True)  # "15m" | "1h"
+    ts: datetime = Field(primary_key=True)  # bar start, UTC
+    open: float | None = None
+    high: float | None = None
+    low: float | None = None
+    close: float
+    volume: float | None = None
+
+
+class NavPoint(SQLModel, table=True):
+    amfi_code: str = Field(primary_key=True)
+    date: dt.date = Field(primary_key=True)
+    nav: float
+
+
+class SeriesStatus(SQLModel, table=True):
+    """Freshness bookkeeping for every cached series and reference list.
+
+    key: "price:RELIANCE.NS" | "intraday:RELIANCE.NS:15m" | "nav:118989" | "ref:nse_equity" …
+    """
+
+    key: str = Field(primary_key=True)
+    kind: str = Field(index=True)  # "price" | "intraday" | "nav" | "reference"
+    source: str  # "yahoo" | "mfapi" | "nse" | "amfi"
+    label: str | None = None
+    last_attempt_at: datetime | None = None
+    last_success_at: datetime | None = None
+    last_error: str | None = None
+    first_date: date | None = None
+    last_date: date | None = None
+    rows: int = 0
+    history_from: date | None = None  # earliest date we've asked the source for
+
+
+class Job(SQLModel, table=True):
+    """A background job (data refresh, later screener runs) and its progress."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    kind: str = Field(index=True)
+    params: str | None = None  # JSON
+    status: str = "queued"  # "queued" | "running" | "done" | "failed"
+    trigger: str = "manual"  # "manual" | "schedule" | "startup"
+    created_at: datetime = Field(default_factory=utcnow, index=True)
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    done: int = 0
+    total: int = 0
+    message: str | None = None
+    errors: str | None = None  # JSON list of strings

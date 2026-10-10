@@ -1,8 +1,9 @@
 """Load and validate config/profiles.yaml. A malformed file fails fast with a readable error."""
 
 import logging
+from datetime import time
 from pathlib import Path
-from typing import Literal
+from typing import Literal, get_args
 
 import yaml
 from pydantic import BaseModel, Field, ValidationError, model_validator
@@ -73,12 +74,60 @@ class ScreenerConfig(BaseModel):
     request_delay_seconds: float = Field(ge=0)
 
 
+_HHMM = r"^([01]\d|2[0-3]):[0-5]\d$"
+SourceKey = Literal["yahoo", "mfapi", "nse", "amfi"]
+ReferenceKey = Literal["nse_equity", "nse_etf", "nifty500", "amfi_navall"]
+
+
+def parse_hhmm(value: str) -> time:
+    h, m = value.split(":")
+    return time(int(h), int(m))
+
+
 class DataConfig(BaseModel):
     price_history_years: int = Field(gt=0)
+    market_open_ist: str = Field(pattern=_HHMM)
+    market_close_ist: str = Field(pattern=_HHMM)
+    refresh_time_ist: str = Field(pattern=_HHMM)
+    nav_refresh_time_ist: str = Field(pattern=_HHMM)
+    refresh_on_startup: bool
     stale_after_hours: float = Field(gt=0)
+    max_missing_sessions: int = Field(ge=0)
+    reference_refresh_days: float = Field(gt=0)
+    intraday_stale_after_minutes: float = Field(gt=0)
+    intraday_max_days: dict[Literal["15m", "1h"], int]
+    incremental_overlap_days: int = Field(ge=1)
+    split_check_tolerance: float = Field(gt=0, lt=1)
     fundamentals_stale_after_days: float = Field(gt=0)
-    max_requests_per_minute: int = Field(gt=0)
-    refresh_time_ist: str = Field(pattern=r"^\d{2}:\d{2}$")
+    http_timeout_seconds: float = Field(gt=0)
+    http_retries: int = Field(ge=0)
+    http_backoff_seconds: float = Field(ge=0)
+    rate_limits_per_minute: dict[SourceKey, float]
+    reference_min_rows: dict[ReferenceKey, int]
+    benchmarks: dict[str, str]
+
+    @model_validator(mode="after")
+    def complete(self) -> "DataConfig":
+        for name, keys, have in (
+            ("rate_limits_per_minute", get_args(SourceKey), self.rate_limits_per_minute),
+            ("reference_min_rows", get_args(ReferenceKey), self.reference_min_rows),
+            ("intraday_max_days", ("15m", "1h"), self.intraday_max_days),
+        ):
+            if missing := set(keys) - set(have):
+                raise ValueError(f"data.{name} is missing {sorted(missing)}")
+        if any(v <= 0 for v in self.rate_limits_per_minute.values()):
+            raise ValueError("data.rate_limits_per_minute values must be positive")
+        if parse_hhmm(self.refresh_time_ist) < parse_hhmm(self.market_close_ist):
+            raise ValueError("data.refresh_time_ist must be after market_close_ist")
+        return self
+
+    @property
+    def price_ready(self) -> time:
+        return parse_hhmm(self.refresh_time_ist)
+
+    @property
+    def nav_ready(self) -> time:
+        return parse_hhmm(self.nav_refresh_time_ist)
 
 
 class ImportConfig(BaseModel):

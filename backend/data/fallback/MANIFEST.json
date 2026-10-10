@@ -1,0 +1,9 @@
+{
+  "note": "Bundled copies used until the app downloads fresh ones into backend/var/reference/.",
+  "downloaded_on": {
+    "EQUITY_L.csv": "2026-10-09",
+    "eq_etfseclist.csv": "2026-10-09",
+    "NAVAll.txt.gz": "2026-10-09",
+    "ind_nifty500list.csv": "2026-10-10"
+  }
+}

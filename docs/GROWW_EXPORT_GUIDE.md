@@ -30,7 +30,7 @@ Each row is matched to an NSE symbol in this order:
 3. A symbol column, if your file has one
 4. **Company name**, accepted only when the match is very close and clearly better than the next candidate
 
-Anything still unmatched appears under **Needs your help**, with suggestions and a search box. For a stock that trades only on BSE, enter its BSE code. Your fixes are remembered.
+Anything still unmatched appears under **Needs your help**, with suggestions and a search box. For a stock that trades only on BSE, enter its BSE trading symbol (e.g. `TCS`, not the numeric scrip code: Yahoo Finance only knows BSE stocks by symbol, and its BSE price data can have gaps). Your fixes are remembered.
 
 ### Purchase dates
 
@@ -80,4 +80,4 @@ Regenerate them with `cd backend && uv run python ../sample_data/generate_sample
 
 ## Reference data
 
-Matching uses lists bundled in `backend/data/fallback/`: NSE `EQUITY_L.csv`, the NSE ETF list, and AMFI `NAVAll.txt`, all downloaded on 09 Oct 2026. Phase 3 adds a daily refresh. Until then, NAVs shown for funds are from that date.
+Matching uses the NSE equity and ETF lists and AMFI's `NAVAll.txt`. The app re-downloads them automatically (NSE lists weekly, the AMFI list daily) into `backend/var/reference/`; the copies bundled in `backend/data/fallback/` are only used until the first successful download, or if the sites are unreachable. See [DATA_SOURCES.md](DATA_SOURCES.md).

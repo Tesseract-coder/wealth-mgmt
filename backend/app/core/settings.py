@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     database_url: str = f"sqlite:///{BACKEND_DIR / 'var' / 'app.db'}"
     profiles_path: Path = BACKEND_DIR / "config" / "profiles.yaml"
     fallback_data_dir: Path = BACKEND_DIR / "data" / "fallback"
+    # Refreshed copies of the NSE/AMFI lists; preferred over the bundled fallback when present.
+    reference_data_dir: Path = BACKEND_DIR / "var" / "reference"
+    scheduler_enabled: bool = True  # daily refresh jobs (tests turn this off)
     google_service_account_file: Path | None = None
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
     log_level: str = "INFO"

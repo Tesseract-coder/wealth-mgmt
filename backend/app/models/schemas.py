@@ -1,3 +1,4 @@
+import datetime as dt
 from datetime import date
 from typing import Literal
 
@@ -164,3 +165,105 @@ class HoldingsOut(BaseModel):
     stocks: list[StockHoldingOut]
     mf_snapshot: SnapshotOut | None
     mf: list[MFHoldingOut]
+
+
+# --------------------------------------------------------------------------- market data
+
+FreshnessStatus = Literal["fresh", "stale", "unavailable"]
+
+
+class FreshnessOut(BaseModel):
+    status: FreshnessStatus
+    reason: str
+
+
+class ReferenceStatusOut(BaseModel):
+    key: str
+    label: str
+    source: str
+    origin: Literal["refreshed", "bundled"]
+    as_of: date | None
+    rows: int | None
+    freshness: FreshnessOut
+
+
+class QuoteOut(BaseModel):
+    kind: Literal["stock", "benchmark", "mf"]
+    code: str
+    label: str
+    price: float | None
+    previous: float | None
+    change_pct: float | None
+    as_of: date | None
+    source: str | None
+    freshness: FreshnessOut
+
+
+class ScheduleOut(BaseModel):
+    enabled: bool
+    prices: str
+    navs: str
+
+
+class JobOut(BaseModel):
+    id: int
+    kind: str
+    status: Literal["queued", "running", "done", "failed"]
+    trigger: str
+    params: dict[str, object]
+    created_at: ISTDatetime
+    started_at: ISTDatetime | None
+    finished_at: ISTDatetime | None
+    done: int
+    total: int
+    message: str | None
+    errors: list[str]
+
+
+class MarketStatusOut(BaseModel):
+    generated_at: ISTDatetime
+    summary: dict[FreshnessStatus, int]
+    references: list[ReferenceStatusOut]
+    quotes: list[QuoteOut]
+    schedule: ScheduleOut
+    last_job: JobOut | None
+    notes: list[str]
+
+
+class BarOut(BaseModel):
+    t: str  # ISO date for daily bars, ISO datetime (IST) for intraday
+    open: float | None
+    high: float | None
+    low: float | None
+    close: float
+    adj_close: float | None = None
+    volume: float | None
+
+
+class PriceSeriesOut(BaseModel):
+    ticker: str
+    interval: str
+    source: str
+    delayed: bool
+    last_complete: bool
+    freshness: FreshnessOut
+    fetch_error: str | None
+    bars: list[BarOut]
+
+
+class NavPointOut(BaseModel):
+    date: dt.date
+    nav: float
+
+
+class NavSeriesOut(BaseModel):
+    code: str
+    scheme_name: str | None
+    freshness: FreshnessOut
+    fetch_error: str | None
+    points: list[NavPointOut]
+
+
+class RefreshIn(BaseModel):
+    scope: Literal["all", "reference", "prices", "navs"] = "all"
+    force: bool = False

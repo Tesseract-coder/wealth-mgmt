@@ -5,18 +5,36 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import imports, portfolio, reference, system
+from app.api import imports, jobs, market, portfolio, reference, system
 from app.api import settings as settings_api
 from app.core.db import init_db
 from app.core.profiles import get_profiles
 from app.core.settings import get_settings
+from app.jobs.runner import get_runner, mark_interrupted, reset_runner
+from app.jobs.scheduler import start_scheduler
+from app.jobs.tasks import JOB_KIND, market_refresh
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    get_profiles()  # fail fast on a bad config
+    profiles = get_profiles()  # fail fast on a bad config
     init_db()
+    if n := mark_interrupted():
+        logger.warning("Marked %d unfinished job(s) from a previous run as interrupted", n)
+    scheduler = None
+    if get_settings().scheduler_enabled:
+        scheduler = start_scheduler(get_runner())
+        if profiles.data.refresh_on_startup:
+            # Only stale items are fetched, so this is cheap when data is current.
+            get_runner().submit(
+                JOB_KIND, market_refresh("all"), params={"scope": "all"}, trigger="startup"
+            )
     yield
+    if scheduler:
+        scheduler.shutdown(wait=False)
+    reset_runner()
 
 
 def create_app() -> FastAPI:
@@ -45,6 +63,8 @@ def create_app() -> FastAPI:
     app.include_router(imports.router)
     app.include_router(portfolio.router)
     app.include_router(reference.router)
+    app.include_router(market.router)
+    app.include_router(jobs.router)
     return app
 
 

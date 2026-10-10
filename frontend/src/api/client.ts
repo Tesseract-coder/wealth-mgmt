@@ -248,3 +248,73 @@ export const portfolioApi = {
   searchSchemes: (q: string) =>
     request<Suggestion[]>(`/reference/schemes?q=${encodeURIComponent(q)}`),
 };
+
+// --------------------------------------------------------------------------- market data
+
+export type FreshnessStatus = "fresh" | "stale" | "unavailable";
+
+export interface Freshness {
+  status: FreshnessStatus;
+  reason: string;
+}
+
+export interface ReferenceStatus {
+  key: string;
+  label: string;
+  source: string;
+  origin: "refreshed" | "bundled";
+  as_of: string | null;
+  rows: number | null;
+  freshness: Freshness;
+}
+
+export interface Quote {
+  kind: "stock" | "benchmark" | "mf";
+  code: string;
+  label: string;
+  price: number | null;
+  previous: number | null;
+  change_pct: number | null;
+  as_of: string | null;
+  source: string | null;
+  freshness: Freshness;
+}
+
+export type JobStatus = "queued" | "running" | "done" | "failed";
+
+export interface Job {
+  id: number;
+  kind: string;
+  status: JobStatus;
+  trigger: string;
+  params: Record<string, unknown>;
+  created_at: string;
+  started_at: string | null;
+  finished_at: string | null;
+  done: number;
+  total: number;
+  message: string | null;
+  errors: string[];
+}
+
+export interface MarketStatus {
+  generated_at: string;
+  summary: Record<FreshnessStatus, number>;
+  references: ReferenceStatus[];
+  quotes: Quote[];
+  schedule: { enabled: boolean; prices: string; navs: string };
+  last_job: Job | null;
+  notes: string[];
+}
+
+export type RefreshScope = "all" | "reference" | "prices" | "navs";
+
+export const marketApi = {
+  status: () => request<MarketStatus>("/market/status"),
+  refresh: (scope: RefreshScope = "all", force = false) =>
+    request<Job>("/market/refresh", { method: "POST", body: JSON.stringify({ scope, force }) }),
+  job: (id: number) => request<Job>(`/jobs/${id}`),
+};
+
+export const isActive = (job: Job | null | undefined): boolean =>
+  job?.status === "queued" || job?.status === "running";

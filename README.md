@@ -12,7 +12,8 @@ A personal, locally-run dashboard that analyses your **Groww** stock and mutual 
 |---|---|---|
 | 1 | Scaffold: FastAPI + React, SQLite, config, Docker + no-Docker run | ✅ |
 | 2 | Groww/CAS/manual import, column mapper, ticker resolution, snapshots | ✅ |
-| 3–11 | Market data, analysis engines, signals, UI, screener, Google Sheets, polish | ⏳ |
+| 3 | Market data: Yahoo prices, mfapi/AMFI NAVs, NSE lists, caching, rate limits, freshness, daily schedule | ✅ |
+| 4–11 | Analysis engines, signals, UI, screener, Google Sheets, polish | ⏳ |
 
 ## Quick start (no Docker)
 
@@ -44,6 +45,10 @@ If port 8000 or 5173 is already in use, set `BACKEND_PORT` / `FRONTEND_PORT` in 
 ## Importing your holdings
 
 See [docs/GROWW_EXPORT_GUIDE.md](docs/GROWW_EXPORT_GUIDE.md). To try the app without your own data, import the **fake** files in `sample_data/`.
+
+## Market data
+
+Free sources only: Yahoo Finance (delayed end-of-day prices), mfapi.in and AMFI (NAVs), NSE archives (symbol lists, Nifty 500). Everything is cached in SQLite, rate-limited per source, and labelled **fresh / stale / unavailable** with a reason. The **Status** page shows this and has a **Refresh now** button. Refreshes run automatically Mon–Fri at 16:00 IST (prices) and daily at 23:30 IST (NAVs), and on startup for anything stale. See [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md).
 
 ## Configuration
 
