@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, col, select
 
 from app.core.db import get_session
+from app.jobs.runner import ACTIVE, get_runner
 from app.models.schemas import JobOut
 from app.models.tables import Job
 
@@ -41,4 +42,17 @@ def get_job(job_id: int, session: Session = Depends(get_session)) -> JobOut:
     job = session.get(Job, job_id)
     if job is None:
         raise HTTPException(404, "No such job")
+    return job_out(job)
+
+
+@router.post("/{job_id}/cancel", response_model=JobOut)
+def cancel_job(job_id: int, session: Session = Depends(get_session)) -> JobOut:
+    """Stop a running job after the item it is working on. Finished work is kept."""
+    job = session.get(Job, job_id)
+    if job is None:
+        raise HTTPException(404, "No such job")
+    if job.status not in ACTIVE:
+        raise HTTPException(409, f"Job {job_id} has already finished ({job.status})")
+    if not get_runner().cancel(job_id):
+        raise HTTPException(409, "This job isn't running in this backend process")
     return job_out(job)

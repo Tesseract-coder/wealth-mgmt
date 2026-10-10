@@ -1,7 +1,8 @@
 """In-process background jobs on a small thread pool, with progress recorded in the Job table.
 
 One job per kind runs at a time: submitting a kind that is already queued/running returns the
-existing job instead of starting a duplicate.
+existing job instead of starting a duplicate. Long jobs check `Progress.stop_requested` and end
+early (status "cancelled") when you press Stop; whatever they finished is kept.
 """
 
 import json
@@ -26,9 +27,14 @@ ACTIVE = ("queued", "running")
 class Progress:
     """Handed to a job function so it can report how far along it is."""
 
-    def __init__(self, job_id: int) -> None:
+    def __init__(self, job_id: int, stop: threading.Event | None = None) -> None:
         self.job_id = job_id
         self.errors: list[str] = []
+        self._stop = stop or threading.Event()
+
+    @property
+    def stop_requested(self) -> bool:
+        return self._stop.is_set()
 
     def update(self, done: int, total: int, message: str | None = None) -> None:
         def apply(job: Job) -> None:
@@ -64,6 +70,7 @@ class JobRunner:
     def __init__(self, max_workers: int = 2) -> None:
         self._pool = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="job")
         self._futures: dict[int, Future[None]] = {}
+        self._stops: dict[int, threading.Event] = {}
         self._lock = threading.Lock()
 
     def submit(
@@ -80,19 +87,29 @@ class JobRunner:
             s.commit()
             s.refresh(job)
             assert job.id is not None
+            self._stops[job.id] = threading.Event()
             self._futures[job.id] = self._pool.submit(self._run, job.id, fn)
             return job
 
+    def cancel(self, job_id: int) -> bool:
+        """Ask a queued or running job to stop. False if this process isn't running it."""
+        stop = self._stops.get(job_id)
+        if stop is None:
+            return False
+        stop.set()
+        return True
+
     def _run(self, job_id: int, fn: JobFn) -> None:
+        stop = self._stops.setdefault(job_id, threading.Event())
         with Session(get_engine()) as s:
             job = s.get(Job, job_id)
             assert job is not None
             job.status, job.started_at = "running", utcnow()
             s.commit()
-        progress = Progress(job_id)
+        progress = Progress(job_id, stop)
         try:
             summary = fn(progress)
-            status = "done"
+            status = "cancelled" if stop.is_set() else "done"
         except Exception as e:
             logger.exception("Job %s failed", job_id)
             summary, status = f"Failed: {e}", "failed"
@@ -105,6 +122,7 @@ class JobRunner:
             if progress.errors:
                 job.errors = json.dumps(progress.errors[:MAX_ERRORS])
             s.commit()
+        self._stops.pop(job_id, None)
 
     def wait(self, job_id: int, timeout: float | None = None) -> None:
         """Block until a job finishes (tests and the CLI use this)."""

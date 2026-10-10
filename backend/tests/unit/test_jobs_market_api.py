@@ -101,10 +101,9 @@ def test_market_status_empty_portfolio(client: TestClient) -> None:
         q["freshness"]["status"] == "unavailable" and q["price"] is None for q in body["quotes"]
     )
     refs = {x["key"]: x for x in body["references"]}
-    assert set(refs) == {"nse_equity", "nse_etf", "nifty500", "amfi_navall", "nse_delivery"}
-    assert all(
-        refs[k]["origin"] == "bundled" for k in ("nse_equity", "nse_etf", "nifty500", "amfi_navall")
-    )
+    lists = ("nse_equity", "nse_etf", "nifty50", "nifty100", "nifty200", "nifty500", "amfi_navall")
+    assert set(refs) == {*lists, "nse_delivery"}
+    assert all(refs[k]["origin"] == "bundled" for k in lists)
     assert refs["nse_delivery"]["freshness"]["status"] == "unavailable"
     assert body["schedule"]["enabled"] is False and body["last_job"] is None
 

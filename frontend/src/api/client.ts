@@ -306,7 +306,7 @@ export interface Quote {
   freshness: Freshness;
 }
 
-export type JobStatus = "queued" | "running" | "done" | "failed";
+export type JobStatus = "queued" | "running" | "done" | "failed" | "cancelled";
 
 export interface Job {
   id: number;
@@ -341,6 +341,7 @@ export const marketApi = {
   refresh: (scope: RefreshScope = "all", force = false) =>
     request<Job>("/market/refresh", { method: "POST", body: JSON.stringify({ scope, force }) }),
   job: (id: number) => request<Job>(`/jobs/${id}`),
+  cancel: (id: number) => request<Job>(`/jobs/${id}/cancel`, { method: "POST" }),
 };
 
 export const isActive = (job: Job | null | undefined): boolean =>
@@ -530,8 +531,14 @@ export interface PriceLevels {
   entry_stop: number;
   stop_breached: boolean;
   risk_per_share: number;
-  targets: { label: string; price: number; pct: number }[];
+  targets: Target[];
   basis: string;
+}
+
+export interface Target {
+  label: string;
+  price: number;
+  pct: number;
 }
 
 export interface Rebalance {
@@ -920,3 +927,225 @@ export const EXPORTS = [
   { href: `${BASE}/export/stocks.csv`, label: "Stock signals (CSV)" },
   { href: `${BASE}/export/funds.csv`, label: "Fund signals (CSV)" },
 ] as const;
+
+// ---------------------------------------------------------------- screener & watchlist
+
+export type FilterOp = "gt" | "gte" | "lt" | "lte" | "between";
+export type UniverseKey = "nifty50" | "nifty100" | "nifty200" | "nifty500" | "custom";
+
+export interface ScreenFilter {
+  field: string;
+  op: FilterOp;
+  value: number | [number, number];
+}
+
+export interface ScreenField {
+  key: string;
+  label: string;
+  group: "Technical" | "Fundamental" | "Score";
+  unit: string;
+  help: string;
+  financial_exempt: boolean;
+}
+
+export interface Preset {
+  key: string;
+  label: string;
+  description: string;
+  filters: ScreenFilter[];
+}
+
+export interface SavedScreen {
+  id: number;
+  name: string;
+  filters: ScreenFilter[];
+  updated_at: string;
+}
+
+export interface Scan {
+  id: number;
+  job_id: number | null;
+  universe: string;
+  universe_label: string;
+  style: StyleKey;
+  style_label: string;
+  risk: RiskKey;
+  risk_label: string;
+  fetch: "missing" | "cached";
+  status: "running" | "complete" | "partial" | "failed";
+  created_at: string;
+  finished_at: string | null;
+  total: number;
+  scored: number;
+  notes: string[];
+}
+
+export interface ScreenerConfig {
+  universes: { key: UniverseKey; label: string; size: number | null }[];
+  default_universe: UniverseKey;
+  custom_universe_max: number;
+  seconds_per_stock: number;
+  presets: Preset[];
+  fields: ScreenField[];
+  ops: Record<FilterOp, string>;
+  screens: SavedScreen[];
+  top_n: number;
+  latest_scan: Scan | null;
+  disclaimer: string;
+}
+
+export interface ScanRequest {
+  universe: UniverseKey;
+  symbols?: string;
+  fetch: "missing" | "cached";
+}
+
+export interface ScreenerJob {
+  job: Job;
+  scan: Scan | null;
+}
+
+export interface ScreenRequest {
+  scan_id?: number;
+  preset?: string;
+  screen_id?: number;
+  filters?: ScreenFilter[];
+  include_held?: boolean;
+}
+
+export interface EntryLevels {
+  interval: string;
+  close: number;
+  atr: number;
+  entry_low: number;
+  entry_high: number;
+  entry_basis: string;
+  stop: number;
+  stop_pct: number;
+  targets: Target[];
+  basis: string;
+}
+
+export interface SectorImpact {
+  sector: string | null;
+  amount: number | null;
+  quantity: number | null;
+  before: number | null;
+  after: number | null;
+  over_limit: boolean;
+  text: string;
+}
+
+export interface Candidate {
+  rank: number;
+  ticker: string;
+  symbol: string;
+  label: string;
+  sector: string | null;
+  held: boolean;
+  watched: boolean;
+  signal: SignalKey;
+  signal_label: string;
+  rule: string;
+  confidence: ConfidenceLevel | null;
+  composite: number | null;
+  technical: number | null;
+  fundamental: number | null;
+  bullish: string[];
+  bearish: string[];
+  flags: Flag[];
+  passed: string[];
+  levels: EntryLevels | null;
+  impact: SectorImpact;
+  facts: Record<string, number | null>;
+  price_as_of: string | null;
+}
+
+export interface ScreenResult {
+  scan: Scan;
+  title: string;
+  filters: string[];
+  prefilters: string[];
+  counts: Record<"universe" | "not_scored" | "held" | "prefilter" | "signal" | "filters" | "missing_data" | "passed", number>;
+  candidates: Candidate[];
+  near_misses: { ticker: string; label: string; composite: number | null; failed: string[] }[];
+  stale_note: string | null;
+  disclaimer: string;
+}
+
+export interface WatchItem {
+  ticker: string;
+  label: string;
+  note: string | null;
+  source: string | null;
+  added_at: string;
+  added_price: number | null;
+  added_signal: SignalKey | null;
+  added_signal_label: string | null;
+  added_score: number | null;
+  held: boolean;
+  status: "ok" | "no_data";
+  signal: SignalKey | null;
+  signal_label: string | null;
+  rule: string | null;
+  confidence: ConfidenceLevel | null;
+  composite: number | null;
+  score_change: number | null;
+  price: number | null;
+  price_as_of: string | null;
+  price_change_pct: number | null;
+  signal_changed_since_added: boolean;
+  last_change: { previous: SignalKey; previous_label: string; current: SignalKey; current_label: string; day: string } | null;
+  stop: number | null;
+  stop_breached: boolean;
+  bullish: string[];
+  bearish: string[];
+  flags: Flag[];
+  sector: string | null;
+  price_freshness: Freshness | null;
+}
+
+export interface Watchlist {
+  style_label: string;
+  risk_label: string;
+  items: WatchItem[];
+  fetching_job_id: number | null;
+  disclaimer: string;
+}
+
+export const screenerApi = {
+  config: () => request<ScreenerConfig>("/screener/config"),
+  run: (body: ScanRequest) => request<ScreenerJob>("/screener/run", { method: "POST", body: JSON.stringify(body) }),
+  job: (id: number) => request<ScreenerJob>(`/screener/jobs/${id}`),
+  active: () => request<ScreenerJob | null>("/screener/active"),
+  screen: (body: ScreenRequest) => request<ScreenResult>("/screener/screen", { method: "POST", body: JSON.stringify(body) }),
+  saveScreen: (name: string, filters: ScreenFilter[], id?: number) =>
+    request<SavedScreen>(id ? `/screener/screens/${id}` : "/screener/screens", {
+      method: id ? "PUT" : "POST",
+      body: JSON.stringify({ name, filters }),
+    }),
+  deleteScreen: async (id: number) => {
+    const res = await fetch(`${BASE}/screener/screens/${id}`, { method: "DELETE" });
+    if (!res.ok) throw new ApiError(res.status, await errorMessage(res));
+  },
+  csvHref: (sel: { preset?: string; screen_id?: number; include_held?: boolean }) => {
+    const p = new URLSearchParams();
+    if (sel.preset) p.set("preset", sel.preset);
+    if (sel.screen_id) p.set("screen_id", String(sel.screen_id));
+    if (sel.include_held) p.set("include_held", "true");
+    return `${BASE}/export/screener.csv?${p.toString()}`;
+  },
+};
+
+export const watchlistApi = {
+  list: () => request<Watchlist>("/watchlist"),
+  tickers: () => request<string[]>("/watchlist/tickers"),
+  add: (ticker: string, source?: string, note?: string) =>
+    request<WatchItem>("/watchlist", { method: "POST", body: JSON.stringify({ ticker, source, note }) }),
+  note: (ticker: string, note: string) =>
+    request<WatchItem>(`/watchlist/${encodeURIComponent(ticker)}`, { method: "PATCH", body: JSON.stringify({ note }) }),
+  remove: async (ticker: string) => {
+    const res = await fetch(`${BASE}/watchlist/${encodeURIComponent(ticker)}`, { method: "DELETE" });
+    if (!res.ok) throw new ApiError(res.status, await errorMessage(res));
+  },
+};

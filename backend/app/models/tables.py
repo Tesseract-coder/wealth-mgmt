@@ -187,7 +187,7 @@ class Job(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     kind: str = Field(index=True)
     params: str | None = None  # JSON
-    status: str = "queued"  # "queued" | "running" | "done" | "failed"
+    status: str = "queued"  # "queued" | "running" | "done" | "failed" | "cancelled"
     trigger: str = "manual"  # "manual" | "schedule" | "startup"
     created_at: datetime = Field(default_factory=utcnow, index=True)
     started_at: datetime | None = None
@@ -296,3 +296,50 @@ class FundPortfolioRow(SQLModel, table=True):
     name: str
     isin: str | None = None
     weight_pct: float
+
+
+class ScreenerScan(SQLModel, table=True):
+    """One screener scan: every stock in the universe with its facts, score and levels.
+
+    Presets and saved screens filter a stored scan, so switching screens needs no new download.
+    """
+
+    id: int | None = Field(default=None, primary_key=True)
+    job_id: int | None = Field(default=None, index=True)
+    universe: str  # "nifty500" | … | "custom"
+    universe_label: str
+    style: str
+    risk: str
+    fetch: str  # "missing" (download what isn't cached) | "cached" (cache only)
+    status: str = "running"  # "running" | "complete" | "partial" (stopped early) | "failed"
+    created_at: datetime = Field(default_factory=utcnow, index=True)
+    finished_at: datetime | None = None
+    total: int = 0  # stocks in the universe
+    scored: int = 0
+    rows_json: str = "[]"
+    notes_json: str = "[]"
+
+
+class SavedScreen(SQLModel, table=True):
+    """A screen you built in the filter builder."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    name: str = Field(index=True, unique=True)
+    filters_json: str = "[]"
+    created_at: datetime = Field(default_factory=utcnow)
+    updated_at: datetime = Field(default_factory=utcnow)
+
+
+class WatchItem(SQLModel, table=True):
+    """A stock you're tracking, with its score and signal when you added it."""
+
+    ticker: str = Field(primary_key=True)
+    label: str
+    note: str | None = None
+    source: str | None = None  # e.g. "Screener: Momentum breakout" | "Manual"
+    added_at: datetime = Field(default_factory=utcnow)
+    added_price: float | None = None
+    added_signal: str | None = None
+    added_score: float | None = None
+    added_style: str | None = None
+    added_risk: str | None = None

@@ -6,8 +6,10 @@ import { MutualFunds } from "./pages/MutualFunds";
 import { Onboarding } from "./pages/Onboarding";
 import { Overview } from "./pages/Overview";
 import { Placeholder } from "./pages/Placeholder";
+import { Screener } from "./pages/Screener";
 import { Settings } from "./pages/Settings";
 import { Technical } from "./pages/Technical";
+import { Watchlist } from "./pages/Watchlist";
 
 export function App() {
   return (
@@ -22,8 +24,8 @@ export function App() {
         <Route path="technical/*" element={<LegacyTechnical />} />
         <Route path="mutual-funds" element={<MutualFunds />} />
         <Route path="mutual-funds/:code" element={<MutualFunds />} />
-        <Route path="screener" element={<Placeholder title="Screener" phase={9} />} />
-        <Route path="watchlist" element={<Placeholder title="Watchlist" phase={9} />} />
+        <Route path="screener" element={<Screener />} />
+        <Route path="watchlist" element={<Watchlist />} />
         <Route path="settings" element={<Settings />} />
         <Route path="*" element={<Placeholder title="Not found" phase={0} />} />
       </Route>

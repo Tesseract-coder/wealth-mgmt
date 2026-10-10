@@ -6,9 +6,10 @@ from pathlib import Path
 from typing import Any, Literal, get_args
 
 import yaml
-from pydantic import BaseModel, Field, ValidationError, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from app.core.settings import get_settings
+from app.screener.fields import FIELD_BY_KEY
 
 logger = logging.getLogger(__name__)
 
@@ -189,16 +190,62 @@ class PortfolioConfig(BaseModel):
         return self
 
 
+UniverseKey = Literal["nifty50", "nifty100", "nifty200", "nifty500", "custom"]
+
+
+class ScreenFilter(BaseModel):
+    """One condition: `field op value`, e.g. roe gte 15, or rsi between [35, 45]."""
+
+    model_config = ConfigDict(extra="forbid")
+    field: str
+    op: Literal["gt", "gte", "lt", "lte", "between"]
+    value: float | list[float]
+
+    @model_validator(mode="after")
+    def value_fits_op(self) -> "ScreenFilter":
+        if self.field not in FIELD_BY_KEY:
+            raise ValueError(f"unknown screener field '{self.field}'")
+        if self.op == "between":
+            if not isinstance(self.value, list) or len(self.value) != 2:
+                raise ValueError(f"{self.field}: 'between' needs [low, high]")
+            if self.value[0] > self.value[1]:
+                raise ValueError(f"{self.field}: 'between' low is above high")
+        elif isinstance(self.value, list):
+            raise ValueError(f"{self.field}: '{self.op}' needs a single number")
+        return self
+
+
+class ScreenPreset(BaseModel):
+    label: str
+    description: str
+    filters: list[ScreenFilter]
+
+
 class ScreenerConfig(BaseModel):
-    default_universe: str
-    min_avg_daily_traded_value_cr: float
+    default_universe: UniverseKey
+    min_avg_daily_traded_value_cr: float = Field(ge=0)
+    traded_value_sessions: int = Field(gt=0)
+    min_history_sessions: int = Field(gt=0)
     top_n: int = Field(gt=0)
     request_delay_seconds: float = Field(ge=0)
+    custom_universe_max: int = Field(gt=0)
+    entry_zone_atr: float = Field(ge=0)
+    keep_scans: int = Field(gt=0)
+    exclude_signals: list[Literal["strong_buy", "buy", "hold", "reduce", "sell", "no_signal"]]
+    presets: dict[str, ScreenPreset]
+
+    @model_validator(mode="after")
+    def has_presets(self) -> "ScreenerConfig":
+        if not self.presets:
+            raise ValueError("screener.presets needs at least one preset")
+        return self
 
 
 _HHMM = r"^([01]\d|2[0-3]):[0-5]\d$"
 SourceKey = Literal["yahoo", "mfapi", "nse", "amfi"]
-ReferenceKey = Literal["nse_equity", "nse_etf", "nifty500", "amfi_navall"]
+ReferenceKey = Literal[
+    "nse_equity", "nse_etf", "nifty50", "nifty100", "nifty200", "nifty500", "amfi_navall"
+]
 
 
 def parse_hhmm(value: str) -> time:

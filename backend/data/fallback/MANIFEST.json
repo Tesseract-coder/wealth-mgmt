@@ -4,6 +4,9 @@
     "EQUITY_L.csv": "2026-10-09",
     "eq_etfseclist.csv": "2026-10-09",
     "NAVAll.txt.gz": "2026-10-09",
-    "ind_nifty500list.csv": "2026-10-10"
+    "ind_nifty500list.csv": "2026-10-10",
+    "ind_nifty50list.csv": "2026-10-10",
+    "ind_nifty100list.csv": "2026-10-10",
+    "ind_nifty200list.csv": "2026-10-10"
   }
 }

@@ -218,13 +218,70 @@ portfolio:
   top_n_concentration: 5           # "your top 5 holdings are X% of the portfolio"
 
 # ---------------------------------------------------------------------------
-# Screener
+# 8. Screener
+# ---------------------------------------------------------------------------
+# A scan downloads (or reads from the cache) prices and fundamentals for every stock in the
+# universe, scores each with your style and risk, and stores the result. Presets and your own
+# screens then filter that stored scan instantly; a new scan is needed only for fresh data.
+# Filters use daily bars and the latest fundamentals. A stock with no value for a filter's field
+# fails that filter (the app never assumes), except fields that don't apply to lenders and
+# insurers (debt/equity, ROCE, EV/EBITDA …): financials pass those.
+# Ops: gt, gte, lt, lte, between ([low, high], inclusive). Fields: see GET /screener/fields.
 # ---------------------------------------------------------------------------
 screener:
-  default_universe: nifty500
-  min_avg_daily_traded_value_cr: 10
+  default_universe: nifty500       # nifty50 | nifty100 | nifty200 | nifty500 | custom
+  min_avg_daily_traded_value_cr: 10  # liquidity pre-filter: average close × volume
+  traded_value_sessions: 20        # …over this many sessions
+  min_history_sessions: 60         # fewer daily bars than this (recent listings): not scored
   top_n: 20
-  request_delay_seconds: 0.5   # throttle between data requests
+  request_delay_seconds: 0.5       # extra pause after each stock that needed a download
+  custom_universe_max: 500         # symbols allowed in a custom list
+  entry_zone_atr: 0.5              # entry zone: from close − this × ATR (or the nearest support, if higher) up to the close
+  keep_scans: 10                   # older stored scans are deleted
+  exclude_signals: [sell, reduce]  # the engine says avoid these, so they are never shown as ideas
+  presets:
+    top_scores:
+      label: "Top scores"
+      description: "No extra filters: the best composite scores that pass your risk pre-filters."
+      filters: []
+    quality_fair_price:
+      label: "Quality at fair price"
+      description: "High ROE and ROCE, low debt, P/E at or below the sector median."
+      filters:
+        - {field: roe, op: gte, value: 15}
+        - {field: roce, op: gte, value: 15}
+        - {field: debt_equity, op: lte, value: 0.5}
+        - {field: pe_vs_sector, op: lte, value: 1.0}
+    momentum_breakout:
+      label: "Momentum breakout"
+      description: "Above the 50- and 200-DMA, within 5% of the 52-week high, volume surge, ADX above 25."
+      filters:
+        - {field: price_vs_sma50_pct, op: gt, value: 0}
+        - {field: price_vs_sma200_pct, op: gt, value: 0}
+        - {field: pct_below_52w_high, op: lte, value: 5}
+        - {field: volume_ratio, op: gte, value: 1.5}
+        - {field: adx, op: gt, value: 25}
+    pullback_uptrend:
+      label: "Pullback in uptrend"
+      description: "Above the 200-DMA, RSI 35–45, within 3% of the 50-DMA (support)."
+      filters:
+        - {field: price_vs_sma200_pct, op: gt, value: 0}
+        - {field: rsi, op: between, value: [35, 45]}
+        - {field: price_vs_sma50_pct, op: between, value: [-3, 3]}
+    growth:
+      label: "Growth"
+      description: "Revenue and profit CAGR (3y) above 15%, operating margin improving."
+      filters:
+        - {field: revenue_cagr_3y, op: gt, value: 15}
+        - {field: profit_cagr_3y, op: gt, value: 15}
+        - {field: op_margin_change, op: gt, value: 0}
+    dividend_value:
+      label: "Dividend + value"
+      description: "Dividend yield of 3% or more, P/E at or below the sector median, positive free cash flow in at least 2 of the last 3 years."
+      filters:
+        - {field: dividend_yield, op: gte, value: 3}
+        - {field: pe_vs_sector, op: lte, value: 1.0}
+        - {field: fcf_positive_years, op: gte, value: 2}
 
 # ---------------------------------------------------------------------------
 # Data sources (all free). Times are IST. Yahoo Finance prices are delayed;
@@ -258,6 +315,9 @@ data:
   reference_min_rows:              # a downloaded list smaller than this is rejected as broken
     nse_equity: 1000
     nse_etf: 50
+    nifty50: 45
+    nifty100: 90
+    nifty200: 180
     nifty500: 450
     amfi_navall: 5000
   benchmarks:                      # Yahoo Finance index tickers

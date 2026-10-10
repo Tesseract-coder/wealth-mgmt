@@ -4,6 +4,7 @@ import { analysisApi, signalApi, type StyleKey } from "../api/client";
 import { PriceChart } from "../charts/PriceChart";
 import { FundamentalReportView } from "./FundamentalView";
 import { StockSignalView } from "./SignalView";
+import { WatchButton } from "./WatchButton";
 
 /** One stock: chart with stop/targets and S/R, the signal with reasons and history, and the
  * fundamentals table against sector medians. */
@@ -17,6 +18,11 @@ export function StockDetail({ ticker, style, fundamentalLink }: { ticker: string
   const isIndex = ticker.startsWith("^");
   return (
     <div className="space-y-4">
+      {ticker.endsWith(".NS") && (
+        <div className="flex justify-end">
+          <WatchButton ticker={ticker} source="Stock page" />
+        </div>
+      )}
       <PriceChart ticker={ticker} levels={sig.data?.levels ?? null} sr={sr} />
       <StockSignalView ticker={ticker} style={style} />
       {!isIndex && (

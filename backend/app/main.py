@@ -14,8 +14,10 @@ from app.api import (
     market,
     portfolio,
     reference,
+    screener,
     signals,
     system,
+    watchlist,
 )
 from app.api import settings as settings_api
 from app.core.db import init_db
@@ -79,6 +81,8 @@ def create_app() -> FastAPI:
     app.include_router(analysis.router)
     app.include_router(signals.router)
     app.include_router(funds.router)
+    app.include_router(screener.router)
+    app.include_router(watchlist.router)
     app.include_router(export.router)
     return app
 

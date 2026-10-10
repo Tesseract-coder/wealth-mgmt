@@ -42,6 +42,27 @@ REFERENCE_FILES: dict[ReferenceKey, ReferenceFile] = {
             "eq_etfseclist.csv",
         ),
         ReferenceFile(
+            "nifty50",
+            "Nifty 50 constituents",
+            "nse",
+            "https://nsearchives.nseindia.com/content/indices/ind_nifty50list.csv",
+            "ind_nifty50list.csv",
+        ),
+        ReferenceFile(
+            "nifty100",
+            "Nifty 100 constituents",
+            "nse",
+            "https://nsearchives.nseindia.com/content/indices/ind_nifty100list.csv",
+            "ind_nifty100list.csv",
+        ),
+        ReferenceFile(
+            "nifty200",
+            "Nifty 200 constituents",
+            "nse",
+            "https://nsearchives.nseindia.com/content/indices/ind_nifty200list.csv",
+            "ind_nifty200list.csv",
+        ),
+        ReferenceFile(
             "nifty500",
             "Nifty 500 constituents",
             "nse",

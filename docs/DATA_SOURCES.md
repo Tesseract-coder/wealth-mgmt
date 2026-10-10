@@ -18,7 +18,7 @@ All sources are free and public. The app never logs in anywhere. Every number on
 | MF NAV history | [mfapi.in](https://www.mfapi.in/) | Daily 23:30 IST | Full history per scheme. |
 | Latest NAVs + scheme list | AMFI `NAVAll.txt` | Daily 23:30 IST | Also used to match fund names to scheme codes. If it has a newer NAV than mfapi, the newer one is used. |
 | Equity + ETF symbol lists | NSE archives `EQUITY_L.csv`, `eq_etfseclist.csv` | Weekly | Used to match ISINs / names to symbols. |
-| Nifty 500 constituents + industry | NSE archives `ind_nifty500list.csv` | Weekly | Sector weights (Phase 7) and the screener universe (Phase 9). |
+| Nifty 50/100/200/500 constituents + industry | NSE archives `ind_nifty50list.csv` … `ind_nifty500list.csv` | Weekly | Sector weights (the Nifty 500 list's industry) and the screener universes. Bundled copies are used until a download succeeds. |
 | Fundamentals (statements, shares, sector) | Yahoo Finance via `yfinance` (`.info`, annual income/balance/cash flow, quarterly income) | Weekly (Sat 10:00 IST), with peers | About 5 requests per stock. Cached for `fundamentals_stale_after_days` (7). Holdings are also refreshed in the daily job when stale. **Refresh fundamentals + peers** fetches holdings plus up to 40 Nifty 500 peers per industry you hold, for sector medians; the first run takes 10–30 minutes. |
 | Ownership, 10-year statements | **Your Screener.in exports** (uploaded, never scraped) | When you upload | See the import guide. |
 | Delivery % and traded value | NSE archives `sec_bhavdata_full_DDMMYYYY.csv` (one file per session, all stocks) | With prices | The last 21 sessions are kept (`technical.delivery_lookback_sessions`). The first download takes 2–3 minutes at NSE's rate limit; after that it's one file a day. Days with no file (holidays) are remembered. |
@@ -66,6 +66,14 @@ All of these settings live in the `data:` section of `backend/config/profiles.ya
 | `GET /market/prices/{ticker}`, `GET /analysis/technical/{ticker}/series` | Candles and indicator lines for the stock chart |
 | `GET/PUT/DELETE /settings/thresholds` | Thresholds editable in Settings (saved to `backend/var/profiles.local.yaml`) |
 | `GET /export/stocks.csv`, `GET /export/funds.csv` | Signals as CSV, ending with the date and the disclaimer |
+| `GET /screener/config` | Universes, presets, filter fields, your saved screens and the latest scan |
+| `POST /screener/run` `{"universe": "nifty500"\|…\|"custom", "symbols": "TCS, INFY", "fetch": "missing"\|"cached", "style", "risk"}` | Starts a scan as a background job; returns the job |
+| `GET /screener/jobs/{id}`, `GET /screener/active`, `POST /jobs/{id}/cancel` | Scan progress, the running scan, stop a job (finished work is kept) |
+| `POST /screener/screen` `{"preset"\|"screen_id"\|"filters", "include_held", "scan_id", "top_n"}` | Ranked ideas from a stored scan (instant, no downloads) |
+| `GET /screener/scans`, `GET /screener/scans/{id}/stocks?status=` | Stored scans; every stock in one with why it was or wasn't scored |
+| `GET/POST /screener/screens`, `PUT/DELETE /screener/screens/{id}` | Your saved screens |
+| `GET /export/screener.csv?preset=&screen_id=&include_held=` | A screen's ideas as CSV |
+| `GET/POST /watchlist`, `GET /watchlist/tickers`, `PATCH/DELETE /watchlist/{ticker}` | The watchlist, scored live from the cache |
 
 ## Mutual fund benchmarks
 

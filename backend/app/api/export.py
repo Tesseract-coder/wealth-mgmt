@@ -5,15 +5,17 @@ import csv
 import io
 from collections.abc import Iterable, Sequence
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from fastapi.responses import Response
 from sqlmodel import Session
 
 from app.api.funds import mf_holdings
+from app.api.screener import screen_scan
 from app.api.signals import holdings_signals
 from app.core.db import get_session
 from app.core.formatting import format_freshness, now_ist
 from app.core.profiles import get_profiles
+from app.models.schemas import ScreenIn
 
 router = APIRouter(prefix="/export", tags=["export"])
 
@@ -120,3 +122,45 @@ def funds_csv(session: Session = Depends(get_session)) -> Response:
             ]
         )
     return _csv("fund-signals", header, rows, "Mutual funds")
+
+
+@router.get("/screener.csv")
+def screener_csv(
+    preset: str | None = Query(None, description="Preset key (default: the first preset)"),
+    screen_id: int | None = Query(None, description="A saved screen instead of a preset"),
+    include_held: bool = False,
+    scan_id: int | None = None,
+    session: Session = Depends(get_session),
+) -> Response:
+    """The candidates of a preset or saved screen on the latest (or given) scan."""
+    d = screen_scan(
+        ScreenIn(scan_id=scan_id, preset=preset, screen_id=screen_id, include_held=include_held),
+        session,
+    )
+    header = [
+        "Rank", "Ticker", "Name", "Sector", "Signal", "Composite", "Technical", "Fundamental",
+        "Confidence", "Last close", "Entry low", "Entry high", "Stop", "Stop %", "Target 1",
+        "Target 2", "Target 3", "Levels timeframe", "Sector effect", "Filters met", "Rule",
+        "Red flags", "Top bullish", "Top bearish", "Price as of", "Held",
+    ]  # fmt: skip
+    rows = []
+    for c in d.candidates:
+        lv = c.levels
+        tg = [f"{t.label} {t.price}" for t in lv.targets] if lv else []
+        rows.append(
+            [
+                c.rank, c.ticker, c.label, c.sector, c.signal_label, c.composite, c.technical,
+                c.fundamental, c.confidence, lv.close if lv else None,
+                lv.entry_low if lv else None, lv.entry_high if lv else None,
+                lv.stop if lv else None, lv.stop_pct if lv else None,
+                *(tg + [None, None, None])[:3], lv.interval if lv else None, c.impact.text,
+                "; ".join(c.passed), c.rule, "; ".join(f.text for f in c.flags),
+                "; ".join(c.bullish), "; ".join(c.bearish), c.price_as_of,
+                "yes" if c.held else "no",
+            ]
+        )  # fmt: skip
+    ctx = (
+        f"{d.title} · {d.scan.universe_label} · {d.scan.style_label} · {d.scan.risk_label} risk"
+        f" · scan {format_freshness(d.scan.created_at)}"
+    )
+    return _csv("screener", header, rows, ctx)

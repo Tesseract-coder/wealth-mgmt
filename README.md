@@ -18,7 +18,8 @@ A personal, locally-run dashboard that analyses your **Groww** stock and mutual 
 | 6 | Scores and signals: style-weighted composite, confidence, red flags, Buy/Hold/Sell with reasons, ATR stop-loss and targets, position sizing, tax note, signal history | ✅ |
 | 7 | Mutual funds (XIRR, CAGR, rolling returns vs benchmark, risk, Regular vs Direct, cost, overlap, Continue/Review/Switch) and portfolio analytics (P&L, day change, XIRR, allocation, beta, correlation, vs Nifty 50) | ✅ |
 | 8 | Dashboard: onboarding, Overview (KPIs, allocation donut, sector bars, value vs Nifty 50, Action needed), sortable holdings table, candlestick charts with overlays and RSI/MACD panes, fund NAV and rolling-return charts, Settings with editable thresholds, CSV export, data-freshness line, mobile menu | ✅ |
-| 9–11 | Screener and watchlist, Google Sheets, polish | ⏳ |
+| 9 | Screener (Nifty 50/100/200/500 or your own list, background scan with progress and Stop, five presets, filter builder, saved screens, entry/stop/targets, sector effect, CSV) and watchlist (live score and signal, changes since added) | ✅ |
+| 10–11 | Google Sheets, polish | ⏳ |
 
 ## Quick start (no Docker)
 
@@ -53,7 +54,7 @@ See [docs/GROWW_EXPORT_GUIDE.md](docs/GROWW_EXPORT_GUIDE.md). To try the app wit
 
 ## Market data
 
-Free sources only: Yahoo Finance (delayed end-of-day prices), mfapi.in and AMFI (NAVs), NSE archives (symbol lists, Nifty 500). Everything is cached in SQLite, rate-limited per source, and labelled **fresh / stale / unavailable** with a reason. **Settings → Data refresh** shows this and has a **Refresh now** button; every page shows when prices were last updated. Refreshes run automatically Mon–Fri at 16:00 IST (prices) and daily at 23:30 IST (NAVs), and on startup for anything stale. See [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md).
+Free sources only: Yahoo Finance (delayed end-of-day prices), mfapi.in and AMFI (NAVs), NSE archives (symbol lists, Nifty 50/100/200/500). Everything is cached in SQLite, rate-limited per source, and labelled **fresh / stale / unavailable** with a reason. **Settings → Data refresh** shows this and has a **Refresh now** button; every page shows when prices were last updated. Refreshes run automatically Mon–Fri at 16:00 IST (prices) and daily at 23:30 IST (NAVs), and on startup for anything stale. See [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md).
 
 ## Dashboard
 
@@ -69,6 +70,12 @@ The **Analysis** page has three tabs for each holding or any NSE stock:
 - **Fundamental:** valuation (vs sector medians), profitability, growth, financial health, ownership and the Piotroski F-score, each with its basis.
 
 The **Mutual funds** page gives each fund a NAV-vs-benchmark chart, rolling-return charts and a **Continue / Review / Switch** signal from its returns vs its category benchmark (1/3/5-year and rolling), risk (volatility, Sharpe, Sortino, max drawdown), Regular vs Direct cost gap, expense ratio (you enter it) and overlap with your other funds (upload AMC portfolio files under Import → Fund portfolios). The **Overview** page shows your portfolio's value, P&L, day change, XIRR, allocation, concentration warnings, beta, correlations and performance vs Nifty 50.
+
+## Screener and watchlist
+
+The **Screener** suggests new stocks. **Run scan** scores every stock in a universe (Nifty 50, 100, 200, 500 by default, or a list you type) with the same engine and your style and risk. It runs in the background with a progress bar and a **Stop** button, uses the cache, and is throttled. The first full Nifty 500 scan downloads about 3,000 Yahoo Finance requests and takes most of an hour; later scans only fetch what is out of date. Choose **Cached data only** for a two-minute rescan.
+
+Screens filter the stored scan instantly: **Top scores**, **Quality at fair price**, **Momentum breakout**, **Pullback in uptrend**, **Growth**, **Dividend + value** (all defined in `profiles.yaml`), or your own from the filter builder, saved by name. Your risk level's pre-filters always apply (liquidity ≥ ₹10 Cr a day, market cap, debt/equity, beta), and stocks you hold are left out unless you tick the box. Each of the top 20 ideas shows its signal and reasons, an entry zone, a stop-loss, targets, and how a starter position would change your sector weights. **Watch** puts it on the **Watchlist**, which re-scores your ideas each time you open it and shows what changed since you added them (signal, score, price) and when the signal last changed. The daily refresh includes watchlist stocks.
 
 Upload Screener.in exports (Import → Screener.in data) for ownership data and 10-year history. [docs/SCORING_METHOD.md](docs/SCORING_METHOD.md) explains every calculation.
 

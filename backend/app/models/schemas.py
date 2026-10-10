@@ -231,7 +231,7 @@ class ScheduleOut(BaseModel):
 class JobOut(BaseModel):
     id: int
     kind: str
-    status: Literal["queued", "running", "done", "failed"]
+    status: Literal["queued", "running", "done", "failed", "cancelled"]
     trigger: str
     params: dict[str, object]
     created_at: ISTDatetime
@@ -861,4 +861,230 @@ class ActionsOut(BaseModel):
     style_label: str
     risk_label: str
     actions: list[ActionOut]
+    disclaimer: str
+
+
+# ---------------------------------------------------------------------------- screener
+
+
+class ScreenFieldOut(BaseModel):
+    key: str
+    label: str
+    group: str
+    unit: str
+    help: str
+    financial_exempt: bool
+
+
+class ScreenFilterIO(BaseModel):
+    field: str
+    op: Literal["gt", "gte", "lt", "lte", "between"]
+    value: float | list[float]
+
+
+class PresetOut(BaseModel):
+    key: str
+    label: str
+    description: str
+    filters: list[ScreenFilterIO]
+
+
+class SavedScreenOut(BaseModel):
+    id: int
+    name: str
+    filters: list[ScreenFilterIO]
+    updated_at: ISTDatetime
+
+
+class SavedScreenIn(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    filters: list[ScreenFilterIO] = Field(min_length=1)
+
+
+class UniverseOut(BaseModel):
+    key: str
+    label: str
+    size: int | None
+
+
+class ScanOut(BaseModel):
+    id: int
+    job_id: int | None
+    universe: str
+    universe_label: str
+    style: StyleKey
+    style_label: str
+    risk: RiskKey
+    risk_label: str
+    fetch: Literal["missing", "cached"]
+    status: Literal["running", "complete", "partial", "failed"]
+    created_at: ISTDatetime
+    finished_at: ISTDatetime | None
+    total: int
+    scored: int
+    notes: list[str]
+
+
+class ScreenerConfigOut(BaseModel):
+    universes: list[UniverseOut]
+    default_universe: str
+    custom_universe_max: int
+    seconds_per_stock: float = Field(
+        description="Rough first-scan time per stock: Yahoo requests at the rate limit, plus pause"
+    )
+    presets: list[PresetOut]
+    fields: list[ScreenFieldOut]
+    ops: dict[str, str]
+    screens: list[SavedScreenOut]
+    top_n: int
+    latest_scan: ScanOut | None
+    disclaimer: str
+
+
+class ScanIn(BaseModel):
+    universe: Literal["nifty50", "nifty100", "nifty200", "nifty500", "custom"] | None = None
+    symbols: str | None = Field(
+        None, description="Custom universe: NSE symbols, comma or newline separated"
+    )
+    fetch: Literal["missing", "cached"] = "missing"
+    style: StyleKey | None = None
+    risk: RiskKey | None = None
+
+
+class ScreenerJobOut(BaseModel):
+    job: "JobOut"
+    scan: ScanOut | None
+
+
+class ScreenIn(BaseModel):
+    scan_id: int | None = Field(None, description="Default: the latest finished scan")
+    preset: str | None = None
+    screen_id: int | None = None
+    filters: list[ScreenFilterIO] | None = Field(None, description="Ad-hoc filters (the builder)")
+    include_held: bool = False
+    top_n: int | None = Field(None, ge=1, le=200)
+
+
+class EntryLevelsOut(BaseModel):
+    interval: str
+    close: float
+    atr: float
+    entry_low: float
+    entry_high: float
+    entry_basis: str
+    stop: float
+    stop_pct: float
+    targets: list[TargetOut]
+    basis: str
+
+
+class SectorImpactOut(BaseModel):
+    sector: str | None
+    amount: float | None
+    quantity: int | None
+    before: float | None
+    after: float | None
+    over_limit: bool
+    text: str
+
+
+class CandidateOut(BaseModel):
+    rank: int
+    ticker: str
+    symbol: str
+    label: str
+    sector: str | None
+    held: bool
+    watched: bool
+    signal: SignalKey
+    signal_label: str
+    rule: str
+    confidence: Literal["high", "medium", "low"] | None
+    composite: float | None
+    technical: float | None
+    fundamental: float | None
+    bullish: list[str]
+    bearish: list[str]
+    flags: list[FlagOut]
+    passed: list[str]
+    levels: EntryLevelsOut | None
+    impact: SectorImpactOut
+    facts: dict[str, float | None]
+    price_as_of: str | None
+
+
+class NearMissOut(BaseModel):
+    ticker: str
+    label: str
+    composite: float | None
+    failed: list[str]
+
+
+class ScreenResultOut(BaseModel):
+    scan: ScanOut
+    title: str
+    filters: list[str]
+    prefilters: list[str]
+    counts: dict[str, int]
+    candidates: list[CandidateOut]
+    near_misses: list[NearMissOut]
+    stale_note: str | None
+    disclaimer: str
+
+
+class WatchIn(BaseModel):
+    ticker: str = Field(min_length=1, max_length=30)
+    note: str | None = Field(None, max_length=500)
+    source: str | None = Field(None, max_length=120)
+
+
+class WatchNoteIn(BaseModel):
+    note: str | None = Field(None, max_length=500)
+
+
+class SignalChangeOut(BaseModel):
+    previous: SignalKey
+    previous_label: str
+    current: SignalKey
+    current_label: str
+    day: date
+
+
+class WatchItemOut(BaseModel):
+    ticker: str
+    label: str
+    note: str | None
+    source: str | None
+    added_at: ISTDatetime
+    added_price: float | None
+    added_signal: SignalKey | None
+    added_signal_label: str | None
+    added_score: float | None
+    held: bool
+    status: Literal["ok", "no_data"]
+    signal: SignalKey | None
+    signal_label: str | None
+    rule: str | None
+    confidence: Literal["high", "medium", "low"] | None
+    composite: float | None
+    score_change: float | None
+    price: float | None
+    price_as_of: str | None
+    price_change_pct: float | None
+    signal_changed_since_added: bool
+    last_change: SignalChangeOut | None
+    stop: float | None
+    stop_breached: bool
+    bullish: list[str]
+    bearish: list[str]
+    flags: list[FlagOut]
+    sector: str | None
+    price_freshness: FreshnessOut | None
+
+
+class WatchlistOut(BaseModel):
+    style_label: str
+    risk_label: str
+    items: list[WatchItemOut]
+    fetching_job_id: int | None
     disclaimer: str

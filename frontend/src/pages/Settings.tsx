@@ -68,8 +68,9 @@ function ExportCard() {
   return (
     <Card title="Export">
       <p className="mb-3 text-sm text-slate-500">
-        Signals with their scores and reasons, under your saved profile. Each file ends with the date and the disclaimer. A PDF/HTML
-        portfolio report comes in Phase 11; Google Sheets export in Phase 10.
+        Signals with their scores and reasons, under your saved profile. Each file ends with the date and the disclaimer. Screener
+        ideas download from the Screener page (Download CSV on any screen). A PDF/HTML portfolio report comes in Phase 11; Google
+        Sheets export in Phase 10.
       </p>
       <div className="flex flex-wrap gap-2">
         {EXPORTS.map((e) => (

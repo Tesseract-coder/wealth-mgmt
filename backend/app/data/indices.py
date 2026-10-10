@@ -1,4 +1,4 @@
-"""Index constituent lists from NSE (Nifty 500 for now): symbol, company, industry, ISIN.
+"""Index constituent lists from NSE (Nifty 50/100/200/500): symbol, company, industry, ISIN.
 
 The industry column is NSE's sector classification, used for sector weights and screener filters.
 """
@@ -8,6 +8,7 @@ import io
 import logging
 from dataclasses import dataclass
 from functools import lru_cache
+from typing import Literal, get_args
 
 from app.data.files import read_text
 
@@ -39,11 +40,20 @@ def parse_index_list(text: str) -> list[Constituent]:
     return out
 
 
+IndexKey = Literal["nifty50", "nifty100", "nifty200", "nifty500"]
+INDEX_KEYS: tuple[IndexKey, ...] = get_args(IndexKey)
+INDEX_LABELS: dict[IndexKey, str] = {k: f"Nifty {k.removeprefix('nifty')}" for k in INDEX_KEYS}
+
+
 @lru_cache
-def load_nifty500() -> tuple[Constituent, ...]:
-    items = tuple(parse_index_list(read_text("nifty500")))
-    logger.info("Loaded %d Nifty 500 constituents", len(items))
+def load_index(key: IndexKey) -> tuple[Constituent, ...]:
+    items = tuple(parse_index_list(read_text(key)))
+    logger.info("Loaded %d %s constituents", len(items), INDEX_LABELS[key])
     return items
+
+
+def load_nifty500() -> tuple[Constituent, ...]:
+    return load_index("nifty500")
 
 
 @lru_cache

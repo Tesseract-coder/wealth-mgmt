@@ -34,6 +34,9 @@ logger = logging.getLogger(__name__)
 PARSERS: dict[ReferenceKey, Callable[[str], Sized]] = {
     "nse_equity": nse.parse_equity_list,
     "nse_etf": nse.parse_etf_list,
+    "nifty50": indices.parse_index_list,
+    "nifty100": indices.parse_index_list,
+    "nifty200": indices.parse_index_list,
     "nifty500": indices.parse_index_list,
     "amfi_navall": amfi.parse_navall,
 }
@@ -46,7 +49,7 @@ def ref_key(key: ReferenceKey) -> str:
 def clear_reference_caches() -> None:
     nse.load_securities.cache_clear()
     amfi.load_schemes.cache_clear()
-    indices.load_nifty500.cache_clear()
+    indices.load_index.cache_clear()
     indices.nifty500_by_symbol.cache_clear()
     resolvers.ticker_resolver.cache_clear()
     resolvers.scheme_resolver.cache_clear()

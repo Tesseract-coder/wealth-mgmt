@@ -1,5 +1,6 @@
 """Refresh jobs. Market data: reference lists → prices → delivery → NAVs → holdings' fundamentals
-→ today's signals (saved to the signal history).
+→ today's signals (saved to the signal history). Watchlist stocks are refreshed and recorded
+alongside your holdings.
 Fundamentals (weekly): holdings plus Nifty 500 peers in the same NSE industry, for medians.
 
 Each step skips anything that is already fresh unless `force` is set, so the job is cheap to
@@ -19,7 +20,7 @@ from app.data.files import REFERENCE_FILES
 from app.data.fundamentals import refresh_fundamentals
 from app.data.navs import refresh_nav
 from app.data.prices import refresh_daily
-from app.data.quotes import benchmark_targets, fund_targets, stock_targets
+from app.data.quotes import Target, benchmark_targets, fund_targets, stock_targets
 from app.data.reference_refresh import refresh_reference
 from app.data.store import RefreshResult
 from app.jobs.runner import JobFn, Progress
@@ -44,10 +45,11 @@ def market_refresh(scope: Scope = "all", force: bool = False) -> JobFn:
                     (REFERENCE_FILES[key].label, partial(refresh_reference, s, key, force=force))
                 )
             twins, fund_benches = _mf_extras(s) if scope in ("all", "prices", "navs") else ([], [])
+            stocks = _stocks_and_watchlist(s)
             if scope in ("all", "prices"):
-                for t in benchmark_targets() + stock_targets(s):
+                for t in benchmark_targets() + stocks:
                     steps.append((t.label, partial(refresh_daily, s, t.code, t.label, force=force)))
-                known = {t.code for t in benchmark_targets()}
+                known = {t.code for t in benchmark_targets() + stocks}
                 for ticker, label in fund_benches:
                     if ticker not in known:
                         steps.append((label, partial(refresh_daily, s, ticker, label, force=force)))
@@ -60,18 +62,27 @@ def market_refresh(scope: Scope = "all", force: bool = False) -> JobFn:
                     steps.append((label, partial(refresh_nav, s, code, label, force=force)))
 
             if scope == "all":
-                for t in stock_targets(s):
+                for t in stocks:
                     steps.append(
                         (
                             f"fundamentals {t.label}",
                             partial(fundamentals_step, s, t.code, t.label, force),
                         )
                     )
-            if scope in ("all", "prices") and stock_targets(s):
+            if scope in ("all", "prices") and stocks:
                 steps.append(("signal history", partial(signals_step, s)))
             return _run_steps(s, steps, progress)
 
     return run
+
+
+def _stocks_and_watchlist(s: Session) -> list[Target]:
+    from app.screener.watchlist import watch_targets
+
+    out = {t.code: t for t in stock_targets(s)}
+    for t in watch_targets(s):
+        out.setdefault(t.code, t)
+    return list(out.values())
 
 
 def _mf_extras(s: Session) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
@@ -109,9 +120,18 @@ FUND_JOB_KIND = "fundamentals_refresh"
 
 
 def signals_step(session: Session) -> RefreshResult:
+    """Today's signals for your holdings and watchlist (holdings only if no stocks are held)."""
     from app.analysis.signals import record_holdings_step
+    from app.data.provider import CachedProvider
+    from app.screener.watchlist import record_watchlist
 
-    return record_holdings_step(session)
+    res = record_holdings_step(session) if stock_targets(session) else None
+    n = record_watchlist(session, CachedProvider(session))
+    msg = (
+        "; ".join(x for x in (res.message if res else "", f"{n} watchlist" if n else "") if x)
+        or "nothing to record"
+    )
+    return RefreshResult("signals", "Signal history", "updated", msg)
 
 
 def fundamentals_step(
@@ -154,7 +174,7 @@ def fundamentals_refresh(force: bool = False, peers: bool = True) -> JobFn:
         from app.core.profiles import get_profiles
 
         with Session(get_engine()) as s:
-            holdings = [(t.code, t.label) for t in stock_targets(s)]
+            holdings = [(t.code, t.label) for t in _stocks_and_watchlist(s)]
             steps: list[tuple[str, Callable[[], RefreshResult]]] = [
                 (label, partial(fundamentals_step, s, code, label, force))
                 for code, label in holdings
