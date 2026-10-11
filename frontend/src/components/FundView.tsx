@@ -6,24 +6,10 @@ import { FundCharts } from "../charts/FundCharts";
 import { formatDate, formatINR } from "../lib/format";
 import { FreshnessBadge } from "./MarketData";
 import { Alert, Button, Card, inputClass } from "./ui";
+import { FundSignalPill } from "./analysis/SignalPill";
 
-const PILL: Record<FundSignalKey, { icon: string; cls: string }> = {
-  continue: { icon: "●", cls: "bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-300" },
-  review: { icon: "◐", cls: "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300" },
-  switch: { icon: "⇄", cls: "bg-red-700 text-white dark:bg-red-600" },
-  no_signal: { icon: "?", cls: "bg-slate-100 text-slate-600 dark:bg-slate-900 dark:text-slate-400" },
-};
-
-/** Continue / Review / Switch as a pill with an icon and text: never colour alone. */
-export function FundSignalPill({ signal, label }: { signal: FundSignalKey; label: string }) {
-  const p = PILL[signal];
-  return (
-    <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold ${p.cls}`}>
-      <span aria-hidden="true">{p.icon}</span>
-      {label}
-    </span>
-  );
-}
+/** Kept here for existing imports; the pill now lives in components/analysis. */
+export { FundSignalPill };
 
 const pct = (v: number | null | undefined, digits = 1) => (v == null ? "—" : `${v > 0 ? "+" : ""}${v.toFixed(digits)}%`);
 const PLAN: Record<string, string> = { direct: "Direct", regular: "Regular" };

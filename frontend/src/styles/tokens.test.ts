@@ -37,6 +37,9 @@ const ON_SOFT: [string, string][] = [
   ["bad", "bad-soft"],
   ["neutral", "neutral-soft"],
   ["accent-text", "accent-soft"],
+  // Solid signal pills (Strong Buy, Sell, Switch): surface-coloured text on the semantic colour.
+  ["surface", "good"],
+  ["surface", "bad"],
 ];
 /** Graphics (shape fills, chart lines, focus ring): 3:1 against the surface (WCAG 1.4.11). */
 const GRAPHICS = ["score-1", "score-2", "score-3", "score-4", "score-5", "chart-1", "chart-2", "chart-3", "chart-4", "chart-5", "chart-6", "chart-up", "chart-down", "focus", "border-strong"];
