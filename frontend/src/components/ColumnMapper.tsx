@@ -49,7 +49,7 @@ export function ColumnMapper({ need, busy, onSubmit, onCancel }: Props) {
           />
         </label>
         {headerChanged && (
-          <span className="text-sm text-slate-500">
+          <span className="text-sm text-fg-subtle">
             Submit to reload the column names from row {headerRow + 1}.
           </span>
         )}
@@ -87,9 +87,9 @@ export function ColumnMapper({ need, busy, onSubmit, onCancel }: Props) {
             <thead>
               <tr>
                 {need.headers.map((h, i) => (
-                  <th key={i} className="border-b border-slate-200 px-2 py-1 dark:border-slate-700">
+                  <th key={i} className="border-b border-border px-2 py-1">
                     {h || `(column ${i + 1})`}
-                    {used.has(i) && <div className="font-normal text-emerald-700 dark:text-emerald-400">→ {used.get(i)}</div>}
+                    {used.has(i) && <div className="font-normal text-good">→ {used.get(i)}</div>}
                   </th>
                 ))}
               </tr>
@@ -98,7 +98,7 @@ export function ColumnMapper({ need, busy, onSubmit, onCancel }: Props) {
               {need.preview.map((row, r) => (
                 <tr key={r}>
                   {need.headers.map((_, c) => (
-                    <td key={c} className="border-b border-slate-100 px-2 py-1 dark:border-slate-800">
+                    <td key={c} className="border-b border-border px-2 py-1">
                       {row[c] ?? ""}
                     </td>
                   ))}

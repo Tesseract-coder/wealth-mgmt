@@ -28,7 +28,7 @@ export function BacktestView({ ticker, style }: { ticker: string; style: StyleKe
       </Alert>
       {!q.data && (
         <Card>
-          <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
+          <p className="mb-3 text-sm text-fg-muted">
             Every week of the last 3 years, the rules see only the prices up to that day and give a signal. The app then checks what
             the price did next. Settings are under <code>backtest:</code> in <code>profiles.yaml</code>.
           </p>
@@ -49,12 +49,12 @@ export function BacktestView({ ticker, style }: { ticker: string; style: StyleKe
 
 function Perf({ title, p, trades }: { title: string; p: BacktestPerformance | null; trades?: number }) {
   return (
-    <div className="rounded border border-slate-200 p-3 dark:border-slate-800">
-      <div className="text-xs uppercase tracking-wide text-slate-500">{title}</div>
-      <div className={`text-lg font-semibold tabular-nums ${p && p.total_return < 0 ? "text-red-700 dark:text-red-400" : "text-emerald-700 dark:text-emerald-400"}`}>
+    <div className="rounded-control border border-border p-3">
+      <div className="text-xs uppercase tracking-wide text-fg-subtle">{title}</div>
+      <div className={`text-lg font-semibold tabular-nums ${p && p.total_return < 0 ? "text-bad" : "text-good"}`}>
         {pct(p?.total_return)}
       </div>
-      <div className="text-xs text-slate-500">
+      <div className="text-xs text-fg-subtle">
         Max drawdown {pct(p?.max_drawdown)} · in the market {share(p?.exposure)}
         {trades !== undefined && ` · ${trades} entr${trades === 1 ? "y" : "ies"}`}
       </div>
@@ -74,7 +74,7 @@ export function BacktestResult({ b }: { b: Backtest }) {
   const last = b.points[b.points.length - 1];
   return (
     <Card title={`${b.label}: ${b.style_label} style, ${b.risk_label} risk`}>
-      <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
+      <p className="mb-3 text-sm text-fg-muted">
         {formatDate(b.start)} – {formatDate(b.end)}: {b.message} Evaluated every {b.step_sessions} sessions on{" "}
         {b.timeframes.join(" + ")} bars; a signal is judged {b.horizon_sessions} sessions later.
       </p>
@@ -82,7 +82,7 @@ export function BacktestResult({ b }: { b: Backtest }) {
         <Perf title="Following the rules" p={b.strategy} trades={b.trades} />
         <Perf title="Buy and hold" p={b.buy_hold} />
       </div>
-      <p className="mb-2 text-xs text-slate-500">
+      <p className="mb-2 text-xs text-fg-subtle">
         "Following the rules" = in after a Buy, out after a Reduce/Sell, unchanged on Hold; trades at the next session's open.
       </p>
       <ComparisonLine
@@ -97,7 +97,7 @@ export function BacktestResult({ b }: { b: Backtest }) {
       <div className="mt-4 overflow-x-auto">
         <table className="w-full text-sm">
           <caption className="mb-1 text-left text-sm font-semibold">How the signals did</caption>
-          <thead className="text-left text-xs text-slate-500">
+          <thead className="text-left text-xs text-fg-subtle">
             <tr>
               <th className="py-1 pr-2">Signal</th>
               <th className="pr-2 text-right">Times</th>
@@ -108,7 +108,7 @@ export function BacktestResult({ b }: { b: Backtest }) {
           </thead>
           <tbody>
             {b.stats.map((s) => (
-              <tr key={s.group} className="border-t border-slate-100 dark:border-slate-800">
+              <tr key={s.group} className="border-t border-border">
                 <td className="py-1 pr-2">{s.label}</td>
                 <td className="pr-2 text-right tabular-nums">{s.count}</td>
                 <td className="pr-2 text-right tabular-nums" title={s.measured < s.count ? `${s.count - s.measured} too recent to judge` : undefined}>
@@ -120,7 +120,7 @@ export function BacktestResult({ b }: { b: Backtest }) {
             ))}
           </tbody>
         </table>
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="mt-1 text-xs text-fg-subtle">
           A Buy is "right" if the price was higher {b.horizon_sessions} sessions later; a Reduce/Sell if it was lower. Compare with the
           base rate{base ? ` (${share(base.rise_rate)} of all weeks were followed by a rise)` : ""}: a rule only helps if it beats it.
         </p>
@@ -132,7 +132,7 @@ export function BacktestResult({ b }: { b: Backtest }) {
         </p>
       )}
       {[...b.notes, b.caveat].map((n) => (
-        <p key={n} className="mt-2 text-xs text-slate-500">
+        <p key={n} className="mt-2 text-xs text-fg-subtle">
           {n}
         </p>
       ))}

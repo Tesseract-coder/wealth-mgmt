@@ -16,7 +16,7 @@ export function WatchButton({ ticker, source, compact = false }: { ticker: strin
   const on = watched.data?.includes(ticker) ?? false;
   if (on)
     return (
-      <span className="whitespace-nowrap text-xs font-medium text-emerald-700 dark:text-emerald-400">
+      <span className="whitespace-nowrap text-xs font-medium text-good">
         <span aria-hidden="true">★ </span>
         {compact ? "Watching" : "On your watchlist"}
       </span>
@@ -27,7 +27,7 @@ export function WatchButton({ ticker, source, compact = false }: { ticker: strin
         <span aria-hidden="true">☆ </span>
         {compact ? "Watch" : "Add to watchlist"}
       </Button>
-      {add.isError && <span className="text-xs text-red-700 dark:text-red-400">{add.error.message}</span>}
+      {add.isError && <span className="text-xs text-bad">{add.error.message}</span>}
     </span>
   );
 }

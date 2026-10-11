@@ -3,6 +3,7 @@ import { ArrowRight, FileText } from "lucide-react";
 import { Link, Navigate } from "react-router-dom";
 import { api, checksApi, REPORT_URL, signalApi, summaryApi, type HoldingsChecks, type PortfolioSummary } from "../api/client";
 import { ActionList } from "../components/ActionList";
+import { StaleNotice } from "../components/StaleNotice";
 import { RewardsRisks } from "../components/analysis";
 import { HoldingCard } from "../components/portfolio/HoldingCard";
 import { NoHoldings, PortfolioCharts, PortfolioHero, SummarySkeleton } from "../components/PortfolioSummary";
@@ -78,6 +79,7 @@ export function Overview() {
         <NoHoldings />
       ) : (
         <>
+          <StaleNotice />
           <PortfolioHero s={s} shape={shapes.data} shapeLoading={hasStocks && !shapes.data && !shapes.isError} />
           <ActionList />
           <Card title="Rewards and risks" description="Across your stocks, from the same checks as each stock's page.">

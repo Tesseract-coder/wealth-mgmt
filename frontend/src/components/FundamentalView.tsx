@@ -3,12 +3,12 @@ import { Link } from "react-router-dom";
 import { fundamentalApi, type Direction, type FundamentalReport, type Metric, type Observation } from "../api/client";
 import { formatINR } from "../lib/format";
 import { FreshnessBadge } from "./MarketData";
-import { Alert, Card } from "./ui";
+import { Alert, Card, ErrorState, SkeletonCard } from "./ui";
 
 const DIR: Record<Direction, { label: string; icon: string; cls: string }> = {
-  bullish: { label: "Positive", icon: "▲", cls: "text-emerald-700 dark:text-emerald-400" },
-  bearish: { label: "Negative", icon: "▼", cls: "text-red-700 dark:text-red-400" },
-  neutral: { label: "Neutral", icon: "●", cls: "text-slate-500" },
+  bullish: { label: "Positive", icon: "▲", cls: "text-good" },
+  bearish: { label: "Negative", icon: "▼", cls: "text-bad" },
+  neutral: { label: "Neutral", icon: "●", cls: "text-fg-subtle" },
 };
 
 const GROUPS: { title: string; keys: string[] }[] = [
@@ -46,8 +46,8 @@ export function formatMetric(m: Pick<Metric, "value" | "unit">): string {
 
 export function FundamentalReportView({ ticker, metricsOnly = false, enabled = true }: { ticker: string; metricsOnly?: boolean; enabled?: boolean }) {
   const q = useQuery({ queryKey: ["fundamental", ticker], queryFn: () => fundamentalApi.report(ticker), enabled });
-  if (q.isError) return <Alert tone="error">{q.error.message}</Alert>;
-  if (!q.data) return <Card>Loading fundamentals for {ticker}… (the first look downloads them from Yahoo Finance)</Card>;
+  if (q.isError) return <ErrorState title="Couldn't load the fundamentals" detail={q.error.message} onRetry={() => void q.refetch()} />;
+  if (!q.data) return <SkeletonCard label={`fundamentals for ${ticker} (the first look downloads them from Yahoo Finance)`} lines={6} />;
   return <FundamentalBody r={q.data} metricsOnly={metricsOnly} />;
 }
 
@@ -63,7 +63,7 @@ export function FundamentalBody({ r, metricsOnly = false }: { r: FundamentalRepo
       <Card
         title={`Fundamentals${r.sector ? ` · ${r.sector}` : ""}`}
         actions={
-          <span className="flex items-center gap-2 text-sm text-slate-500">
+          <span className="flex items-center gap-2 text-sm text-fg-subtle">
             {r.source === "screener" ? "Screener.in upload" : r.source === "yahoo" ? "Yahoo Finance" : "No statements"}
             {r.latest_year && ` · latest year ${r.latest_year.slice(0, 4)}`}
             <FreshnessBadge f={r.freshness} />
@@ -71,7 +71,7 @@ export function FundamentalBody({ r, metricsOnly = false }: { r: FundamentalRepo
         }
       >
         {r.notes.map((n) => (
-          <p key={n} className={`mb-2 text-xs ${n.startsWith("Data check") ? "text-amber-800 dark:text-amber-300" : "text-slate-500"}`}>
+          <p key={n} className={`mb-2 text-xs ${n.startsWith("Data check") ? "text-caution" : "text-fg-subtle"}`}>
             {n}
           </p>
         ))}
@@ -85,13 +85,13 @@ export function FundamentalBody({ r, metricsOnly = false }: { r: FundamentalRepo
                 <table className="w-full text-sm">
                   <tbody>
                     {rows.map((m) => (
-                      <tr key={m.key} className="border-t border-slate-100 align-top dark:border-slate-800">
+                      <tr key={m.key} className="border-t border-border align-top">
                         <td className="py-1 pr-2">{m.label}</td>
                         <td className="pr-2 text-right tabular-nums font-medium">{formatMetric(m)}</td>
-                        <td className="pr-2 text-right text-xs text-slate-500 tabular-nums">
+                        <td className="pr-2 text-right text-xs text-fg-subtle tabular-nums">
                           {m.sector_median !== null ? `sector ${formatMetric({ value: m.sector_median, unit: m.unit })}` : ""}
                         </td>
-                        <td className="text-xs text-slate-500">{m.basis}</td>
+                        <td className="text-xs text-fg-subtle">{m.basis}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -107,10 +107,10 @@ export function FundamentalBody({ r, metricsOnly = false }: { r: FundamentalRepo
           <ul className="grid gap-1 text-sm sm:grid-cols-2">
             {r.fscore.tests.map((t) => (
               <li key={t.name}>
-                <span className={t.passed === null ? "text-slate-500" : t.passed ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}>
+                <span className={t.passed === null ? "text-fg-subtle" : t.passed ? "text-good" : "text-bad"}>
                   {t.passed === null ? "– n/a" : t.passed ? "✓ pass" : "✗ fail"}
                 </span>{" "}
-                {t.name} <span className="text-xs text-slate-500">({t.detail})</span>
+                {t.name} <span className="text-xs text-fg-subtle">({t.detail})</span>
               </li>
             ))}
           </ul>
@@ -121,7 +121,7 @@ export function FundamentalBody({ r, metricsOnly = false }: { r: FundamentalRepo
       <Card title="Readings">
         <Readings observations={r.observations} />
         {r.unavailable.length > 0 && (
-          <div className="mt-3 text-xs text-slate-500">
+          <div className="mt-3 text-xs text-fg-subtle">
             <span className="font-medium">Not available:</span> {r.unavailable.join("; ")}
           </div>
         )}
@@ -145,11 +145,11 @@ function Readings({ observations }: { observations: Observation[] }) {
             <ul className="space-y-1 text-sm">
               {items.map((o) => (
                 <li key={o.key}>
-                  <span className="text-xs uppercase text-slate-400">{o.category}</span> {o.text}
-                  {o.minor && <span className="ml-1 text-xs text-slate-500">(minor)</span>}
+                  <span className="text-xs uppercase text-fg-subtle">{o.category}</span> {o.text}
+                  {o.minor && <span className="ml-1 text-xs text-fg-subtle">(minor)</span>}
                 </li>
               ))}
-              {items.length === 0 && <li className="text-slate-500">None</li>}
+              {items.length === 0 && <li className="text-fg-subtle">None</li>}
             </ul>
           </div>
         );
@@ -160,8 +160,8 @@ function Readings({ observations }: { observations: Observation[] }) {
 
 export function FundamentalHoldings() {
   const q = useQuery({ queryKey: ["fund-holdings"], queryFn: fundamentalApi.holdings });
-  if (q.isError) return <Alert tone="error">{q.error.message}</Alert>;
-  if (!q.data) return <Card>Loading…</Card>;
+  if (q.isError) return <ErrorState title="Couldn't load your holdings' fundamentals" detail={q.error.message} onRetry={() => void q.refetch()} />;
+  if (!q.data) return <SkeletonCard label="your holdings' fundamentals" lines={6} />;
   if (q.data.length === 0)
     return (
       <Alert tone="info">
@@ -170,12 +170,12 @@ export function FundamentalHoldings() {
     );
   return (
     <Card title="Your holdings: fundamentals">
-      <p className="mb-3 text-sm text-slate-500">
+      <p className="mb-3 text-sm text-fg-subtle">
         Cached data only. Run <b>Refresh fundamentals + peers</b> in Settings → Data refresh to fill gaps and sector medians.
       </p>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="text-left text-xs uppercase text-slate-500">
+          <thead className="text-left text-xs uppercase text-fg-subtle">
             <tr>
               <th className="py-1 pr-2">Stock</th>
               <th className="pr-2">Sector</th>
@@ -190,12 +190,12 @@ export function FundamentalHoldings() {
           </thead>
           <tbody>
             {q.data.map((r) => (
-              <tr key={r.ticker} className="border-t border-slate-100 align-top dark:border-slate-800">
+              <tr key={r.ticker} className="border-t border-border align-top">
                 <td className="py-1 pr-2">
                   <Link className="underline" to={`/analysis/${encodeURIComponent(r.ticker)}?view=fundamental`}>
                     {r.label}
                   </Link>
-                  <div className="font-mono text-xs text-slate-500">{r.ticker}</div>
+                  <div className="font-mono text-xs text-fg-subtle">{r.ticker}</div>
                 </td>
                 <td className="pr-2 text-xs">{r.sector ?? "—"}</td>
                 <td className="pr-2 text-right tabular-nums">{r.pe?.toFixed(1) ?? "—"}</td>

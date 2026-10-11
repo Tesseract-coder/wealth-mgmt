@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { api, dashboardApi, EXPORTS, REPORT_URL, sheetsApi, type Threshold, type Thresholds } from "../api/client";
 import { GoogleSheetsSettings, SheetsExportButton } from "../components/GoogleSheets";
 import { MarketData } from "../components/MarketData";
-import { Alert, Button, Card, inputClass } from "../components/ui";
+import { Download, FileText } from "lucide-react";
+import { Alert, Button, buttonClass, Card, ErrorState, inputClass, PageHeader, Skeleton, SkeletonCard, Stat } from "../components/ui";
 import { ProfileForm } from "./Onboarding";
 
 const TABS = [
@@ -29,8 +30,8 @@ export function Settings() {
   };
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Settings</h1>
-      <div role="tablist" className="flex flex-wrap gap-1 border-b border-slate-200 dark:border-slate-800">
+      <PageHeader title="Settings" description="Your profile, thresholds, data refresh, Google Sheets, exports and system status." />
+      <div role="tablist" aria-label="Settings sections" className="flex gap-1 overflow-x-auto border-b border-border">
         {TABS.map((t) => (
           <button
             key={t.key}
@@ -38,7 +39,7 @@ export function Settings() {
             role="tab"
             aria-selected={tab === t.key}
             onClick={() => pick(t.key)}
-            className={`-mb-px border-b-2 px-3 py-2 text-sm ${tab === t.key ? "border-slate-900 font-medium dark:border-slate-100" : "border-transparent text-slate-500"}`}
+            className={`-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium ${tab === t.key ? "border-accent text-fg" : "border-transparent text-fg-muted hover:text-fg"}`}
           >
             {t.label}
           </button>
@@ -46,11 +47,15 @@ export function Settings() {
       </div>
       {tab === "profile" &&
         (config.error || profile.error ? (
-          <Alert tone="error">Couldn't load your profile: {(config.error ?? profile.error)?.message}</Alert>
+          <ErrorState
+            title="Couldn't load your profile"
+            detail={(config.error ?? profile.error)?.message ?? ""}
+            onRetry={() => void Promise.all([config.refetch(), profile.refetch()])}
+          />
         ) : config.data && profile.data ? (
           <ProfileForm config={config.data} profile={profile.data} />
         ) : (
-          <Card>Loading…</Card>
+          <SkeletonCard label="your profile" lines={6} />
         ))}
       {tab === "thresholds" && <ThresholdsEditor />}
       {tab === "data" && <MarketData />}
@@ -61,43 +66,45 @@ export function Settings() {
   );
 }
 
-const LINK_BTN =
-  "rounded border border-slate-300 px-3 py-1.5 text-sm font-medium hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800";
+const LINK_BTN = buttonClass("secondary", "md");
 
 function ExportCard() {
   const sheets = useQuery({ queryKey: ["sheets"], queryFn: sheetsApi.status });
   return (
     <div className="space-y-4">
       <Card title="Portfolio report (HTML / PDF)">
-        <p className="mb-3 text-sm text-slate-500">
+        <p className="mb-3 text-sm text-fg-subtle">
           One page with your summary, actions, allocation, every stock and fund with its signal and reasons, the top screener ideas,
           data freshness and the disclaimer. Open it and use <strong>Print / Save as PDF</strong> for a PDF (it is laid out for A4
           landscape, with the disclaimer on every page). Built from cached data, so it opens in a few seconds.
         </p>
         <div className="flex flex-wrap gap-2">
           <a href={REPORT_URL} target="_blank" rel="noreferrer" className={LINK_BTN}>
-            📄 Open report<span className="sr-only"> (opens in a new tab)</span>
+            <FileText aria-hidden className="size-4" />
+            Open report<span className="sr-only"> (opens in a new tab)</span>
           </a>
           <a href={`${REPORT_URL}?download=true`} download className={LINK_BTN}>
-            ⬇ Download HTML
+            <Download aria-hidden className="size-4" />
+            Download HTML
           </a>
         </div>
       </Card>
       <Card title="Download">
-        <p className="mb-3 text-sm text-slate-500">
+        <p className="mb-3 text-sm text-fg-subtle">
           Signals with their scores and reasons, under your saved profile. Each file ends with the date and the disclaimer. Screener
           ideas download from the Screener page (Download CSV on any screen).
         </p>
         <div className="flex flex-wrap gap-2">
           {EXPORTS.map((e) => (
             <a key={e.href} href={e.href} download className={LINK_BTN}>
-              ⬇ {e.label}
+              <Download aria-hidden className="size-4" />
+              {e.label}
             </a>
           ))}
         </div>
       </Card>
       <Card title="Google Sheets">
-        <p className="mb-3 text-sm text-slate-500">Writes the Summary, stock, fund and Screener tabs of your sheet. Set it up under the Google Sheets tab.</p>
+        <p className="mb-3 text-sm text-fg-subtle">Writes the Summary, stock, fund and Screener tabs of your sheet. Set it up under the Google Sheets tab.</p>
         <SheetsExportButton status={sheets.data} />
       </Card>
     </div>
@@ -106,7 +113,8 @@ function ExportCard() {
 
 function SystemCard() {
   const health = useQuery({ queryKey: ["health"], queryFn: api.health });
-  if (health.isError) return <Alert tone="error">Backend unreachable: {health.error.message}</Alert>;
+  if (health.isError)
+    return <ErrorState title="The backend isn't answering" detail={health.error.message} hint="Start it with make dev, then retry." onRetry={() => void health.refetch()} />;
   const h = health.data;
   return (
     <Card title="System">
@@ -117,10 +125,7 @@ function SystemCard() {
           ["Config version", h ? String(h.config_version) : undefined],
           ["Server time", h?.server_time_ist],
         ].map(([k, v]) => (
-          <div key={k}>
-            <dt className="text-xs uppercase tracking-wide text-slate-500">{k}</dt>
-            <dd className="mt-1 font-medium">{v ?? "…"}</dd>
-          </div>
+          <Stat key={k} label={k!} value={v ?? <Skeleton className="h-5 w-20" />} />
         ))}
       </dl>
     </Card>
@@ -147,8 +152,8 @@ const UNIT: Record<Threshold["unit"], string> = { fraction: "%", score: "/100", 
 
 function ThresholdsEditor() {
   const q = useQuery({ queryKey: ["thresholds"], queryFn: dashboardApi.thresholds });
-  if (q.isError) return <Alert tone="error">{q.error.message}</Alert>;
-  if (!q.data) return <Card>Loading…</Card>;
+  if (q.isError) return <ErrorState title="Couldn't load the thresholds" detail={q.error.message} onRetry={() => void q.refetch()} />;
+  if (!q.data) return <SkeletonCard label="the thresholds" lines={8} />;
   return <ThresholdsForm d={q.data} />;
 }
 
@@ -192,10 +197,10 @@ export function ThresholdsForm({ d }: { d: Thresholds }) {
                   const dirty = draft[t.path] !== initial[t.path];
                   return (
                     <label key={t.path} className="grid grid-cols-[1fr_8rem] items-center gap-2 text-sm">
-                      <span>
+                      <span className="text-fg">
                         {t.label}
-                        {t.edited && <span className="ml-1 text-xs text-amber-800 dark:text-amber-300">(edited; default {toDisplay(t, t.default) || "none"})</span>}
-                        {dirty && <span className="ml-1 text-xs text-slate-500">(unsaved)</span>}
+                        {t.edited && <span className="ml-1 text-xs text-caution">(edited; default {toDisplay(t, t.default) || "none"})</span>}
+                        {dirty && <span className="ml-1 text-xs text-fg-subtle">(unsaved)</span>}
                       </span>
                       <span className="flex items-center gap-1">
                         <input
@@ -206,7 +211,7 @@ export function ThresholdsForm({ d }: { d: Thresholds }) {
                           placeholder={t.nullable ? "no limit" : ""}
                           onChange={(e) => setDraft({ ...draft, [t.path]: e.target.value })}
                         />
-                        <span className="w-12 text-xs text-slate-500">{UNIT[t.unit]}</span>
+                        <span className="w-12 text-xs text-fg-subtle">{UNIT[t.unit]}</span>
                       </span>
                     </label>
                   );

@@ -2,12 +2,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { isActive, marketApi, type Freshness, type FreshnessStatus, type Job, type Quote, type Schedule } from "../api/client";
 import { formatDate, formatFreshness, formatINR, formatNumber, formatPct } from "../lib/format";
-import { Alert, Button, Card } from "./ui";
+import { Alert, Button, Card, ErrorState, SkeletonCard } from "./ui";
 
 const BADGE: Record<FreshnessStatus, string> = {
-  fresh: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
-  stale: "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300",
-  unavailable: "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+  fresh: "border border-good-border bg-good-soft text-good",
+  stale: "border border-caution-border bg-caution-soft text-caution",
+  unavailable: "border border-neutral-border bg-neutral-soft text-neutral",
 };
 
 const LABEL: Record<FreshnessStatus, string> = { fresh: "Fresh", stale: "Stale", unavailable: "Unavailable" };
@@ -70,8 +70,8 @@ export function MarketData() {
   const fundRunning = isActive(fundJob.data) || refreshFund.isPending;
   const shownFund: Job | null | undefined = fundJob.data ?? lastFund;
 
-  if (status.isError) return <Alert tone="error">Could not load market data status: {status.error.message}</Alert>;
-  if (!status.data) return <Card title="Market data">Loading…</Card>;
+  if (status.isError) return <ErrorState title="Couldn't load the market data status" detail={status.error.message} onRetry={() => void status.refetch()} />;
+  if (!status.data) return <SkeletonCard label="market data" lines={6} />;
   const s = status.data;
   const running = isActive(job.data) || refresh.isPending;
   const shownJob: Job | null | undefined = job.data ?? lastJob;
@@ -124,7 +124,7 @@ export function MarketData() {
           <div key={kind} className="mt-4 overflow-x-auto">
             <h3 className="mb-1 text-sm font-semibold">{KIND_LABEL[kind]}</h3>
             <table className="w-full text-sm">
-              <thead className="text-left text-xs uppercase text-slate-500">
+              <thead className="text-left text-xs uppercase text-fg-subtle">
                 <tr>
                   <th className="py-1 pr-2">Name</th>
                   <th className="pr-2">Code</th>
@@ -136,13 +136,13 @@ export function MarketData() {
               </thead>
               <tbody>
                 {rows.map((q) => (
-                  <tr key={q.code} className="border-t border-slate-100 align-top dark:border-slate-800">
+                  <tr key={q.code} className="border-t border-border align-top">
                     <td className="py-1 pr-2">{q.label}</td>
                     <td className="pr-2 font-mono text-xs">{q.code}</td>
                     <td className="pr-2 text-right tabular-nums">{price(q)}</td>
                     <td
                       className={`pr-2 text-right tabular-nums ${
-                        (q.change_pct ?? 0) > 0 ? "text-emerald-700 dark:text-emerald-400" : (q.change_pct ?? 0) < 0 ? "text-red-700 dark:text-red-400" : ""
+                        (q.change_pct ?? 0) > 0 ? "text-good" : (q.change_pct ?? 0) < 0 ? "text-bad" : ""
                       }`}
                     >
                       {formatPct(q.change_pct)}
@@ -151,7 +151,7 @@ export function MarketData() {
                     <td>
                       <FreshnessBadge f={q.freshness} />
                       {q.freshness.status !== "fresh" && (
-                        <div className="text-xs text-slate-500">{q.freshness.reason}</div>
+                        <div className="text-xs text-fg-subtle">{q.freshness.reason}</div>
                       )}
                     </td>
                   </tr>
@@ -167,13 +167,13 @@ export function MarketData() {
         <table className="w-full text-sm">
           <tbody>
             {s.references.map((r) => (
-              <tr key={r.key} className="border-t border-slate-100 align-top dark:border-slate-800">
+              <tr key={r.key} className="border-t border-border align-top">
                 <td className="py-1 pr-2">{r.label}</td>
-                <td className="pr-2 text-slate-500">{r.origin === "bundled" ? "bundled copy" : "downloaded"}</td>
+                <td className="pr-2 text-fg-subtle">{r.origin === "bundled" ? "bundled copy" : "downloaded"}</td>
                 <td className="pr-2 whitespace-nowrap">{formatDate(r.as_of)}</td>
                 <td>
                   <FreshnessBadge f={r.freshness} />
-                  {r.freshness.status !== "fresh" && <div className="text-xs text-slate-500">{r.freshness.reason}</div>}
+                  {r.freshness.status !== "fresh" && <div className="text-xs text-fg-subtle">{r.freshness.reason}</div>}
                 </td>
               </tr>
             ))}
@@ -181,7 +181,7 @@ export function MarketData() {
         </table>
       </div>
 
-      <ul className="mt-3 list-disc pl-5 text-xs text-slate-500">
+      <ul className="mt-3 list-disc pl-5 text-xs text-fg-subtle">
         {s.notes.map((n) => (
           <li key={n}>{n}</li>
         ))}
@@ -200,19 +200,19 @@ function JobLine({ job, title = "Last refresh" }: { job: Job; title?: string }) 
           <div className="mb-1">
             {job.message ?? "Queued"} ({job.done}/{job.total})
           </div>
-          <div className="h-2 w-full rounded bg-slate-200 dark:bg-slate-800" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-            <div className="h-2 rounded bg-slate-700 dark:bg-slate-300" style={{ width: `${pct}%` }} />
+          <div className="h-2 w-full rounded bg-surface-3" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+            <div className="h-2 rounded bg-accent" style={{ width: `${pct}%` }} />
           </div>
         </div>
       ) : (
-        <div className="text-slate-600 dark:text-slate-400">
+        <div className="text-fg-muted">
           {title} ({job.trigger}) {job.status === "failed" ? "failed" : "finished"} {formatFreshness(new Date(when))}:{" "}
           {job.message}
         </div>
       )}
       {job.errors.length > 0 && (
         <details className="mt-1">
-          <summary className="cursor-pointer text-amber-800 dark:text-amber-300">{job.errors.length} item(s) could not be refreshed</summary>
+          <summary className="cursor-pointer text-caution">{job.errors.length} item(s) could not be refreshed</summary>
           <ul className="list-disc pl-5 text-xs">
             {job.errors.map((e) => (
               <li key={e}>{e}</li>
@@ -228,7 +228,7 @@ function JobLine({ job, title = "Last refresh" }: { job: Job; title?: string }) 
 export function ScheduleInfo({ schedule }: { schedule: Schedule }) {
   if (!schedule.enabled) {
     return (
-      <p className="mb-3 text-sm text-slate-500">
+      <p className="mb-3 text-sm text-fg-subtle">
         Automatic refresh is off (<code>SCHEDULER_ENABLED=false</code>). Use the buttons above to refresh.
       </p>
     );
@@ -242,7 +242,7 @@ export function ScheduleInfo({ schedule }: { schedule: Schedule }) {
   return (
     <div className="mb-3 text-sm">
       <h3 className="font-medium">Automatic refresh</h3>
-      <ul className="mt-1 space-y-0.5 text-slate-600 dark:text-slate-400">
+      <ul className="mt-1 space-y-0.5 text-fg-muted">
         {rows.map(([id, text, at]) => (
           <li key={id}>
             {text}
@@ -251,7 +251,7 @@ export function ScheduleInfo({ schedule }: { schedule: Schedule }) {
           </li>
         ))}
       </ul>
-      {schedule.note && <p className="mt-1 text-xs text-slate-500">{schedule.note}</p>}
+      {schedule.note && <p className="mt-1 text-xs text-fg-subtle">{schedule.note}</p>}
     </div>
   );
 }

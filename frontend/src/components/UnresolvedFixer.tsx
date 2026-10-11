@@ -11,7 +11,7 @@ export function UnresolvedFixer({ stocks, funds }: { stocks: StockHolding[]; fun
   if (s.length === 0 && f.length === 0) return null;
   return (
     <Card title={`Needs your help: ${s.length + f.length} unmatched holding(s)`}>
-      <p className="mb-3 text-sm text-slate-500">
+      <p className="mb-3 text-sm text-fg-subtle">
         Pick the right match. Your choice is remembered for future imports.
       </p>
       <ul className="space-y-4">
@@ -57,9 +57,9 @@ function FixRow(props: {
 
   const options = q.length >= 2 ? (search.data ?? []) : initial;
   return (
-    <div className="rounded border border-slate-200 p-3 dark:border-slate-800">
+    <div className="rounded-control border border-border p-3">
       <div className="font-medium">{title}</div>
-      {subtitle && <div className="text-xs text-slate-500">{subtitle}</div>}
+      {subtitle && <div className="text-xs text-fg-subtle">{subtitle}</div>}
       <label className="mt-2 block text-sm">
         <span className="sr-only">Search</span>
         <input
@@ -71,21 +71,21 @@ function FixRow(props: {
       </label>
       <div className="mt-2 flex flex-wrap gap-2">
         {options.length === 0 && (
-          <span className="text-sm text-slate-500">{q.length >= 2 ? "No matches." : "No suggestions; search above."}</span>
+          <span className="text-sm text-fg-subtle">{q.length >= 2 ? "No matches." : "No suggestions; search above."}</span>
         )}
         {options.map((o) => {
           const code = (kind === "stock" ? o.symbol : o.amfi_code) ?? "";
           return (
             <Button key={code} variant="secondary" disabled={fix.isPending} onClick={() => fix.mutate({ code })}>
               <span className="font-mono">{code}</span> · {o.name}{" "}
-              <span className="text-xs text-slate-500">({Math.round(o.score)}% match)</span>
+              <span className="text-xs text-fg-subtle">({Math.round(o.score)}% match)</span>
             </Button>
           );
         })}
       </div>
       {kind === "stock" && (
         <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-          <span className="text-slate-500">Only on BSE?</span>
+          <span className="text-fg-subtle">Only on BSE?</span>
           <input
             className={`${inputClass} w-40`}
             placeholder="BSE symbol, e.g. TCS"

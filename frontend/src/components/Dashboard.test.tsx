@@ -168,16 +168,24 @@ const config: AppConfig = {
 const fresh: Profile = { style: null, risk: "medium", custom_technical_weight: 0.5, gsheet_url: null, onboarded: false, updated_at: "" };
 
 describe("Onboarding", () => {
-  it("defaults risk to Medium and needs a style before saving", () => {
+  it("walks three steps with progress, needs a style, defaults risk to Medium and checks the sheet link", () => {
     wrap(<ProfileForm config={config} profile={fresh} firstRun />);
-    expect(screen.getByRole("radio", { name: /Medium/ })).toBeChecked();
-    const btn = screen.getByRole("button", { name: "Save and continue" });
-    expect(btn).toBeDisabled();
+    const progress = screen.getByRole("list", { name: "Setup progress" });
+    expect(within(progress).getAllByRole("listitem")[0]).toHaveAttribute("aria-current", "step");
+    const next = screen.getByRole("button", { name: "Next" });
+    expect(next).toBeDisabled(); // no style yet
     fireEvent.click(screen.getByRole("radio", { name: /Custom/ }));
     expect(screen.getByText(/Technical weight: 50%/)).toBeInTheDocument();
+    fireEvent.click(next);
+    expect(screen.getByRole("heading", { name: "Your risk level" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /Medium/ })).toBeChecked();
+    expect(within(progress).getByText(/Your investing style \(done\)/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
     fireEvent.change(screen.getByPlaceholderText(/docs.google.com/), { target: { value: "http://evil.example" } });
     expect(screen.getByText(/doesn't look like a Google Sheets link/)).toBeInTheDocument();
-    expect(btn).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Save and continue" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.getByRole("heading", { name: "Your risk level" })).toBeInTheDocument();
   });
 
   it("saves and sends a new user to Import", async () => {
@@ -190,9 +198,22 @@ describe("Onboarding", () => {
     vi.stubGlobal("fetch", fetchMock);
     wrap(<ProfileForm config={config} profile={fresh} firstRun />);
     fireEvent.click(screen.getByRole("radio", { name: /Long-term/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
     fireEvent.click(screen.getByRole("button", { name: "Save and continue" }));
     expect(await screen.findByText("import page")).toBeInTheDocument();
     const sent = JSON.parse(String(fetchMock.mock.calls[0]![1]?.body));
     expect(sent).toMatchObject({ style: "long_term", risk: "medium", gsheet_url: null });
+  });
+});
+
+describe("Risk impact", () => {
+  it("lists what each risk level sets and what switching would change", async () => {
+    const { RiskImpact } = await import("./RiskImpact");
+    render(<RiskImpact config={config} selected="high" saved="medium" />);
+    expect(screen.getByText(/Switching from Medium to High changes \d+ settings?/)).toBeInTheDocument();
+    expect(screen.getByRole("rowheader", { name: "Debt/equity limit" })).toBeInTheDocument();
+    expect(screen.getByText(/Check: Debt within your risk limit/)).toBeInTheDocument();
+    expect(screen.getAllByText("changes").length).toBeGreaterThan(0);
   });
 });

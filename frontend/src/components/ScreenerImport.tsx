@@ -28,7 +28,7 @@ export function ScreenerImport() {
   });
   return (
     <div className="space-y-3">
-      <div className="text-sm text-slate-500">
+      <div className="text-sm text-fg-subtle">
         <p>Two kinds of Screener.in export are understood. Download them yourself while logged in to screener.in:</p>
         <ul className="mt-1 list-disc pl-5">
           <li>
@@ -57,7 +57,7 @@ export function ScreenerImport() {
         <>
           <FileDrop accept=".xlsx,.csv" hint=".csv or .xlsx from Screener.in" file={file} onFile={setFile} disabled={run.isPending} />
           <label className="block max-w-xs text-sm">
-            <span className="text-slate-500">NSE symbol (only if a company file isn&apos;t matched automatically)</span>
+            <span className="text-fg-subtle">NSE symbol (only if a company file isn&apos;t matched automatically)</span>
             <input className={inputClass} value={symbol} onChange={(e) => setSymbol(e.target.value)} placeholder="e.g. ITC" />
           </label>
           <Button disabled={!file || run.isPending} onClick={() => run.mutate(undefined)}>

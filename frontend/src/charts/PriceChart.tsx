@@ -13,7 +13,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, chartApi, type ChartInterval, type PriceLevels } from "../api/client";
 import { FreshnessBadge } from "../components/MarketData";
-import { Alert, Card } from "../components/ui";
+import { Alert, Card, ErrorState, Loading, Skeleton } from "../components/ui";
 import { useIsDark } from "../hooks/useIsDark";
 import { formatDate, formatNumber } from "../lib/format";
 import { palette, seriesColor } from "./palette";
@@ -130,17 +130,19 @@ export function PriceChart({
           </label>
         ))}
       </fieldset>
-      {prices.isError && <Alert tone="error">{prices.error.message}</Alert>}
+      {prices.isError && <ErrorState title="Couldn't load the price history" detail={prices.error.message} hint="Yahoo Finance may not have answered. Retry, or run Refresh now in Settings." onRetry={() => void prices.refetch()} />}
       {prices.data?.fetch_error && <Alert tone="warning">Could not refresh: {prices.data.fetch_error}. Showing cached bars.</Alert>}
       {!data ? (
-        <div className="flex h-96 items-center justify-center text-sm text-slate-500">Loading price history…</div>
+        <Loading label="the price history">
+          <Skeleton className="h-96 w-full" />
+        </Loading>
       ) : data.candles.length === 0 ? (
         <Alert tone="info">No price history for {ticker} yet. Run Refresh now in Settings, or check the ticker.</Alert>
       ) : (
         <>
           <ChartCanvas data={data} on={on} mas={mas} rsiKey={rsiKey} levels={showStops ? levels : null} sr={on.has("sr") && last ? nearestLevels(sr, last.close) : []} bands={th ? [th.rsi_oversold, th.rsi_overbought] : null} />
           <Legend on={on} mas={mas} showStops={showStops} hasSr={sr.length > 0 && on.has("sr")} />
-          <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+          <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-fg-subtle">
             {last && (
               <span>
                 Last close {formatNumber(last.close)} on {formatDate(last.time)}. {data.candles.length} bars.
@@ -160,14 +162,14 @@ export function PriceChart({
 
 function Segmented({ options, value, onChange, label }: { options: { key: string; label: string }[]; value: string; onChange: (v: string) => void; label: string }) {
   return (
-    <div role="group" aria-label={label} className="inline-flex overflow-hidden rounded border border-slate-300 dark:border-slate-700">
+    <div role="group" aria-label={label} className="inline-flex overflow-hidden rounded border border-border-strong">
       {options.map((o) => (
         <button
           key={o.key}
           type="button"
           aria-pressed={value === o.key}
           onClick={() => onChange(o.key)}
-          className={`px-2 py-1 ${value === o.key ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900" : "hover:bg-slate-100 dark:hover:bg-slate-800"}`}
+          className={`px-2 py-1 ${value === o.key ? "bg-accent text-accent-fg" : "text-fg-muted hover:bg-surface-2 hover:text-fg"}`}
         >
           {o.label}
         </button>
@@ -310,7 +312,7 @@ function ChartCanvas({
     <div>
       <div ref={ref} style={{ height: 380 + (panes - 1) * 120 }} role="img" aria-label="Candlestick price chart with the selected indicators" />
       {panes > 1 && (
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="mt-1 text-xs text-fg-subtle">
           Lower panes: {[on.has("rsi") && rsiKey ? `RSI (${bands ? `dashed lines at ${bands[0]} and ${bands[1]}` : ""})` : null, on.has("macd") && data.lines.macd ? "MACD line, signal line and histogram" : null].filter(Boolean).join(" · ")}
         </p>
       )}

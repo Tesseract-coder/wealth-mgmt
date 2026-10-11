@@ -33,7 +33,7 @@ export function FundPortfolioImport() {
   });
   return (
     <div className="space-y-3">
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-fg-subtle">
         To measure how much your funds overlap, upload each fund&apos;s holdings. Every AMC publishes a monthly portfolio file (Excel) on its website,
         often with one sheet per scheme: enter that sheet&apos;s name. Columns like <i>Name of the Instrument, ISIN, % to Net Assets</i> are found
         automatically.
@@ -45,7 +45,7 @@ export function FundPortfolioImport() {
       ) : (
         <>
           <label className="block max-w-lg text-sm">
-            <span className="text-slate-500">Fund</span>
+            <span className="text-fg-subtle">Fund</span>
             <select className={inputClass} value={code} onChange={(e) => setCode(e.target.value)}>
               <option value="">Choose one of your funds…</option>
               {funds.map((m) => (
@@ -57,11 +57,11 @@ export function FundPortfolioImport() {
           </label>
           <div className="flex flex-wrap gap-3">
             <label className="text-sm">
-              <span className="block text-slate-500">Portfolio date</span>
+              <span className="block text-fg-subtle">Portfolio date</span>
               <input type="date" className={inputClass} value={asOf} onChange={(e) => setAsOf(e.target.value)} />
             </label>
             <label className="text-sm">
-              <span className="block text-slate-500">Sheet name (if several schemes)</span>
+              <span className="block text-fg-subtle">Sheet name (if several schemes)</span>
               <input className={inputClass} value={sheet} onChange={(e) => setSheet(e.target.value)} placeholder="optional" />
             </label>
           </div>

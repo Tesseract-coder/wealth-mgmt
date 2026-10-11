@@ -14,7 +14,7 @@ import {
 } from "../api/client";
 import { formatFreshness } from "../lib/format";
 import { ColumnMapper } from "./ColumnMapper";
-import { Alert, Button, Card, inputClass } from "./ui";
+import { Alert, Button, Card, ErrorState, inputClass, SkeletonCard } from "./ui";
 
 const when = (iso: string) => formatFreshness(new Date(iso));
 
@@ -22,10 +22,10 @@ const when = (iso: string) => formatFreshness(new Date(iso));
 export function CheckRow({ c }: { c: SheetCheck }) {
   const [icon, word, tone] =
     c.ok === true
-      ? ["✓", "OK", "text-emerald-700 dark:text-emerald-400"]
+      ? ["✓", "OK", "text-good"]
       : c.ok === false
-        ? ["✗", "Problem", "text-red-700 dark:text-red-400"]
-        : ["–", "Not checked", "text-slate-500"];
+        ? ["✗", "Problem", "text-bad"]
+        : ["–", "Not checked", "text-fg-subtle"];
   return (
     <li className="flex gap-2 text-sm">
       <span aria-hidden="true" className={`w-4 shrink-0 font-bold ${tone}`}>
@@ -33,7 +33,7 @@ export function CheckRow({ c }: { c: SheetCheck }) {
       </span>
       <div className="min-w-0">
         <span className="font-medium">{c.name}</span> <span className={`text-xs ${tone}`}>({word})</span>
-        <p className="break-words text-slate-600 dark:text-slate-400">{c.detail}</p>
+        <p className="break-words text-fg-muted">{c.detail}</p>
       </div>
     </li>
   );
@@ -57,7 +57,7 @@ export function SheetsExportButton({ status }: { status: SheetsStatus | undefine
       <Button disabled={!ready || run.isPending} onClick={() => run.mutate([])} title={ready ? undefined : "Add the key and the sheet link first"}>
         {run.isPending ? "Exporting…" : "Export to Google Sheets"}
       </Button>
-      {!ready && status && <p className="text-xs text-slate-500">Needs a service-account key and your sheet's link (Settings → Google Sheets).</p>}
+      {!ready && status && <p className="text-xs text-fg-subtle">Needs a service-account key and your sheet's link (Settings → Google Sheets).</p>}
       {confirm && (
         <Alert tone="warning">
           <p>
@@ -104,13 +104,13 @@ function KeyUpload({ status }: { status: SheetsStatus }) {
       {sa.configured && sa.client_email ? (
         <div className="space-y-1">
           <p>
-            <span aria-hidden="true" className="text-emerald-700 dark:text-emerald-400">
+            <span aria-hidden="true" className="text-good">
               ✓{" "}
             </span>
             Key found. Share your sheet with this address as an <strong>Editor</strong>:
           </p>
           <div className="flex flex-wrap items-center gap-2">
-            <code className="break-all rounded bg-slate-100 px-2 py-1 dark:bg-slate-800">{sa.client_email}</code>
+            <code className="break-all rounded bg-surface-2 px-2 py-1">{sa.client_email}</code>
             <Button
               variant="secondary"
               className="!px-2 !py-0.5 text-xs"
@@ -121,19 +121,19 @@ function KeyUpload({ status }: { status: SheetsStatus }) {
               {copied ? "Copied" : "Copy"}
             </Button>
           </div>
-          <p className="break-all text-xs text-slate-500">
+          <p className="break-all text-xs text-fg-subtle">
             Stored at {sa.path}
             {sa.path.includes("/secrets/") ? " (gitignored)" : ""}. The private key is never shown, and is used only to sign in to Google.
           </p>
         </div>
       ) : (
-        <p className="text-slate-600 dark:text-slate-400">
-          {sa.error ? <span className="text-red-700 dark:text-red-400">✗ {sa.error}</span> : "No service-account key yet."} A service account is a
+        <p className="text-fg-muted">
+          {sa.error ? <span className="text-bad">✗ {sa.error}</span> : "No service-account key yet."} A service account is a
           Google Cloud robot you share one sheet with. It is <strong>not</strong> your Google or broker login. Steps: docs/GOOGLE_SHEETS_SETUP.md.
         </p>
       )}
       <label className="block">
-        <span className="mb-1 block text-slate-500">{sa.configured ? "Replace the key (JSON)" : "Upload the key (JSON)"}</span>
+        <span className="mb-1 block text-fg-subtle">{sa.configured ? "Replace the key (JSON)" : "Upload the key (JSON)"}</span>
         <input
           type="file"
           accept=".json,application/json"
@@ -157,7 +157,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
     <label className="block text-sm">
       <span className="mb-1 block font-medium">{label}</span>
       {children}
-      {hint && <span className="mt-1 block text-xs text-slate-500">{hint}</span>}
+      {hint && <span className="mt-1 block text-xs text-fg-subtle">{hint}</span>}
     </label>
   );
 }
@@ -248,7 +248,7 @@ export function SheetsSettingsForm({ status }: { status: SheetsStatus }) {
         <Button type="submit" disabled={save.isPending}>
           {save.isPending ? "Saving…" : "Save"}
         </Button>
-        {save.isSuccess && <span className="text-sm text-emerald-700 dark:text-emerald-400">✓ Saved</span>}
+        {save.isSuccess && <span className="text-sm text-good">✓ Saved</span>}
       </div>
       {save.isError && <Alert tone="error">{save.error.message}</Alert>}
     </form>
@@ -260,7 +260,7 @@ function ConnectionTest() {
   const run = useMutation({ mutationFn: sheetsApi.test, onSettled: () => void qc.invalidateQueries({ queryKey: ["sheets"] }) });
   return (
     <div className="space-y-3">
-      <p className="text-sm text-slate-500">Checks the key, the link, sign-in, opening the sheet, write access, the tabs and any published links. Changes nothing.</p>
+      <p className="text-sm text-fg-subtle">Checks the key, the link, sign-in, opening the sheet, write access, the tabs and any published links. Changes nothing.</p>
       <Button onClick={() => run.mutate()} disabled={run.isPending}>
         {run.isPending ? "Testing…" : "Test connection"}
       </Button>
@@ -282,20 +282,20 @@ function ConnectionTest() {
 const DIRECTION: Record<string, string> = { export: "Export", import: "Import", test: "Test" };
 
 function History({ status }: { status: SheetsStatus }) {
-  if (status.history.length === 0) return <p className="text-sm text-slate-500">Nothing synced yet.</p>;
+  if (status.history.length === 0) return <p className="text-sm text-fg-subtle">Nothing synced yet.</p>;
   return (
     <ul className="space-y-1 text-sm">
       {status.history.map((h, i) => (
         <li key={i} className="flex gap-2">
-          <span aria-hidden="true" className={h.ok ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}>
+          <span aria-hidden="true" className={h.ok ? "text-good" : "text-bad"}>
             {h.ok ? "✓" : "✗"}
           </span>
           <span className="min-w-0">
             <span className="font-medium">
               {DIRECTION[h.direction]} {h.ok ? "succeeded" : "failed"}
             </span>
-            {h.detail && <span className="text-slate-500"> · {h.detail}</span>} <span className="text-xs text-slate-500">{when(h.at)}</span>
-            <span className="block break-words text-xs text-slate-600 dark:text-slate-400">{h.message}</span>
+            {h.detail && <span className="text-fg-subtle"> · {h.detail}</span>} <span className="text-xs text-fg-subtle">{when(h.at)}</span>
+            <span className="block break-words text-xs text-fg-muted">{h.message}</span>
           </span>
         </li>
       ))}
@@ -306,8 +306,8 @@ function History({ status }: { status: SheetsStatus }) {
 /** Settings → Google Sheets. */
 export function GoogleSheetsSettings() {
   const q = useQuery({ queryKey: ["sheets"], queryFn: sheetsApi.status });
-  if (q.isError) return <Alert tone="error">{q.error.message}</Alert>;
-  if (!q.data) return <Card>Loading…</Card>;
+  if (q.isError) return <ErrorState title="Couldn't load the Google Sheets settings" detail={q.error.message} onRetry={() => void q.refetch()} />;
+  if (!q.data) return <SkeletonCard label="the Google Sheets settings" lines={5} />;
   const d = q.data;
   const lastExport = d.history.find((h) => h.direction === "export" && h.ok);
   return (
@@ -336,7 +336,7 @@ export function GoogleSheetsSettings() {
             )
           }
         >
-          <p className="mb-2 text-sm text-slate-500">
+          <p className="mb-2 text-sm text-fg-subtle">
             Writes {d.export_tabs.summary}, {d.export_tabs.stocks}, {d.export_tabs.mf} and {d.export_tabs.screener}, each stamped with the time and
             the disclaimer. {lastExport ? `Last export: ${when(lastExport.at)}.` : "Not exported yet."}
           </p>
@@ -390,7 +390,7 @@ export function SheetImport({ onDone }: { onDone: (r: Imported) => void }) {
     );
   return (
     <div className="space-y-3 text-sm">
-      <p className="text-slate-500">
+      <p className="text-fg-subtle">
         Same columns as a Groww export (name, quantity, average price; ISIN or symbol helps). Each import is a new snapshot that replaces the
         previous one of that kind.
       </p>
@@ -425,7 +425,7 @@ export function SheetImport({ onDone }: { onDone: (r: Imported) => void }) {
         <label className="block">
           <span className="mb-1 block font-medium">Published CSV link</span>
           <input className={inputClass} value={urlValue} onChange={(e) => setUrl(e.target.value)} placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?output=csv" />
-          <span className="mt-1 block text-xs text-slate-500">File → Share → Publish to web → choose the tab → Comma-separated values (.csv).</span>
+          <span className="mt-1 block text-xs text-fg-subtle">File → Share → Publish to web → choose the tab → Comma-separated values (.csv).</span>
         </label>
       )}
       <Button disabled={!ready || run.isPending} onClick={() => run.mutate(undefined)}>

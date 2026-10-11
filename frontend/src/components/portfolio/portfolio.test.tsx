@@ -150,3 +150,18 @@ describe("Overview", () => {
     expect(portfolioRisks({ ...SAMPLE_HOLDINGS, risks: [w, "x"] }, { ...SAMPLE_SUMMARY, warnings: [w] })).toEqual([w, "x"]);
   });
 });
+
+describe("Stale data notice", () => {
+  it("names what's out of date and why", async () => {
+    const { staleLines } = await import("../StaleNotice");
+    const q = (code: string, kind: "stock" | "mf", status: "fresh" | "stale" | "unavailable", reason: string) => ({ kind, code, label: code, price: 1, previous: 1, change_pct: 0, as_of: "2026-10-07", source: "yahoo", freshness: { status, reason } });
+    const s = {
+      generated_at: "", summary: { fresh: 1, stale: 1, unavailable: 1 }, references: [], schedule: {} as never, last_job: null, last_fundamentals_job: null, notes: [],
+      quotes: [q("ITC.NS", "stock", "fresh", "ok"), q("TATAMOTORS.NS", "stock", "stale", "2 days old: Yahoo Finance did not respond."), q("Axis ELSS", "mf", "unavailable", "No NAV downloaded yet")],
+    };
+    expect(staleLines(s).lines).toEqual([
+      "Price data for TATAMOTORS is out of date: 2 days old: Yahoo Finance did not respond.",
+      "NAV for Axis ELSS is unavailable: No NAV downloaded yet.",
+    ]);
+  });
+});

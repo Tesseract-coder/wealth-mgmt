@@ -17,14 +17,14 @@ import { FundamentalHoldings } from "../components/FundamentalView";
 import { HoldingSignalsView } from "../components/SignalView";
 import { StockStory } from "../components/stock/StockStory";
 import { PriceChart } from "../charts/PriceChart";
-import { Alert, Card, inputClass, SkeletonCard } from "../components/ui";
+import { Alert, Card, ErrorState, inputClass, SkeletonCard } from "../components/ui";
 import { useDebounced } from "../hooks/useDebounced";
 import { formatDate, formatINR } from "../lib/format";
 
 const DIR: Record<Direction, { label: string; icon: string; cls: string }> = {
-  bullish: { label: "Bullish", icon: "▲", cls: "text-emerald-700 dark:text-emerald-400" },
-  bearish: { label: "Bearish", icon: "▼", cls: "text-red-700 dark:text-red-400" },
-  neutral: { label: "Neutral", icon: "●", cls: "text-slate-500" },
+  bullish: { label: "Bullish", icon: "▲", cls: "text-good" },
+  bearish: { label: "Bearish", icon: "▼", cls: "text-bad" },
+  neutral: { label: "Neutral", icon: "●", cls: "text-fg-subtle" },
 };
 
 const INTERVAL_LABEL: Record<string, string> = {
@@ -121,7 +121,7 @@ export function Technical() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold">Analysis</h1>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-fg-subtle">
             Buy / Hold / Sell signals with the scores and readings behind them, under any investing style. Open a stock for its full story.
           </p>
         </div>
@@ -130,7 +130,7 @@ export function Technical() {
           <TickerSearch style={style} view={view} />
         </div>
       </div>
-      <div role="tablist" className="flex gap-1 overflow-x-auto border-b border-slate-200 dark:border-slate-800">
+      <div role="tablist" className="flex gap-1 overflow-x-auto border-b border-border">
         {VIEWS.map(({ key: v, label }) => (
           <button
             key={v}
@@ -139,7 +139,7 @@ export function Technical() {
             aria-selected={view === v}
             onClick={() => update({ view: v })}
             className={`-mb-px border-b-2 px-3 py-2 text-sm ${
-              view === v ? "border-slate-900 font-medium dark:border-slate-100" : "border-transparent text-slate-500"
+              view === v ? "border-accent font-medium text-fg" : "border-transparent text-fg-muted hover:text-fg"
             }`}
           >
             {label}
@@ -178,7 +178,7 @@ function TickerSearch({ style, view }: { style: StyleKey | null; view: View }) {
   return (
     <div className="relative w-72 text-sm">
       <label>
-        <span className="mb-1 block text-slate-500">Stock</span>
+        <span className="mb-1 block text-fg-subtle">Stock</span>
         <input
           className={inputClass}
           placeholder="Search NSE symbol or company…"
@@ -193,12 +193,12 @@ function TickerSearch({ style, view }: { style: StyleKey | null; view: View }) {
         />
       </label>
       {dq.length >= 2 && results.data && results.data.length > 0 && (
-        <ul className="absolute z-10 mt-1 w-full rounded border border-slate-200 bg-white shadow dark:border-slate-700 dark:bg-slate-900">
+        <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-control border border-border bg-surface shadow-pop">
           {results.data.map((s) => (
             <li key={s.symbol}>
               <button
                 type="button"
-                className="w-full px-2 py-1 text-left hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="w-full px-2 py-1 text-left hover:bg-surface-2"
                 onClick={() => go(`${s.symbol}.NS`)}
               >
                 <span className="font-mono">{s.symbol}</span> · {s.name}
@@ -213,8 +213,8 @@ function TickerSearch({ style, view }: { style: StyleKey | null; view: View }) {
 
 function HoldingsSummary({ style }: { style: StyleKey | null }) {
   const q = useQuery({ queryKey: ["tech-holdings", style], queryFn: () => analysisApi.holdings(style) });
-  if (q.isError) return <Alert tone="error">{q.error.message}</Alert>;
-  if (!q.data) return <Card>Loading…</Card>;
+  if (q.isError) return <ErrorState title="Couldn't summarise your holdings" detail={q.error.message} onRetry={() => void q.refetch()} />;
+  if (!q.data) return <SkeletonCard label="your holdings" lines={6} />;
   if (q.data.length === 0)
     return (
       <Alert tone="info">
@@ -223,12 +223,12 @@ function HoldingsSummary({ style }: { style: StyleKey | null }) {
     );
   return (
     <Card title="Your holdings">
-      <p className="mb-3 text-sm text-slate-500">
+      <p className="mb-3 text-sm text-fg-subtle">
         Uses cached prices only. If a row says Unavailable, run <b>Refresh now</b> in Settings → Data refresh.
       </p>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="text-left text-xs uppercase text-slate-500">
+          <thead className="text-left text-xs uppercase text-fg-subtle">
             <tr>
               <th className="py-1 pr-2">Stock</th>
               <th className="pr-2">As of</th>
@@ -240,12 +240,12 @@ function HoldingsSummary({ style }: { style: StyleKey | null }) {
           </thead>
           <tbody>
             {q.data.map((r) => (
-              <tr key={r.ticker} className="border-t border-slate-100 align-top dark:border-slate-800">
+              <tr key={r.ticker} className="border-t border-border align-top">
                 <td className="py-1 pr-2">
                   <Link className="underline" to={`/analysis/${encodeURIComponent(r.ticker)}${analysisQuery(style, "technical")}`}>
                     {r.label}
                   </Link>
-                  <div className="font-mono text-xs text-slate-500">{r.ticker}</div>
+                  <div className="font-mono text-xs text-fg-subtle">{r.ticker}</div>
                 </td>
                 <td className="pr-2 whitespace-nowrap">{formatDate(r.as_of)}</td>
                 <td className="pr-2 text-right tabular-nums">{r.bullish}</td>
@@ -273,8 +273,8 @@ function HoldingsSummary({ style }: { style: StyleKey | null }) {
 /** Every timeframe's readings. `chart` false when the page already shows the price chart. */
 export function TechnicalReportView({ ticker, style, chart = true }: { ticker: string; style: StyleKey | null; chart?: boolean }) {
   const q = useQuery({ queryKey: ["technical", ticker, style], queryFn: () => analysisApi.technical(ticker, style) });
-  if (q.isError) return <Alert tone="error">{q.error.message}</Alert>;
-  if (!q.data) return <Card>Analysing {ticker}… (the first look at a stock downloads its price history)</Card>;
+  if (q.isError) return <ErrorState title="Couldn't read the technical readings" detail={q.error.message} onRetry={() => void q.refetch()} />;
+  if (!q.data) return <SkeletonCard label={`readings for ${ticker} (the first look downloads its price history)`} lines={6} />;
   const r = q.data;
   return (
     <div className="space-y-4">
@@ -317,15 +317,15 @@ function TimeframeCard({ tf, isIndex }: { tf: TimeframeReport; isIndex: boolean 
     <Card
       title={`${INTERVAL_LABEL[tf.interval] ?? tf.interval} · ${tf.bars} bars`}
       actions={
-        <span className="flex items-center gap-2 text-sm text-slate-500">
+        <span className="flex items-center gap-2 text-sm text-fg-subtle">
           as of {tf.as_of ? (tf.as_of.length > 10 ? new Date(tf.as_of).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : formatDate(tf.as_of)) : "—"}
           <FreshnessBadge f={tf.freshness} />
         </span>
       }
     >
-      {tf.freshness.status !== "fresh" && <p className="mb-2 text-xs text-slate-500">{tf.freshness.reason}</p>}
+      {tf.freshness.status !== "fresh" && <p className="mb-2 text-xs text-fg-subtle">{tf.freshness.reason}</p>}
       {tf.notes.map((n) => (
-        <p key={n} className="mb-2 text-xs text-amber-800 dark:text-amber-300">
+        <p key={n} className="mb-2 text-xs text-caution">
           {n}
         </p>
       ))}
@@ -333,7 +333,7 @@ function TimeframeCard({ tf, isIndex }: { tf: TimeframeReport; isIndex: boolean 
         <dl className="mb-3 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4 lg:grid-cols-8">
           {keyVals.map(([k, val]) => (
             <div key={k}>
-              <dt className="text-xs text-slate-500">{k}</dt>
+              <dt className="text-xs text-fg-subtle">{k}</dt>
               <dd className="tabular-nums">{val}</dd>
             </div>
           ))}
@@ -360,16 +360,16 @@ function Readings({ a }: { a: FrameAnalysis }) {
               {by(d).map((o) => (
                 <li key={o.key}>
                   {o.text}
-                  {o.minor && <span className="ml-1 text-xs text-slate-500">(minor)</span>}
+                  {o.minor && <span className="ml-1 text-xs text-fg-subtle">(minor)</span>}
                 </li>
               ))}
-              {by(d).length === 0 && <li className="text-slate-500">None</li>}
+              {by(d).length === 0 && <li className="text-fg-subtle">None</li>}
             </ul>
           </div>
         ))}
       </div>
       {a.unavailable.length > 0 && (
-        <div className="mt-3 text-xs text-slate-500">
+        <div className="mt-3 text-xs text-fg-subtle">
           <span className="font-medium">Not available:</span> {a.unavailable.join("; ")}
         </div>
       )}
