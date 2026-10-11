@@ -1192,6 +1192,12 @@ export interface WatchItem {
   flags: Flag[];
   sector: string | null;
   price_freshness: Freshness | null;
+  /** Score Shape; null until the stock has prices. */
+  axes?: Record<string, number | null> | null;
+  shape_total?: number | null;
+  shape_max?: number | null;
+  shape_step?: number | null;
+  week_change?: WeekChange | null;
 }
 
 export interface Watchlist {
@@ -1335,4 +1341,200 @@ export const sheetsApi = {
   },
   import: (body: SheetImportIn) =>
     request<Imported | NeedsMapping>("/sheets/import", { method: "POST", body: JSON.stringify(body) }),
+};
+
+// ---------------------------------------------------------------------------- Score Shape
+
+export type CheckStatus = "pass" | "fail" | "no_data";
+
+export interface CheckResult {
+  section: string;
+  check_id: string;
+  label: string;
+  status: CheckStatus;
+  value: number | null;
+  threshold: number | null;
+  unit: string;
+  display_value: string;
+  display_threshold: string;
+  /** One plain-English sentence: what the result means. */
+  explanation: string;
+  /** What the metric is, in one sentence (for a tooltip). */
+  help: string | null;
+  highlight: ("reward" | "risk")[];
+}
+
+export interface SectionResult {
+  key: string;
+  label: string;
+  question: string;
+  caption: string | null;
+  checks: CheckResult[];
+  passed: number;
+  with_data: number;
+  /** 0 … axis_max; null = not enough data */
+  score: number | null;
+  note: string | null;
+}
+
+export interface Shape {
+  sections: SectionResult[];
+  axes: Record<string, number | null>;
+  total: number;
+  max_total: number;
+  axis_max: number;
+  /** Colour step 1 (weak) … 5 (strong) */
+  step: number | null;
+  checks_total: number;
+  checks_with_data: number;
+  confidence: ConfidenceLevel;
+  confidence_reason: string;
+  rewards: string[];
+  risks: string[];
+  summary: string;
+}
+
+export interface FairValue {
+  label: "Estimate";
+  value: number;
+  price: number;
+  /** Price vs fair value: negative = below (cheaper) */
+  gap_pct: number;
+  methods: { name: string; value: number; basis: string }[];
+  caveat: string;
+}
+
+export interface WeekChange {
+  since: string;
+  axes: Record<string, number | null>;
+  total: number;
+  previous_signal: SignalKey | null;
+  previous_signal_label: string | null;
+  signal_changed: boolean;
+}
+
+export interface StockChecks extends Shape {
+  ticker: string;
+  label: string;
+  sector: string | null;
+  is_financial: boolean;
+  style: StyleKey;
+  style_label: string;
+  risk: RiskKey;
+  risk_label: string;
+  signal: SignalKey;
+  signal_label: string;
+  fair_value: FairValue | null;
+  pe_history: { fy: string; year_end: string; price: number; pe: number }[];
+  week_change: WeekChange | null;
+  disclaimer: string;
+}
+
+export interface HoldingShape {
+  ticker: string;
+  label: string;
+  sector: string | null;
+  value: number | null;
+  weight: number | null;
+  signal: SignalKey;
+  signal_label: string;
+  axes: Record<string, number | null>;
+  total: number;
+  max_total: number;
+  step: number | null;
+  confidence: ConfidenceLevel;
+  /** "Strongest: …" / "Weakest: …" */
+  top: string[];
+}
+
+export interface PortfolioShape {
+  axes: { key: string; label: string; score: number | null; coverage: number }[];
+  total: number;
+  max_total: number;
+  axis_max: number;
+  step: number | null;
+  stock_value: number;
+  holdings: number;
+}
+
+export interface HoldingsChecks {
+  style: StyleKey;
+  style_label: string;
+  risk: RiskKey;
+  risk_label: string;
+  portfolio: PortfolioShape;
+  holdings: HoldingShape[];
+  rewards: string[];
+  risks: string[];
+  notes: string[];
+  disclaimer: string;
+}
+
+export interface FundChecks extends Shape {
+  code: string;
+  name: string;
+  category: string | null;
+  signal: FundSignalKey;
+  signal_label: string;
+  disclaimer: string;
+}
+
+export interface AxisDef {
+  key: string;
+  label: string;
+  question: string;
+  caption: string | null;
+}
+
+export interface ChecksConfig {
+  axis_max: number;
+  score_steps: number[];
+  stock: AxisDef[];
+  fund: AxisDef[];
+}
+
+export interface FinancialYear {
+  fy: string;
+  year_end: string;
+  revenue: number | null;
+  net_income: number | null;
+  op_margin: number | null;
+  net_margin: number | null;
+  roe: number | null;
+  total_debt: number | null;
+  equity: number | null;
+  cash: number | null;
+  debt_equity: number | null;
+  fcf: number | null;
+  dividends_paid: number | null;
+  payout_pct: number | null;
+  pe: number | null;
+  price: number | null;
+}
+
+export interface FinancialHistory {
+  ticker: string;
+  label: string;
+  sector: string | null;
+  is_financial: boolean;
+  source: string | null;
+  /** "₹ Cr", or e.g. "USD Cr" */
+  unit: string;
+  years: FinancialYear[];
+  quarters: { label: string; period_end: string; revenue: number | null; net_income: number | null }[];
+  fair_value: FairValue | null;
+  notes: string[];
+  disclaimer: string;
+}
+
+export const checksApi = {
+  config: () => request<ChecksConfig>("/analysis/checks/config"),
+  stock: (ticker: string, style?: StyleKey | null, risk?: RiskKey | null) =>
+    request<StockChecks>(`/analysis/stock/${encodeURIComponent(ticker)}/checks${styleQuery(style, risk)}`),
+  holdings: (style?: StyleKey | null, risk?: RiskKey | null) =>
+    request<HoldingsChecks>(`/analysis/checks/holdings${styleQuery(style, risk)}`),
+  history: (ticker: string) =>
+    request<FinancialHistory>(`/analysis/fundamental/${encodeURIComponent(ticker)}/history`),
+  fund: (code: string) => request<FundChecks>(`/analysis/mf/${encodeURIComponent(code)}/checks`),
+  funds: () => request<{ funds: FundChecks[]; disclaimer: string }>("/analysis/mf/holdings/checks"),
 };

@@ -110,6 +110,9 @@ class FundamentalReport:
     notes: list[str] = field(default_factory=list)
     fetch_errors: list[str] = field(default_factory=list)
     applicable: bool = True  # False for ETFs and indices
+    # The statements the metrics came from (for history charts and the checks); not serialised.
+    statements: Statements | None = field(default=None, repr=False, compare=False)
+    currency: str = "INR"  # of the statements (amounts); prices are always INR
 
 
 # ---------------------------------------------------------------------------- helpers
@@ -1195,4 +1198,6 @@ def analyse_fundamentals(
         unavailable=na,
         notes=notes,
         fetch_errors=errors,
+        statements=st if st.years else None,
+        currency=str(info.get("financialCurrency") or "INR"),
     )

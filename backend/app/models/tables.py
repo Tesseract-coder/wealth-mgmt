@@ -270,6 +270,21 @@ class SignalRecord(SQLModel, table=True):
     recorded_at: datetime = Field(default_factory=utcnow)
 
 
+class AxisRecord(SQLModel, table=True):
+    """One day's Score Shape for a stock under a risk level (for "changed since last week").
+
+    Axis scores are JSON ({section: 0–6 or null}) so sections in checks.yaml can change without
+    a schema change."""
+
+    ticker: str = Field(primary_key=True)
+    day: dt.date = Field(primary_key=True)
+    risk: str = Field(primary_key=True)
+    axes_json: str
+    total: int
+    max_total: int
+    recorded_at: datetime = Field(default_factory=utcnow)
+
+
 class FundInfo(SQLModel, table=True):
     """Scheme facts no free API provides, entered by you (e.g. the TER from the factsheet)."""
 

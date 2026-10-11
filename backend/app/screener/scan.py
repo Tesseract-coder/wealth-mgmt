@@ -22,6 +22,7 @@ from typing import Any, Literal
 import pandas as pd
 from sqlmodel import Session, col, select
 
+from app.analysis.checks import evaluate_stock
 from app.analysis.fundamental import analyse_fundamentals
 from app.analysis.positions import Portfolio, load_portfolio
 from app.analysis.signals import SIGNAL_LABEL, StockSignal, analyse_stock
@@ -223,6 +224,10 @@ def facts_for(sig: StockSignal, daily: pd.DataFrame, p: Profiles) -> dict[str, f
         "interest_coverage", "current_ratio", "fcf_positive_years",
     ):  # fmt: skip
         out[k] = mv(k)
+    shape = evaluate_stock(sig, daily)
+    for key, score in shape.axes.items():
+        out[f"axis_{key}"] = None if score is None else float(score)
+    out["axis_total"] = float(shape.total)
     # numpy floats from pandas would not survive json.dumps
     return {k: None if x is None or pd.isna(x) else round(float(x), 4) for k, x in out.items()}
 

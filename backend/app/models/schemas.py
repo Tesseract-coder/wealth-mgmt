@@ -1089,6 +1089,12 @@ class WatchItemOut(BaseModel):
     flags: list[FlagOut]
     sector: str | None
     price_freshness: FreshnessOut | None
+    # Score Shape (added with the redesign; None when the stock has no prices yet)
+    axes: dict[str, int | None] | None = None
+    shape_total: int | None = None
+    shape_max: int | None = None
+    shape_step: int | None = None
+    week_change: "WeekChangeOut | None" = None
 
 
 class WatchlistOut(BaseModel):
@@ -1184,3 +1190,217 @@ class SheetImportIn(BaseModel):
     tab: str | None = Field(None, max_length=100, description="Default: the saved import tab")
     url: str | None = Field(None, max_length=500, description="Default: the saved CSV link")
     mapping: ColumnMappingIn | None = None
+
+
+# ---------------------------------------------------------------------------- Score Shape
+
+
+CheckStatus = Literal["pass", "fail", "no_data"]
+
+
+class CheckOut(BaseModel):
+    section: str
+    check_id: str
+    label: str
+    status: CheckStatus
+    value: float | None
+    threshold: float | None
+    unit: str
+    display_value: str
+    display_threshold: str
+    explanation: str
+    help: str | None
+    highlight: list[str]
+
+
+class SectionOut(BaseModel):
+    key: str
+    label: str
+    question: str
+    caption: str | None
+    checks: list[CheckOut]
+    passed: int
+    with_data: int
+    score: int | None = Field(description="0 … axis_max; null = not enough data")
+    note: str | None
+
+
+class ShapeOut(BaseModel):
+    sections: list[SectionOut]
+    axes: dict[str, int | None]
+    total: int
+    max_total: int
+    axis_max: int
+    step: int | None = Field(description="Colour step 1 (weak) … 5 (strong)")
+    checks_total: int
+    checks_with_data: int
+    confidence: Literal["high", "medium", "low"]
+    confidence_reason: str
+    rewards: list[str]
+    risks: list[str]
+    summary: str
+
+
+class FairValueMethodOut(BaseModel):
+    name: str
+    value: float
+    basis: str
+
+
+class FairValueOut(BaseModel):
+    label: Literal["Estimate"] = "Estimate"
+    value: float
+    price: float
+    gap_pct: float = Field(description="Price vs fair value: negative = below (cheaper)")
+    methods: list[FairValueMethodOut]
+    caveat: str
+
+
+class YearPEOut(BaseModel):
+    fy: str
+    year_end: date
+    price: float
+    pe: float
+
+
+class WeekChangeOut(BaseModel):
+    since: date
+    axes: dict[str, int | None]
+    total: int
+    previous_signal: SignalKey | None
+    previous_signal_label: str | None
+    signal_changed: bool
+
+
+class StockChecksOut(ShapeOut):
+    ticker: str
+    label: str
+    sector: str | None
+    is_financial: bool
+    style: StyleKey
+    style_label: str
+    risk: RiskKey
+    risk_label: str
+    signal: SignalKey
+    signal_label: str
+    fair_value: FairValueOut | None
+    pe_history: list[YearPEOut]
+    week_change: WeekChangeOut | None
+    disclaimer: str
+
+
+class HoldingShapeOut(BaseModel):
+    ticker: str
+    label: str
+    sector: str | None
+    value: float | None
+    weight: float | None
+    signal: SignalKey
+    signal_label: str
+    axes: dict[str, int | None]
+    total: int
+    max_total: int
+    step: int | None
+    confidence: Literal["high", "medium", "low"]
+    top: list[str] = Field(description="Strongest and weakest section, one line each")
+
+
+class AxisAverageOut(BaseModel):
+    key: str
+    label: str
+    score: float | None
+    coverage: float
+
+
+class PortfolioShapeOut(BaseModel):
+    axes: list[AxisAverageOut]
+    total: float
+    max_total: int
+    axis_max: int
+    step: int | None
+    stock_value: float
+    holdings: int
+
+
+class HoldingsChecksOut(BaseModel):
+    style: StyleKey
+    style_label: str
+    risk: RiskKey
+    risk_label: str
+    portfolio: PortfolioShapeOut
+    holdings: list[HoldingShapeOut]
+    rewards: list[str]
+    risks: list[str]
+    notes: list[str]
+    disclaimer: str
+
+
+class FundChecksOut(ShapeOut):
+    code: str
+    name: str
+    category: str | None
+    signal: FundSignalKey
+    signal_label: str
+    disclaimer: str
+
+
+class FundHoldingsChecksOut(BaseModel):
+    funds: list[FundChecksOut]
+    disclaimer: str
+
+
+class AxisDefOut(BaseModel):
+    key: str
+    label: str
+    question: str
+    caption: str | None
+
+
+class ChecksConfigOut(BaseModel):
+    axis_max: int
+    score_steps: list[float]
+    stock: list[AxisDefOut]
+    fund: list[AxisDefOut]
+
+
+class FinancialYearOut(BaseModel):
+    fy: str
+    year_end: date
+    revenue: float | None
+    net_income: float | None
+    op_margin: float | None
+    net_margin: float | None
+    roe: float | None
+    total_debt: float | None
+    equity: float | None
+    cash: float | None
+    debt_equity: float | None
+    fcf: float | None
+    dividends_paid: float | None
+    payout_pct: float | None
+    pe: float | None
+    price: float | None
+
+
+class FinancialQuarterOut(BaseModel):
+    label: str
+    period_end: date
+    revenue: float | None
+    net_income: float | None
+
+
+class FinancialHistoryOut(BaseModel):
+    ticker: str
+    label: str
+    sector: str | None
+    is_financial: bool
+    source: str | None
+    unit: str = Field("₹ Cr", description='"₹ Cr", or e.g. "USD Cr" for statements in USD')
+    years: list[FinancialYearOut]
+    quarters: list[FinancialQuarterOut]
+    fair_value: FairValueOut | None
+    notes: list[str]
+    disclaimer: str
+
+
+WatchItemOut.model_rebuild()

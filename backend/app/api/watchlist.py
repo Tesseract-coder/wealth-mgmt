@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, col, select
 
+from app.analysis.checks import evaluate_stock, week_change
 from app.analysis.signals import SIGNAL_LABEL, active_profile, resolve_style
+from app.api.checks import week_change_out
 from app.core.db import get_session
 from app.core.profiles import get_profiles
-from app.data.provider import CachedProvider
+from app.data.provider import CachedProvider, DataProvider
 from app.jobs.runner import ACTIVE, get_runner
 from app.models.schemas import (
     FlagOut,
@@ -21,8 +23,10 @@ from app.screener import watchlist as wl
 router = APIRouter(prefix="/watchlist", tags=["watchlist"])
 
 
-def item_out(v: wl.WatchView) -> WatchItemOut:
+def item_out(v: wl.WatchView, session: Session, provider: DataProvider) -> WatchItemOut:
     w, s = v.item, v.signal
+    shape = evaluate_stock(s, provider.daily(s.ticker).frame) if s else None
+    wc = week_change(session, s.ticker, s.risk, s.style, shape, s.signal) if s and shape else None
     price = s.levels.close if s and s.levels else None
     chg = v.change
     tf = s.technical.timeframes[0] if s and s.technical.timeframes else None
@@ -74,6 +78,11 @@ def item_out(v: wl.WatchView) -> WatchItemOut:
         price_freshness=(
             FreshnessOut(status=tf.freshness.status, reason=tf.freshness.reason) if tf else None
         ),
+        axes=shape.axes if shape else None,
+        shape_total=shape.total if shape else None,
+        shape_max=shape.max_total if shape else None,
+        shape_step=shape.step if shape else None,
+        week_change=week_change_out(wc),
     )
 
 
@@ -92,11 +101,12 @@ def get_watchlist(session: Session = Depends(get_session)) -> WatchlistOut:
     p = get_profiles()
     style, risk, _ = active_profile(session)
     style_key, _ = resolve_style(style)
-    views = wl.view(session, CachedProvider(session))
+    provider = CachedProvider(session)
+    views = wl.view(session, provider)
     return WatchlistOut(
         style_label=p.styles[style_key].label,
         risk_label=p.risk_levels[risk].label,
-        items=[item_out(v) for v in views],
+        items=[item_out(v, session, provider) for v in views],
         fetching_job_id=fetching_job(session),
         disclaimer=p.disclaimer,
     )
@@ -119,7 +129,7 @@ def add_to_watchlist(body: WatchIn, session: Session = Depends(get_session)) -> 
     if provider.daily(w.ticker).frame.empty:
         get_runner().submit(wl.FETCH_JOB_KIND, wl.fetch_job())
     v = next(x for x in wl.view(session, provider) if x.item.ticker == w.ticker)
-    return item_out(v)
+    return item_out(v, session, provider)
 
 
 @router.patch("/{ticker}", response_model=WatchItemOut)
@@ -132,8 +142,9 @@ def edit_note(
     w.note = (body.note or "").strip() or None
     session.add(w)
     session.commit()
-    v = next(x for x in wl.view(session, CachedProvider(session)) if x.item.ticker == ticker)
-    return item_out(v)
+    provider = CachedProvider(session)
+    v = next(x for x in wl.view(session, provider) if x.item.ticker == ticker)
+    return item_out(v, session, provider)
 
 
 @router.delete("/{ticker}", status_code=204)

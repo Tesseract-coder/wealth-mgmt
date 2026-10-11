@@ -6,8 +6,10 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.analysis.checks import get_checks
 from app.api import (
     analysis,
+    checks,
     export,
     funds,
     imports,
@@ -35,6 +37,7 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     profiles = get_profiles()  # fail fast on a bad config
+    get_checks()  # …and on bad checks (config/checks.yaml)
     init_db()
     if n := mark_interrupted():
         logger.warning("Marked %d unfinished job(s) from a previous run as interrupted", n)
@@ -96,6 +99,7 @@ def create_app() -> FastAPI:
     app.include_router(market.router)
     app.include_router(jobs.router)
     app.include_router(analysis.router)
+    app.include_router(checks.router)
     app.include_router(signals.router)
     app.include_router(funds.router)
     app.include_router(screener.router)

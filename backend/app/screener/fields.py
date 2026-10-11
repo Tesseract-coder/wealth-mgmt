@@ -160,6 +160,20 @@ FIELDS: tuple[Field, ...] = (
     Field("composite", "Composite score", "Score", "", "0–100, your style's blend"),
     Field("technical_score", "Technical score", "Score", "", "0–100"),
     Field("fundamental_score", "Fundamental score", "Score", "", "0–100"),
+    # Score Shape axes (config/checks.yaml): checks passed, scaled to 0–6. Needs a scan made
+    # after the shape was added; older scans have no value, so these filters fail there.
+    *(
+        Field(f"axis_{key}", f"{label} (shape)", "Score", "/6", f"{label} checks, 0–6")
+        for key, label in (
+            ("valuation", "Valuation"),
+            ("growth", "Future Growth"),
+            ("past", "Past Performance"),
+            ("health", "Financial Health"),
+            ("momentum", "Momentum"),
+            ("dividends", "Dividends"),
+        )
+    ),
+    Field("axis_total", "Shape total", "Score", "/36", "All six axes added up, 0–36"),
 )
 
 FIELD_BY_KEY: dict[str, Field] = {f.key: f for f in FIELDS}

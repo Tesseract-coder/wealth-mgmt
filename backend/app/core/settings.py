@@ -13,6 +13,8 @@ class Settings(BaseSettings):
 
     database_url: str = f"sqlite:///{BACKEND_DIR / 'var' / 'app.db'}"
     profiles_path: Path = BACKEND_DIR / "config" / "profiles.yaml"
+    # Pass/fail checks behind the Score Shape (wording and thresholds; see the file's header).
+    checks_path: Path = BACKEND_DIR / "config" / "checks.yaml"
     # Thresholds edited in Settings, layered over profiles.yaml (gitignored, under var/).
     profiles_override_path: Path = BACKEND_DIR / "var" / "profiles.local.yaml"
     fallback_data_dir: Path = BACKEND_DIR / "data" / "fallback"

@@ -9,6 +9,7 @@ from datetime import date
 
 from sqlmodel import Session, col, select
 
+from app.analysis.checks import record_shape
 from app.analysis.positions import Portfolio, load_portfolio
 from app.analysis.signals import (
     SIGNAL_LABEL,
@@ -179,6 +180,7 @@ def record_watchlist(session: Session, provider: DataProvider) -> int:
         sig = evaluate(session, provider, w.ticker, w.label, style, risk, ctw, pf)
         if sig is not None:
             record(session, sig)
+            record_shape(session, sig, provider.daily(w.ticker).frame)
             n += 1
     session.commit()
     return n

@@ -466,3 +466,98 @@ So the replayed signal is a technical-only signal. It can differ from today's li
   - Brokerage, taxes, slippage and dividends are not modelled.
 
 One stock over three years is a small sample, so read the numbers as a sanity check of the rules, not as evidence that they work.
+
+## Part 9: Score Shape (checks)
+
+The Score Shape is a plain-English view of the same data. Each stock gets **six axes**. Each axis scores 0–6, built from simple pass/fail checks. It sits beside the composite score and signal and doesn't change either. The checks are defined in `config/checks.yaml`: labels, thresholds and wording. Where `profiles.yaml` already has a threshold, the check refers to it (`ref:`) instead of copying it, so editing `profiles.yaml` (or a threshold in Settings) moves both.
+
+### Axes and checks (stocks)
+
+| Axis | Checks |
+|---|---|
+| **Valuation** | P/E below the sector median · P/E below its own median at recent year-ends · PEG at most 1.5 · price below the estimated fair value · EV/EBITDA below the sector median (not for lenders) · P/B within `valuation_rich_ratio` × the sector median |
+| **Future Growth** | Revenue CAGR (3y) ≥ `growth_good` · profit CAGR (3y) ≥ `growth_good` · latest quarter revenue YoY ≥ `quarter_yoy_good` · same for profit · latest quarter's revenue growth faster than the 3-year average · profit growing faster than revenue |
+| **Past Performance** | ROE ≥ `roe_good` · ROE above the sector median · ROCE ≥ `roce_good` (not for lenders) · operating margin above the sector median (not for lenders) · margin change over 3 years no worse than −`margin_trend_flat_pp` · a profit in every year on record |
+| **Financial Health** | Debt/equity within your risk level's `max_debt_to_equity` · interest coverage ≥ 3× (no interest to pay passes) · current ratio ≥ `current_ratio_poor` · positive free cash flow · debt/equity lower now than in the oldest year on record (just debt when equity is missing) · promoter pledge under 5% (needs a Screener.in upload) |
+| **Momentum** | Price above the 200-day average · price above the 50-day average · RSI between `rsi_neutral_band[0]` and `rsi_overbought` · MACD above its signal line · beating the Nifty 50 over 6 months · on-balance volume rising faster than `obv_slope_min` |
+| **Dividends** | Pays a dividend · yield ≥ `dividend_yield_high` · paid in every year on record · dividends paid higher than in the oldest year · payout at most 75% of profit · free cash flow covers the dividend (not for lenders) |
+
+Notes on the axes:
+
+- **Future Growth** uses recent results only. The app has no analyst forecasts.
+- **Momentum** always uses daily bars, whatever your style, so a stock's shape is the same under every style. Style changes only the order and emphasis on screen.
+- **Lenders and insurers.** The checks marked "not for lenders" are left out. Financial Health uses lender checks instead:
+  - equity at least 8% of total assets;
+  - book value (equity) higher than in the oldest year;
+  - return on assets ≥ 1%;
+  - the pledge check.
+- **Non-payers.** A company that pays no dividend fails every dividend check, with the reason "Pays no dividend". Its Dividends axis shows 0 with a "No dividend" note.
+- **Statements in another currency** (some IT companies file in USD). Valuation checks, P/E history and the fair value are skipped, as the fundamental engine already does for those ratios. Amounts are labelled in that currency.
+
+### Axis score, total and confidence
+
+- **Check result.** Each check is **pass**, **fail** or **no data**. Every result shows the value, the threshold and one sentence.
+- **Axis score.** `passed ÷ checks with data × 6`, with halves rounded up. With all 6 checks computable, this is simply the number passed.
+  - Checks with no data, and checks that don't apply, are left out.
+  - With fewer than `axis.min_applicable` checks that have data (3 for stocks), the axis shows **Not enough data** instead of a score.
+- **Total.** The sum of the axes that have a score, out of 6 × those axes (36 when all six have one).
+- **Colour step** (1 = weak … 5 = strong). Set by total ÷ maximum against `axis.score_steps` (0.2, 0.4, 0.6, 0.8). The number is always shown next to the colour.
+- **Confidence.** The share of checks with data, against the cut-offs in `confidence`: high ≥ 0.8, medium ≥ 0.5, low otherwise.
+
+### Rewards and Risks, summary
+
+- **Rewards.** Passed checks marked `highlight: [reward]` in the YAML.
+- **Risks.** The stock's red flags (severe first), then failed checks marked `highlight: [risk]`.
+- Each list keeps 5 items at most.
+- **Summary.** Filled in from a template, not written by an AI: checks passed, strongest and weakest axis, missing data, the fair-value gap and the signal under your style.
+
+### Fair value estimate
+
+Fair value is labelled **Estimate**. It is the average of the methods that have a sector median (needs `fundamental.sector_min_peers` cached peers):
+
+- **Earnings:** sector-median P/E × trailing profit, which works out as market cap × median P/E ÷ the company's P/E.
+- **Cash profit** (non-financials): sector-median EV/EBITDA × EBITDA, minus debt, plus cash. EBITDA, debt and cash are the same figures used for the EV/EBITDA metric.
+- **Book value** (lenders and insurers): sector-median P/B × equity.
+
+Each is turned into a per-share value at today's share count. A negative result (debt worth more than the business at peer multiples) counts as zero.
+
+What it means and doesn't:
+
+- It says what the company would be worth if the market priced it like its peers. It doesn't allow for faster growth or better returns, which can justify a premium.
+- A single method (P/E alone) would duplicate the "P/E below the sector median" check, so two methods are averaged.
+
+### P/E history
+
+- **Each year-end's P/E.** The close on (or up to a week before) the financial year-end × shares ÷ that year's net profit. It uses the year's share count when the statements have it, and today's otherwise.
+- **Loss years** are skipped.
+- **The check** needs at least 3 year-ends. Yahoo usually provides 4, so this is the 3–4 year median, not 5 years.
+
+### Funds
+
+Five axes, scored the same way. An axis needs `axis.min_applicable.fund` = 2 checks with data.
+
+| Axis | Checks |
+|---|---|
+| **Returns** | Beat the benchmark over 1, 3 and 5 years · 3-year CAGR above `mf.risk_free_rate_pct` |
+| **Consistency** | Beat the benchmark in ≥ 50% of rolling 3-year windows · average rolling 3-year excess ≥ `mf.signals.review_rolling_excess_pp` · beat it in ≥ 50% of rolling 1-year windows |
+| **Risk** | Volatility no higher than the benchmark's · maximum drawdown no deeper · no overlap above `mf.overlap_high_pct` with your other funds (needs portfolio files) |
+| **Risk-adjusted** | Sharpe ratio ≥ the benchmark's · Sortino ratio ≥ the benchmark's |
+| **Cost** | Direct plan · expense ratio within `mf.expense_ratio_high_pct` for its asset class (needs your input) |
+
+Debt and "other" funds have no equity benchmark, so most Returns, Consistency and Risk checks show no data for them.
+
+### Portfolio shape
+
+- **Each axis** is the value-weighted average of your stock holdings' scores on that axis. Holdings with no score on an axis are left out of that axis; `coverage` says how much of your stock value it covers.
+- **Funds** have different axes, so they aren't averaged in.
+- **Portfolio Rewards and Risks** cover:
+  - sectors above your sector limit;
+  - holdings above your per-stock limit;
+  - Sell/Reduce signals;
+  - the share of stock value in companies with weak (≤ 2/6) or strong (≥ 5/6) Financial Health.
+
+### History ("changed since last week")
+
+- **What is saved.** Each time holdings' signals are saved (the daily job, or opening Holdings), the stock's axis scores are saved too, one row per stock, day and risk level (`AxisRecord`). Watchlist stocks are saved by the daily job.
+- **What "a week ago" means.** The latest saved shape at least 6 days old. The change per axis compares today's scores with it, and the signal on that day comes from the signal history.
+- **When it starts.** History begins when this feature is first used, so changes appear after about a week.

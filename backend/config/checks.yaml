@@ -1,0 +1,450 @@
+# Portfolio Analyzer — pass/fail checks behind each stock's and fund's Score Shape.
+#
+# Each section is one axis of the shape. A check is "pass", "fail" or "no data"; "no data" never
+# counts either way, it only lowers the confidence label. The axis score is
+#   passed ÷ checks with data × 6, halves rounded up
+# so a stock with all 6 checks computable scores exactly the number it passes. Checks that don't
+# apply (applies: non_financial for a bank, say) are left out the same way. With fewer than
+# axis.min_applicable checks that have data, the axis shows "Not enough data" instead of a score.
+#
+# These checks are a separate, plain-English view. They don't change the composite score,
+# signals or any threshold in profiles.yaml; where a threshold already exists there, it is
+# referenced (ref: path) rather than repeated, so editing profiles.yaml moves both.
+#
+# threshold / upper: a number, or {ref: path}. Paths start at profiles.yaml's top level
+# ("fundamental.thresholds.roe_good"), or "risk." for your active risk level
+# ("risk.max_debt_to_equity"). A list item is addressed by its index ("…rsi_neutral_band.0").
+# Some thresholds are a peer figure (the sector median) worked out per stock; those have none here.
+#
+# Text: {value} and {threshold} are filled in with units; other {names} come from the check.
+# highlight: reward = a pass is listed under Rewards; risk = a fail is listed under Risks.
+# applies: all (default) | non_financial | financial (lenders and insurers).
+
+version: 1
+
+axis:
+  max: 6
+  min_applicable:
+    stock: 3
+    fund: 2
+  # Colour step of the whole shape: total ÷ maximum at or above each cut-off moves up one step
+  # (5 steps, weak → strong).
+  score_steps: [0.2, 0.4, 0.6, 0.8]
+
+stock:
+  valuation:
+    label: Valuation
+    question: Is the price reasonable?
+    checks:
+      - id: pe_vs_sector
+        label: P/E below the sector median
+        unit: x
+        highlight: [reward, risk]
+        help: "P/E: what you pay for every ₹1 of yearly profit."
+        pass: P/E of {value} is below the sector median of {threshold}.
+        fail: P/E of {value} is above the sector median of {threshold}, so it costs more than its peers.
+      - id: pe_vs_history
+        label: P/E below its own recent median
+        unit: x
+        help: Compares today's P/E with the P/E at each recent financial year-end.
+        pass: P/E of {value} is below its own median of {threshold} over the last {years} year-ends.
+        fail: P/E of {value} is above its own median of {threshold} over the last {years} year-ends.
+      - id: peg
+        label: PEG below 1.5
+        threshold: 1.5
+        unit: x
+        help: "PEG: the P/E divided by yearly profit growth. Below 1.5 means growth helps justify the price."
+        pass: PEG of {value} suggests the price is backed by {growth} a year of profit growth.
+        fail: PEG of {value} is above {threshold}, so the price runs ahead of profit growth.
+      - id: fair_value
+        label: Price below the estimated fair value
+        unit: inr
+        highlight: [reward, risk]
+        help: A rough estimate from what similar companies trade at. See "How fair value is estimated".
+        pass: Price {value} is {gap} below the estimated fair value of {threshold}.
+        fail: Price {value} is {gap} above the estimated fair value of {threshold}.
+      - id: ev_ebitda_vs_sector
+        label: EV/EBITDA below the sector median
+        applies: non_financial
+        unit: x
+        help: "EV/EBITDA: the whole company's price (including debt) per ₹1 of cash profit."
+        pass: EV/EBITDA of {value} is below the sector median of {threshold}.
+        fail: EV/EBITDA of {value} is above the sector median of {threshold}.
+      - id: pb_vs_sector
+        label: P/B in line with the sector
+        ratio: {ref: fundamental.thresholds.valuation_rich_ratio}
+        unit: x
+        help: "P/B: price compared with the company's book value (assets minus debts)."
+        pass: P/B of {value} is within {ratio_text} of the sector median ({median}).
+        fail: P/B of {value} is more than {ratio_text} the sector median ({median}).
+
+  growth:
+    label: Future Growth
+    question: Is it growing?
+    caption: Based on recent results. The app doesn't use analyst forecasts.
+    checks:
+      - id: revenue_cagr
+        label: Revenue growing fast (3 years)
+        threshold: {ref: fundamental.thresholds.growth_good}
+        unit: pct
+        highlight: [reward]
+        help: Average yearly growth in sales over 3 years.
+        pass: Revenue grew {value} a year over 3 years, above {threshold}.
+        fail: Revenue grew {value} a year over 3 years, below {threshold}.
+      - id: profit_cagr
+        label: Profit growing fast (3 years)
+        threshold: {ref: fundamental.thresholds.growth_good}
+        unit: pct
+        highlight: [reward, risk]
+        help: Average yearly growth in net profit over 3 years.
+        pass: Profit grew {value} a year over 3 years, above {threshold}.
+        fail: Profit grew {value} a year over 3 years, below {threshold}.
+      - id: revenue_quarter
+        label: Latest quarter's revenue up on last year
+        threshold: {ref: fundamental.thresholds.quarter_yoy_good}
+        unit: pct
+        help: Sales in the latest quarter compared with the same quarter a year earlier.
+        pass: Latest quarter's revenue is up {value} on a year ago.
+        fail: Latest quarter's revenue changed {value} on a year ago, below {threshold}.
+      - id: profit_quarter
+        label: Latest quarter's profit up on last year
+        threshold: {ref: fundamental.thresholds.quarter_yoy_good}
+        unit: pct
+        help: Net profit in the latest quarter compared with the same quarter a year earlier.
+        pass: Latest quarter's profit is up {value} on a year ago.
+        fail: Latest quarter's profit changed {value} on a year ago, below {threshold}.
+      - id: revenue_accelerating
+        label: Revenue growth speeding up
+        unit: pct
+        help: The latest quarter's growth compared with the 3-year average.
+        pass: The latest quarter's revenue growth ({value}) is faster than the 3-year average ({threshold}).
+        fail: The latest quarter's revenue growth ({value}) is slower than the 3-year average ({threshold}).
+      - id: profit_outpacing_revenue
+        label: Profit growing faster than revenue
+        unit: pct
+        help: When profit grows faster than sales, each sale is becoming more profitable.
+        pass: Profit grew faster ({value} a year) than revenue ({threshold}).
+        fail: Profit grew slower ({value} a year) than revenue ({threshold}).
+
+  past:
+    label: Past Performance
+    question: How well has it done?
+    checks:
+      - id: roe_good
+        label: Return on equity of 15% or more
+        threshold: {ref: fundamental.thresholds.roe_good}
+        unit: pct
+        highlight: [reward, risk]
+        help: "ROE: profit earned for every ₹100 of shareholder money."
+        pass: ROE of {value} means ₹{value_plain} profit for every ₹100 of shareholder money.
+        fail: ROE of {value} is below {threshold}.
+      - id: roe_vs_sector
+        label: ROE above the sector median
+        unit: pct
+        help: Compares this company's ROE with its peers'.
+        pass: ROE of {value} is above the sector median of {threshold}.
+        fail: ROE of {value} is below the sector median of {threshold}.
+      - id: roce_good
+        label: Return on capital of 15% or more
+        applies: non_financial
+        threshold: {ref: fundamental.thresholds.roce_good}
+        unit: pct
+        help: "ROCE: profit earned for every ₹100 of money in the business, borrowed or owned."
+        pass: ROCE of {value} is at or above {threshold}.
+        fail: ROCE of {value} is below {threshold}.
+      - id: margin_vs_sector
+        label: Operating margin above the sector median
+        applies: non_financial
+        unit: pct
+        help: "Operating margin: profit from the core business for every ₹100 of sales."
+        pass: Operating margin of {value} is above the sector median of {threshold}.
+        fail: Operating margin of {value} is below the sector median of {threshold}.
+      - id: margin_trend
+        label: Margins stable or improving
+        threshold: {ref: fundamental.thresholds.margin_trend_flat_pp}
+        unit: pp
+        help: How the margin has moved over the last 3 years.
+        pass: "{margin} moved {value} over {years} years: stable or better."
+        fail: "{margin} fell {abs_value} over {years} years."
+      - id: profitable_every_year
+        label: Profitable every year
+        unit: count
+        highlight: [risk]
+        help: Whether the company made a net profit in each year on record.
+        pass: Made a profit in each of the last {value} years.
+        fail: Made a loss in {losses} of the last {years} years.
+
+  health:
+    label: Financial Health
+    question: Can it pay its bills?
+    checks:
+      - id: debt_equity
+        label: Debt within your risk limit
+        applies: non_financial
+        threshold: {ref: risk.max_debt_to_equity}
+        unit: x
+        highlight: [reward, risk]
+        help: "Debt/equity: borrowings for every ₹1 of shareholder money."
+        pass: Debt is {value} equity, within your {risk} risk limit of {threshold}.
+        fail: Debt is {value} equity, above your {risk} risk limit of {threshold}.
+      - id: interest_coverage
+        label: Interest covered 3× by profit
+        applies: non_financial
+        threshold: 3
+        unit: x
+        highlight: [risk]
+        help: "Interest coverage: operating profit ÷ interest. Above 3× leaves a safety margin."
+        pass: Operating profit covers interest {value}.
+        fail: Operating profit covers interest only {value}, below {threshold}.
+      - id: current_ratio
+        label: Short-term assets cover short-term debts
+        applies: non_financial
+        threshold: {ref: fundamental.thresholds.current_ratio_poor}
+        unit: x
+        help: "Current ratio: assets turning into cash within a year ÷ bills due within a year."
+        pass: Current ratio of {value}, so bills due this year are covered.
+        fail: Current ratio of {value}, below {threshold}; bills due this year aren't fully covered.
+      - id: fcf_positive
+        label: Positive free cash flow
+        applies: non_financial
+        unit: inr_cr
+        highlight: [risk]
+        help: "Free cash flow: cash left after running and investing in the business."
+        pass: Free cash flow of {value} in the latest year.
+        fail: Free cash flow was {value} in the latest year.
+      - id: debt_trend
+        label: Debt falling relative to equity
+        applies: non_financial
+        unit: x
+        highlight: [reward]
+        help: Debt/equity now compared with the oldest year on record (just debt when equity is missing).
+        pass: "{trend_text}"
+        fail: "{trend_text}"
+      - id: pledge
+        label: Under 5% of promoter shares pledged
+        threshold: 5
+        unit: pct
+        highlight: [risk]
+        help: Pledged promoter shares can be sold by lenders in a downturn. Needs a Screener.in upload.
+        pass: "{value} of promoter shares are pledged."
+        fail: "{value} of promoter shares are pledged, above {threshold}."
+      - id: capital_cushion
+        label: Equity at least 8% of assets
+        applies: financial
+        threshold: 8
+        unit: pct
+        highlight: [reward, risk]
+        help: For a lender, shareholder money as a share of total assets is its cushion against bad loans.
+        pass: Equity is {value} of assets, a cushion against bad loans.
+        fail: Equity is only {value} of assets, below {threshold}.
+      - id: book_growth
+        label: Book value growing
+        applies: financial
+        unit: inr_cr
+        help: For a lender, growing shareholder money means it is building its cushion from profits.
+        pass: Shareholder equity grew from {first} to {value} over {years} years.
+        fail: Shareholder equity went from {first} to {value} over {years} years.
+      - id: roa
+        label: Return on assets of 1% or more
+        applies: financial
+        threshold: 1
+        unit: pct
+        help: "ROA: profit for every ₹100 of assets. Lenders above 1% are usually healthy."
+        pass: Return on assets of {value}.
+        fail: Return on assets of {value}, below {threshold}.
+
+  momentum:
+    label: Momentum
+    question: Is the price trend on its side?
+    caption: From daily prices, whatever your style.
+    checks:
+      - id: above_sma200
+        label: Price above its 200-day average
+        unit: inr
+        highlight: [reward, risk]
+        help: The 200-day average shows the long-term trend.
+        pass: Price {value} is above its 200-day average of {threshold}, a long-term uptrend.
+        fail: Price {value} is below its 200-day average of {threshold}, a long-term downtrend.
+      - id: above_sma50
+        label: Price above its 50-day average
+        unit: inr
+        help: The 50-day average shows the medium-term trend.
+        pass: Price {value} is above its 50-day average of {threshold}.
+        fail: Price {value} is below its 50-day average of {threshold}.
+      - id: rsi_healthy
+        label: RSI in the healthy zone
+        threshold: {ref: technical.thresholds.rsi_neutral_band.0}
+        upper: {ref: technical.thresholds.rsi_overbought}
+        unit: number
+        help: "RSI (0–100) measures recent buying pressure. Between {threshold} and {upper} is firm but not overheated."
+        pass: RSI of {value} is firm but not overheated ({threshold}–{upper}).
+        fail: "RSI of {value} is {zone} (healthy: {threshold}–{upper})."
+      - id: macd_positive
+        label: MACD above its signal line
+        unit: number
+        help: MACD compares short- and long-term averages. Above its signal line, momentum is rising.
+        pass: MACD is above its signal line, so momentum is rising.
+        fail: MACD is below its signal line, so momentum is fading.
+      - id: beats_nifty_6m
+        label: Beating the Nifty 50 (6 months)
+        unit: pp
+        highlight: [reward]
+        help: The stock's 6-month return minus the Nifty 50's.
+        pass: Beat the Nifty 50 by {value} over 6 months.
+        fail: Trailed the Nifty 50 by {abs_value} over 6 months.
+      - id: obv_rising
+        label: Volume backing the price
+        threshold: {ref: technical.thresholds.obv_slope_min}
+        unit: number
+        help: On-balance volume rises when more shares trade on up days than down days.
+        pass: More shares are trading on up days than on down days.
+        fail: Volume isn't backing the price; more shares trade on down days or it's flat.
+
+  dividends:
+    label: Dividends
+    question: Does it pay you?
+    checks:
+      - id: pays_dividend
+        label: Pays a dividend
+        unit: pct
+        help: "Dividend yield: yearly dividends as a share of the share price."
+        pass: Pays a dividend yielding {value}.
+        fail: Pays no dividend.
+      - id: yield_high
+        label: Dividend yield of 3% or more
+        threshold: {ref: fundamental.thresholds.dividend_yield_high}
+        unit: pct
+        highlight: [reward]
+        help: A yield of 3% or more pays you a meaningful income.
+        pass: Yields {value}, at or above {threshold}.
+        fail: Yields {value}, below {threshold}.
+      - id: dividend_consistent
+        label: Paid every year on record
+        unit: count
+        help: Whether a dividend was paid in each year on record.
+        pass: Paid a dividend in each of the last {years} years.
+        fail: Paid a dividend in {value} of the last {years} years.
+      - id: dividend_growing
+        label: Dividends growing
+        unit: inr_cr
+        help: Total dividends paid now compared with the oldest year on record.
+        pass: Dividends paid rose from {first} to {value} over {years} years.
+        fail: Dividends paid went from {first} to {value} over {years} years.
+      - id: payout_sustainable
+        label: Payout under 75% of profit
+        threshold: 75
+        unit: pct
+        highlight: [risk]
+        help: Paying out most of the profit leaves little to reinvest or to keep dividends up in a bad year.
+        pass: Pays out {value} of profit, leaving room to reinvest.
+        fail: Pays out {value} of profit, above {threshold}.
+      - id: fcf_covers_dividend
+        label: Dividend covered by free cash flow
+        applies: non_financial
+        unit: inr_cr
+        help: Whether the cash the business generated paid for the dividend.
+        pass: Free cash flow ({threshold}) covered the dividend ({value}).
+        fail: Free cash flow ({threshold}) didn't cover the dividend ({value}).
+
+fund:
+  returns:
+    label: Returns
+    question: Has it beaten its benchmark?
+    checks:
+      - id: beat_bench_1y
+        label: Beat the benchmark (1 year)
+        unit: pct
+        highlight: [reward, risk]
+        pass: Returned {value} vs the {bench}'s {threshold} over 1 year.
+        fail: Returned {value} vs the {bench}'s {threshold} over 1 year.
+      - id: beat_bench_3y
+        label: Beat the benchmark (3 years)
+        unit: pct
+        highlight: [reward, risk]
+        pass: Returned {value} a year vs the {bench}'s {threshold} over 3 years.
+        fail: Returned {value} a year vs the {bench}'s {threshold} over 3 years.
+      - id: beat_bench_5y
+        label: Beat the benchmark (5 years)
+        unit: pct
+        pass: Returned {value} a year vs the {bench}'s {threshold} over 5 years.
+        fail: Returned {value} a year vs the {bench}'s {threshold} over 5 years.
+      - id: above_risk_free
+        label: Beat a risk-free deposit (3 years)
+        threshold: {ref: mf.risk_free_rate_pct}
+        unit: pct
+        pass: Returned {value} a year over 3 years, above the risk-free {threshold}.
+        fail: Returned {value} a year over 3 years, below the risk-free {threshold}.
+  consistency:
+    label: Consistency
+    question: Does it beat the benchmark reliably?
+    checks:
+      - id: rolling3_beat_share
+        label: Beat the benchmark in most 3-year periods
+        threshold: 50
+        unit: pct
+        highlight: [reward]
+        pass: Beat the benchmark in {value} of rolling 3-year periods.
+        fail: Beat the benchmark in only {value} of rolling 3-year periods.
+      - id: rolling3_avg_excess
+        label: Ahead of the benchmark on average (3-year periods)
+        threshold: {ref: mf.signals.review_rolling_excess_pp}
+        unit: pp
+        pass: On average {value} a year against the benchmark over rolling 3-year periods.
+        fail: On average {value} a year against the benchmark over rolling 3-year periods.
+      - id: rolling1_beat_share
+        label: Beat the benchmark in most 1-year periods
+        threshold: 50
+        unit: pct
+        pass: Beat the benchmark in {value} of rolling 1-year periods.
+        fail: Beat the benchmark in only {value} of rolling 1-year periods.
+  risk:
+    label: Risk
+    question: How bumpy is the ride?
+    checks:
+      - id: volatility_vs_bench
+        label: Less volatile than the benchmark
+        unit: pct
+        pass: Volatility of {value} a year vs the benchmark's {threshold}.
+        fail: Volatility of {value} a year vs the benchmark's {threshold}.
+      - id: drawdown_vs_bench
+        label: Smaller worst fall than the benchmark
+        unit: pct
+        highlight: [risk]
+        pass: Worst fall {value} vs the benchmark's {threshold}.
+        fail: Worst fall {value} vs the benchmark's {threshold}.
+      - id: overlap_low
+        label: Not duplicating your other funds
+        threshold: {ref: mf.overlap_high_pct}
+        unit: pct
+        highlight: [risk]
+        pass: Shares at most {value} of its holdings with any of your other funds.
+        fail: Shares {value} of its holdings with {other}.
+  risk_adjusted:
+    label: Risk-adjusted
+    question: Is the return worth the risk?
+    checks:
+      - id: sharpe_vs_bench
+        label: Better Sharpe ratio than the benchmark
+        unit: number
+        pass: Sharpe ratio {value} vs the benchmark's {threshold}.
+        fail: Sharpe ratio {value} vs the benchmark's {threshold}.
+      - id: sortino_vs_bench
+        label: Better Sortino ratio than the benchmark
+        unit: number
+        pass: Sortino ratio {value} vs the benchmark's {threshold}.
+        fail: Sortino ratio {value} vs the benchmark's {threshold}.
+  cost:
+    label: Cost
+    question: Are you paying too much?
+    checks:
+      - id: direct_plan
+        label: Direct plan
+        unit: text
+        highlight: [risk]
+        pass: A Direct plan, with no distributor commission.
+        fail: A Regular plan; the Direct plan of the same fund costs less{gap}.
+      - id: expense_ok
+        label: Expense ratio within the limit
+        unit: pct
+        pass: Expense ratio {value}, within {threshold} for {asset} funds.
+        fail: Expense ratio {value}, above {threshold} for {asset} funds.

@@ -529,6 +529,9 @@ def evaluate_holdings(
         )
         if save:
             record(session, s)
+            from app.analysis.checks import record_shape  # checks builds on this module
+
+            record_shape(session, s, provider.daily(ticker).frame)
         out.append(s)
     if save:
         session.commit()
