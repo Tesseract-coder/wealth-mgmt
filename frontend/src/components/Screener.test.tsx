@@ -9,7 +9,7 @@ import { parseSel } from "../pages/Screener";
 import { WatchlistTable } from "../pages/Watchlist";
 import { FilterBuilder, fromDrafts, toDraft, type Draft } from "./FilterBuilder";
 import { ScanProgress, scanMinutes } from "./ScanPanel";
-import { funnel, ScreenResults } from "./ScreenResults";
+import { funnel, keyFacts, ScreenResults, shapeFromFacts } from "./ScreenResults";
 
 function wrap(node: ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
@@ -91,14 +91,20 @@ describe("Screen results", () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify([]), { status: 200 })));
     wrap(<ScreenResults r={result} includeHeld={false} />);
     expect(screen.getByText(/501 in the universe → 21 not scored .* → 1 passed/)).toBeInTheDocument();
+    // Cards first: shape (if the scan has one), signal, entry zone, key facts, portfolio effect.
+    const ideas = within(screen.getByRole("list", { name: "Ideas" }));
+    expect(ideas.getByText("Buy / Add")).toBeInTheDocument();
+    expect(ideas.getAllByText("₹2,970.00 – ₹3,000.00").length).toBeGreaterThan(0); // entry zone
+    expect(ideas.getByText("Re-scan for a shape")).toBeInTheDocument();
+    expect(ideas.getAllByText("ROE 30%: high")).toHaveLength(2); // key fact without a shape, and in Why
+    expect(ideas.getByRole("figure", { name: /Consumer Durables share of your portfolio/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: "Table" }));
     const table = within(screen.getByRole("table"));
     expect(table.getByText("Buy / Add")).toBeInTheDocument();
     expect(table.getByText("₹2,970.00 – ₹3,000.00")).toBeInTheDocument();
     expect(table.getByText("₹2,880.00 (−4.0%)")).toBeInTheDocument();
     expect(table.getByText("Consumer Durables: 5.0% → 13.0%")).toBeInTheDocument();
     expect(table.getByRole("link", { name: "Titan" })).toHaveAttribute("href", "/analysis/TITAN.NS");
-    // Small screens get the same idea as a card (CSS picks one).
-    expect(within(screen.getByRole("list", { name: "Ideas" })).getByText("Buy / Add")).toBeInTheDocument();
     expect(screen.getByText(/failed ROE ≥ 15% \(no data\)/)).toBeInTheDocument();
     const btn = await table.findByRole("button", { name: /Watch/ });
     await waitFor(() => expect(btn).toBeEnabled());
@@ -110,13 +116,20 @@ describe("Screen results", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
     wrap(<ScreenResults r={result} includeHeld={false} />);
-    const btn = await within(screen.getByRole("table")).findByRole("button", { name: /Watch/ });
+    const btn = await within(screen.getByRole("list", { name: "Ideas" })).findByRole("button", { name: /Watch/ });
     await waitFor(() => expect(btn).toBeEnabled());
     fireEvent.click(btn);
     await waitFor(() => expect(screen.getAllByText(/Watching/).length).toBeGreaterThan(0));
     const post = fetchMock.mock.calls.find(([, i]) => i?.method === "POST")!;
     expect(post[0]).toBe("/api/watchlist");
     expect(JSON.parse(String(post[1]?.body))).toEqual({ ticker: "TITAN.NS", source: "Screener: Quality at fair price" });
+  });
+
+  it("reads the Score Shape and key facts from the scan's facts", () => {
+    const facts = { axis_valuation: 4, axis_growth: 2, axis_past: 6, axis_health: 5, axis_momentum: 3, axis_dividends: 1, axis_total: 21 };
+    expect(shapeFromFacts(facts)?.total).toBe(21);
+    expect(shapeFromFacts({})).toBeNull();
+    expect(keyFacts({ ...cand, facts })).toEqual(["Strongest: Past Performance 6/6", "Weakest: Dividends 1/6"]);
   });
 
   it("says when held stocks are excluded", () => {

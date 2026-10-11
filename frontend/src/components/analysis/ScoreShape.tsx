@@ -113,12 +113,12 @@ const GEOMETRY: Record<ShapeSize, { w: number; h: number; r: number; px: number 
   lg: { w: 360, h: 300, r: 96, px: 360 },
 };
 
-function point(i: number, n: number, radius: number): [number, number] {
+export function point(i: number, n: number, radius: number): [number, number] {
   const a = -Math.PI / 2 + (i * 2 * Math.PI) / n;
   return [Math.cos(a) * radius, Math.sin(a) * radius];
 }
 
-const pts = (list: [number, number][]) => list.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(" ");
+export const pts = (list: [number, number][]) => list.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(" ");
 
 /**
  * The Score Shape: one spoke per section, each scored 0 … max by the share of its checks that pass,

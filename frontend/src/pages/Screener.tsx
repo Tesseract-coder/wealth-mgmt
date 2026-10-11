@@ -5,7 +5,8 @@ import { screenerApi, type ScreenerConfig, type ScreenFilter, type ScreenRequest
 import { FilterBuilder, fromDrafts, SaveScreen, toDraft, type Draft } from "../components/FilterBuilder";
 import { ScanPanel } from "../components/ScanPanel";
 import { ScreenResults } from "../components/ScreenResults";
-import { Alert, Button, Card } from "../components/ui";
+import { Bookmark, SlidersHorizontal, type LucideIcon } from "lucide-react";
+import { Alert, Button, Card, EmptyState, ErrorState, Loading, PageHeader, Skeleton, SkeletonCard } from "../components/ui";
 
 /** "preset:growth" | "saved:3" | "custom" */
 type Sel = { kind: "preset"; key: string } | { kind: "saved"; id: number } | { kind: "custom" };
@@ -22,33 +23,36 @@ export function parseSel(v: string | null, config: ScreenerConfig): Sel {
 
 const selKey = (s: Sel) => (s.kind === "preset" ? `preset:${s.key}` : s.kind === "saved" ? `saved:${s.id}` : "custom");
 
-function Tab({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+/** A screen as a tile: name and one line on what it finds. Tiles act as tabs. */
+function Tile({ active, onClick, title, children, icon: Icon }: { active: boolean; onClick: () => void; title: string; children?: React.ReactNode; icon?: LucideIcon }) {
   return (
     <button
       type="button"
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className={`whitespace-nowrap rounded-full border px-3 py-1 text-sm ${
-        active
-          ? "border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900"
-          : "border-slate-300 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+      className={`flex h-full flex-col items-start gap-1 rounded-card border p-3 text-left transition-colors ${
+        active ? "border-accent bg-accent-soft" : "border-border bg-surface hover:border-border-strong hover:bg-surface-2"
       }`}
     >
-      {children}
+      <span className={`flex items-center gap-1.5 text-sm font-semibold ${active ? "text-accent-text" : "text-fg"}`}>
+        {Icon && <Icon aria-hidden className="size-4" />}
+        {title}
+      </span>
+      {children && <span className="line-clamp-2 text-xs text-fg-muted">{children}</span>}
     </button>
   );
 }
 
 function Chips({ filters, config }: { filters: ScreenFilter[]; config: ScreenerConfig }) {
-  if (filters.length === 0) return <p className="text-sm text-slate-500">No extra filters.</p>;
+  if (filters.length === 0) return <p className="text-sm text-fg-muted">No extra filters.</p>;
   return (
     <ul className="flex flex-wrap gap-1.5 text-xs">
       {filters.map((f, i) => {
         const label = config.fields.find((x) => x.key === f.field)?.label ?? f.field;
         const v = Array.isArray(f.value) ? `${f.value[0]} – ${f.value[1]}` : `${config.ops[f.op]} ${f.value}`;
         return (
-          <li key={i} className="rounded bg-slate-100 px-2 py-0.5 dark:bg-slate-800">
+          <li key={i} className="rounded-full border border-border bg-surface-2 px-2 py-0.5 text-fg">
             {label} {v}
           </li>
         );
@@ -118,26 +122,25 @@ function ScreenerBody({ config }: { config: ScreenerConfig }) {
       <ScanPanel config={config} />
       <Card title="Screens">
         <div className="space-y-3">
-          <div role="tablist" aria-label="Screens" className="flex flex-wrap gap-1.5">
+          <div role="tablist" aria-label="Screens" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             {config.presets.map((p) => (
-              <Tab key={p.key} active={sel.kind === "preset" && sel.key === p.key} onClick={() => select({ kind: "preset", key: p.key })}>
-                {p.label}
-              </Tab>
+              <Tile key={p.key} active={sel.kind === "preset" && sel.key === p.key} onClick={() => select({ kind: "preset", key: p.key })} title={p.label}>
+                {p.description}
+              </Tile>
             ))}
             {config.screens.map((s) => (
-              <Tab key={s.id} active={sel.kind === "saved" && sel.id === s.id} onClick={() => select({ kind: "saved", id: s.id })}>
-                <span aria-hidden="true">☰ </span>
-                {s.name}
-              </Tab>
+              <Tile key={s.id} icon={Bookmark} active={sel.kind === "saved" && sel.id === s.id} onClick={() => select({ kind: "saved", id: s.id })} title={s.name}>
+                Your screen · {s.filters.length} condition{s.filters.length === 1 ? "" : "s"}
+              </Tile>
             ))}
-            <Tab active={sel.kind === "custom"} onClick={() => openBuilder(applied ?? [], true)}>
-              + Build your own
-            </Tab>
+            <Tile icon={SlidersHorizontal} active={sel.kind === "custom"} onClick={() => openBuilder(applied ?? [], true)} title="Build your own">
+              Any mix of technical, fundamental and Score Shape conditions
+            </Tile>
           </div>
 
           {preset && (
             <div className="space-y-1.5">
-              <p className="text-sm text-slate-600 dark:text-slate-400">{preset.description}</p>
+              <p className="text-sm text-fg-muted">{preset.description}</p>
               {preset.filters.length > 0 && <Chips filters={preset.filters} config={config} />}
               <Button variant="secondary" onClick={() => openBuilder(preset.filters, true)}>
                 Customise a copy
@@ -158,9 +161,9 @@ function ScreenerBody({ config }: { config: ScreenerConfig }) {
             </div>
           )}
           {showBuilder && (
-            <div className="space-y-3 rounded border border-slate-200 p-3 dark:border-slate-800">
+            <div className="space-y-3 rounded-control border border-border p-3">
               <FilterBuilder fields={config.fields} ops={config.ops} drafts={drafts} onChange={setDrafts} />
-              {built.error && drafts.length > 0 && <p className="text-sm text-amber-800 dark:text-amber-300">{built.error}</p>}
+              {built.error && drafts.length > 0 && <p className="text-sm text-caution">{built.error}</p>}
               <div className="flex flex-wrap items-end gap-4">
                 {sel.kind === "custom" && (
                   <Button disabled={!!built.error || !config.latest_scan} onClick={() => setApplied(built.filters)}>
@@ -186,20 +189,24 @@ function ScreenerBody({ config }: { config: ScreenerConfig }) {
       </Card>
 
       {!config.latest_scan ? null : result.isError ? (
-        <Alert tone="error">{result.error.message}</Alert>
+        <ErrorState title="Couldn't run this screen" detail={result.error.message} onRetry={() => void result.refetch()} />
       ) : req === null ? (
-        <Card>
-          <p className="text-sm text-slate-500">Add conditions and press Apply.</p>
-        </Card>
+        <EmptyState title="Add conditions and press Apply">Pick fields such as ROE or a minimum Financial Health score, then Apply to see matching ideas.</EmptyState>
       ) : !result.data ? (
-        <Card>Screening…</Card>
+        <Loading label="the screen">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,19rem),1fr))] gap-4">
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} className="h-72 w-full" />
+            ))}
+          </div>
+        </Loading>
       ) : (
         <Card
           title={`${result.data.title}: ${result.data.candidates.length ? `top ${result.data.candidates.length}` : "no ideas"}`}
           actions={
             sel.kind !== "custom" && (
               <a
-                className="text-sm underline"
+                className="text-sm text-accent-text underline"
                 href={screenerApi.csvHref({ preset: preset?.key, screen_id: saved?.id, include_held: includeHeld })}
               >
                 Download CSV
@@ -219,14 +226,17 @@ export function Screener() {
   const config = useQuery({ queryKey: ["screener-config"], queryFn: screenerApi.config });
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-semibold">Screener</h1>
-        <p className="text-sm text-slate-500">
-          Scores every stock in a universe with your style and risk, then ranks the ones that pass a screen, with an entry
-          zone, stop-loss and targets for each. Switching screens is instant; run a new scan for fresh data.
-        </p>
-      </div>
-      {config.isError ? <Alert tone="error">{config.error.message}</Alert> : !config.data ? <Card>Loading…</Card> : <ScreenerBody config={config.data} />}
+      <PageHeader
+        title="Screener"
+        description="Scores every stock in a universe with your style and risk, then ranks the ones that pass a screen, with a Score Shape, entry zone, stop-loss and targets for each. Switching screens is instant; run a new scan for fresh data."
+      />
+      {config.isError ? (
+        <ErrorState title="Couldn't load the screener" detail={config.error.message} onRetry={() => void config.refetch()} />
+      ) : !config.data ? (
+        <SkeletonCard label="the screener" />
+      ) : (
+        <ScreenerBody config={config.data} />
+      )}
     </div>
   );
 }

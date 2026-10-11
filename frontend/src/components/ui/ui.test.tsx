@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { Upload } from "lucide-react";
 import { useState } from "react";
@@ -177,11 +178,16 @@ describe("theme", () => {
 });
 
 describe("/dev/components", () => {
+  afterEach(() => vi.unstubAllGlobals());
   it("shows the primitives in both themes", () => {
+    // The sample screener and watchlist cards include Watch buttons, which ask the API what's watched.
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("[]", { status: 200 })));
     const { container } = render(
-      <MemoryRouter>
-        <DevComponents />
-      </MemoryRouter>,
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <DevComponents />
+        </MemoryRouter>
+      </QueryClientProvider>,
     );
     expect(screen.getByText("Light theme")).toBeInTheDocument();
     expect(screen.getByText("Dark theme (default)")).toBeInTheDocument();

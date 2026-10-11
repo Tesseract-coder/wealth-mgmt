@@ -1,10 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import type { FundReport, MFHoldingsAnalysis, PortfolioSummary } from "../api/client";
-import { FundHoldingsBody, FundReportBody, FundSignalPill } from "./FundView";
+import { drawdowns } from "../charts/FundCharts";
+import { SAMPLE_FUND, SAMPLE_FUND_REPORT } from "./analysis/samples";
+import { FundHoldingsBody, FundReportBody, FundSignalPill, riskGrade } from "./FundView";
 import { PortfolioSummaryBody } from "./PortfolioSummary";
 
 const fund: FundReport = {
@@ -69,7 +71,7 @@ describe("Fund views", () => {
     expect(screen.getByText("+6.6%")).toBeInTheDocument();
     expect(screen.getByText("1.7 pp")).toBeInTheDocument(); // 6.62 − 4.89
     expect(screen.getByText("70%")).toBeInTheDocument(); // rolling beat share
-    expect(screen.getByText("-16.2%")).toBeInTheDocument();
+    expect(screen.getByText("−16.2%")).toBeInTheDocument(); // true minus sign
     expect(screen.getByText(/\+1\.04 pp a year more/)).toBeInTheDocument();
     expect(screen.getByPlaceholderText("e.g. 0.65")).toBeInTheDocument();
     expect(screen.getByText(/Expense ratio \(no free API publishes it\)/)).toBeInTheDocument();
@@ -90,6 +92,34 @@ describe("Fund views", () => {
     expect(links.slice(0, 2)).toEqual(["Bad Fund", "Good Fund"]);
     expect(screen.getAllByText("62%")).toHaveLength(2);
     expect(screen.getByText(/costs less/)).toBeInTheDocument();
+    expect(screen.getByText("Good Fund and Bad Fund share 62% of holdings: owning both adds little variety.")).toBeInTheDocument();
+  });
+
+  it("fund cards show the shape, return vs index, risk grade, cost and plan, with a table toggle", () => {
+    const d: MFHoldingsAnalysis = { funds: [{ ...SAMPLE_FUND_REPORT, expense_ratio_pct: 0.63 }], overlap: { codes: [], names: [], pct: [], approximate: false }, warnings: [], disclaimer: "x" };
+    wrap(<FundHoldingsBody d={d} checks={[SAMPLE_FUND]} />);
+    const card = screen.getByRole("article");
+    expect(within(card).getByRole("img", { name: /^Score Shape for Parag Parikh/ })).toBeInTheDocument();
+    expect(within(card).getByText("Direct plan")).toBeInTheDocument();
+    expect(within(card).getByText("Lower risk than its benchmark")).toBeInTheDocument();
+    expect(within(card).getByText("Expense ratio 0.63%")).toBeInTheDocument();
+    expect(within(card).getByText(/pp ahead/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: "Table" }));
+    expect(screen.getByRole("columnheader", { name: "Shape" })).toBeInTheDocument();
+  });
+
+  it("fund detail opens with the Score Shape and each section's checks", () => {
+    wrap(<FundReportBody f={SAMPLE_FUND_REPORT} checks={SAMPLE_FUND} />);
+    expect(screen.getByRole("img", { name: /^Score Shape for Parag Parikh/ }).getAttribute("aria-label")).toContain("Cost not enough data");
+    expect(screen.getByRole("heading", { name: "Rewards (3)" })).toBeInTheDocument();
+    for (const s of ["Returns", "Consistency", "Risk", "Risk-adjusted", "Cost"]) expect(screen.getByRole("heading", { level: 2, name: s })).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "Consistency checks" })).toBeInTheDocument();
+  });
+
+  it("works out drawdowns and grades risk", () => {
+    expect(drawdowns([100, 120, 90, null, 130])).toEqual([0, 0, -25, null, 0]);
+    expect(riskGrade(undefined)).toBe("Risk: not enough data");
+    expect(riskGrade(SAMPLE_FUND)).toBe("Lower risk than its benchmark");
   });
 });
 

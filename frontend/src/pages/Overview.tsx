@@ -129,14 +129,14 @@ function HoldingsPreview({
         <p className="text-sm text-fg-muted">Couldn't load the holdings. Open the Holdings page to retry.</p>
       ) : !signals.data ? (
         <Loading label="your biggest holdings">
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,19rem),1fr))] gap-4">
             {[0, 1, 2].map((i) => (
               <Skeleton key={i} className="h-56 w-full" />
             ))}
           </div>
         </Loading>
       ) : (
-        <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,19rem),1fr))] gap-4">
           {top.map((h) => (
             <li key={h.ticker}>
               <HoldingCard h={h} shape={byTicker.get(h.ticker)} linkQuery={linkQuery} />

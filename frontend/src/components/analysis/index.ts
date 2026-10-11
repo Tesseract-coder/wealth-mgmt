@@ -17,4 +17,5 @@ export {
   type ShapeSize,
 } from "./ScoreShape";
 export { CheckBar, SectionHeader } from "./SectionHeader";
+export { ShapeOverlay, type OverlaySeries } from "./ShapeOverlay";
 export { FundSignalPill, SignalPill } from "./SignalPill";

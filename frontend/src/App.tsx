@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Layout } from "./components/Layout";
+import { Compare } from "./pages/Compare";
 import { Holdings } from "./pages/Holdings";
 import { Import } from "./pages/Import";
 import { MutualFunds } from "./pages/MutualFunds";
@@ -30,6 +31,7 @@ export function App() {
         <Route path="mutual-funds/:code" element={<MutualFunds />} />
         <Route path="screener" element={<Screener />} />
         <Route path="watchlist" element={<Watchlist />} />
+        <Route path="compare" element={<Compare />} />
         <Route path="settings" element={<Settings />} />
         <Route
           path="dev/components"

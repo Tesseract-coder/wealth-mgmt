@@ -23,7 +23,7 @@ function HoldingsData({ style, risk, layout, onLayout }: { style: StyleKey | nul
   if (!q.data)
     return (
       <Loading label="your holdings">
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,19rem),1fr))] gap-4">
           {Array.from({ length: 6 }, (_, i) => (
             <Skeleton key={i} className="h-56 w-full" />
           ))}

@@ -1,8 +1,10 @@
+import { GitCompareArrows } from "lucide-react";
+import { Link } from "react-router-dom";
 import type { PriceSeries, StockChecks, StockSignal } from "../../api/client";
 import { formatDate, formatINR, formatPct } from "../../lib/format";
 import { SignalPill } from "../analysis";
 import { FreshnessBadge } from "../MarketData";
-import { Badge, Delta, Skeleton, Stat } from "../ui";
+import { Badge, buttonClass, Delta, Skeleton, Stat } from "../ui";
 import { WatchButton } from "../WatchButton";
 
 const CONFIDENCE = { high: "High", medium: "Medium", low: "Low" } as const;
@@ -46,7 +48,14 @@ export function StockHeader({
             {checks?.is_financial && <Badge tone="accent">Lender: own health checks</Badge>}
           </p>
         </div>
-        {!isIndex && ticker.endsWith(".NS") && <WatchButton ticker={ticker} source="Stock page" />}
+        {!isIndex && ticker.endsWith(".NS") && (
+          <div className="flex flex-wrap items-center gap-2">
+            <Link to={`/compare?t=${encodeURIComponent(ticker)}`} className={buttonClass("secondary", "sm")}>
+              <GitCompareArrows aria-hidden className="size-3.5" /> Compare
+            </Link>
+            <WatchButton ticker={ticker} source="Stock page" />
+          </div>
+        )}
       </div>
 
       <div className="mt-4 flex flex-wrap items-end gap-x-8 gap-y-4">

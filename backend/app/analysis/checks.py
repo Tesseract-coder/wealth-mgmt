@@ -558,7 +558,7 @@ def evaluate_fund(report: FundReport) -> ShapeResult:
         sections,
         p,
         cfg,
-        summary_tail=f"The fund signal is {report.signal_label}: {report.rule}",
+        summary_tail=f"The fund signal is {report.signal_label}: {report.rule.rstrip('.')}.",
         name=report.name,
     )
     return ShapeResult(

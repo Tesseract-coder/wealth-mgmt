@@ -32,7 +32,10 @@ import {
   SignalPill,
 } from "../components/analysis";
 import { SAMPLE_FUND, SAMPLE_HOLDINGS, SAMPLE_STOCK } from "../components/analysis/samples";
+import { SAMPLE_SCREEN, SAMPLE_WATCHLIST } from "../components/portfolio/samples";
+import { ScreenResults } from "../components/ScreenResults";
 import { formatINR, formatINRCompact, formatPct } from "../lib/format";
+import { WatchlistCards } from "./Watchlist";
 
 const SWATCHES: { group: string; tokens: string[] }[] = [
   { group: "Surfaces", tokens: ["bg", "surface", "surface-2", "surface-3", "border", "border-strong"] },
@@ -160,6 +163,14 @@ function AnalysisGallery() {
         <Card>
           <SectionHeader section={SAMPLE_FUND.sections.find((s) => s.key === "cost")!} level={3} />
         </Card>
+      </Section>
+
+      <Section title="Screener result card (sample)">
+        <ScreenResults r={SAMPLE_SCREEN} includeHeld={false} />
+      </Section>
+
+      <Section title="Watchlist card with week-on-week change (sample)">
+        <WatchlistCards d={SAMPLE_WATCHLIST} />
       </Section>
 
       <Section title="Chart with caption">

@@ -170,8 +170,9 @@ describe("Fund charts", () => {
 
   it("summarises growth and how often the fund beat its benchmark", () => {
     render(<FundChartsBody c={c} />);
-    expect(screen.getByText(/Growth of 100 since 08 Oct 2021: fund 180.5, Nifty 50 160.2/)).toBeInTheDocument();
-    expect(screen.getByText(/Beat Nifty 50 in 2 of 4 windows \(50%\); excess ranged -1.0 to 2.0 pp/)).toBeInTheDocument();
+    expect(screen.getByText("₹100 invested on 08 Oct 2021 is now ₹180.5 in the fund and ₹160.2 in Nifty 50: the fund is ahead.")).toBeInTheDocument();
+    expect(screen.getByText(/Beat Nifty 50 in 2 of 4 3-year windows \(50%\); the gap ranged from −1.0 pp to \+2.0 pp/)).toBeInTheDocument();
+    expect(screen.getByText(/worst fall in this period was 0.0%/)).toBeInTheDocument(); // only two points, both new highs
     expect(screen.getByText(/price index/)).toBeInTheDocument();
   });
 

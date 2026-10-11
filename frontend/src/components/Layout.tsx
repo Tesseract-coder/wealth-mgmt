@@ -16,6 +16,7 @@ export const NAV = [
   { to: "/mutual-funds", label: "Mutual Funds" },
   { to: "/screener", label: "Screener" },
   { to: "/watchlist", label: "Watchlist" },
+  { to: "/compare", label: "Compare" },
   { to: "/settings", label: "Settings" },
 ] as const;
 

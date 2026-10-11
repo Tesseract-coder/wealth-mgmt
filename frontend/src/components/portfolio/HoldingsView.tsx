@@ -188,7 +188,7 @@ export function HoldingsView({
       {rows.length === 0 ? (
         <EmptyState title="No holdings match">Clear a filter or change the search.</EmptyState>
       ) : layout === "cards" ? (
-        <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,19rem),1fr))] gap-4">
           {rows.map((h) => (
             <li key={h.ticker}>
               <HoldingCard h={h} shape={byTicker.get(h.ticker)} linkQuery={linkQuery} />

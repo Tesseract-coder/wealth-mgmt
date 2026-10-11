@@ -16,9 +16,9 @@ export function ScanSummary({ scan }: { scan: Scan }) {
         {scan.scored} of {scan.total} scored · {formatFreshness(new Date(scan.finished_at ?? scan.created_at))}
         {scan.fetch === "cached" && " · cached data only"}
       </p>
-      {scan.status === "partial" && <p className="text-amber-800 dark:text-amber-300">This scan was stopped early and covers part of the universe.</p>}
+      {scan.status === "partial" && <p className="text-caution">This scan was stopped early and covers part of the universe.</p>}
       {scan.notes.map((n) => (
-        <p key={n} className="text-xs text-slate-500">
+        <p key={n} className="text-xs text-fg-subtle">
           {n}
         </p>
       ))}
@@ -39,10 +39,10 @@ export function ScanProgress({ job, onStop, stopping, label }: { job: Job; onSto
           {stopping ? "Stopping…" : "Stop"}
         </Button>
       </div>
-      <div className="h-2 w-full rounded bg-slate-200 dark:bg-slate-800" role="progressbar" aria-label="Scan progress" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-        <div className="h-2 rounded bg-slate-700 transition-all dark:bg-slate-300" style={{ width: `${pct}%` }} />
+      <div className="h-2 w-full rounded bg-surface-3" role="progressbar" aria-label="Scan progress" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+        <div className="h-2 rounded bg-accent transition-all" style={{ width: `${pct}%` }} />
       </div>
-      {job.errors.length > 0 && <p className="text-xs text-amber-800 dark:text-amber-300">{job.errors.length} stock(s) could not be downloaded so far.</p>}
+      {job.errors.length > 0 && <p className="text-xs text-caution">{job.errors.length} stock(s) could not be downloaded so far.</p>}
     </div>
   );
 }
@@ -90,7 +90,7 @@ export function ScanPanel({ config }: { config: ScreenerConfig }) {
       <div className="space-y-3">
         <div className="flex flex-wrap items-end gap-3 text-sm">
           <label>
-            <span className="mb-1 block text-slate-500">Universe</span>
+            <span className="mb-1 block text-fg-subtle">Universe</span>
             <select className={inputClass} value={runningUniverse ?? universe} disabled={running} onChange={(e) => setUniverse(e.target.value as UniverseKey)}>
               {config.universes.map((u) => (
                 <option key={u.key} value={u.key}>
@@ -101,7 +101,7 @@ export function ScanPanel({ config }: { config: ScreenerConfig }) {
             </select>
           </label>
           <fieldset disabled={running}>
-            <legend className="mb-1 text-slate-500">Data</legend>
+            <legend className="mb-1 text-fg-subtle">Data</legend>
             <label className="mr-3">
               <input type="radio" name="fetch" checked={fetchMode === "missing"} onChange={() => setFetchMode("missing")} /> Download what's missing
             </label>
@@ -115,14 +115,14 @@ export function ScanPanel({ config }: { config: ScreenerConfig }) {
         </div>
         {universe === "custom" && (
           <label className="block text-sm">
-            <span className="mb-1 block text-slate-500">
+            <span className="mb-1 block text-fg-subtle">
               NSE symbols, separated by commas or new lines ({customCount}/{config.custom_universe_max})
             </span>
             <textarea className={`${inputClass} h-20 font-mono`} value={symbols} disabled={running} onChange={(e) => setSymbols(e.target.value)} placeholder="TCS, INFY, HDFCBANK" />
           </label>
         )}
         {fetchMode === "missing" && !running && (
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-fg-subtle">
             Downloads prices and fundamentals that aren't cached or are out of date, at the free sources' rate limits
             {firstRunMinutes ? `: a first ${n}-stock scan takes about ${firstRunMinutes} minutes` : ""}. Later scans reuse the cache
             and are much quicker. It runs in the background, so you can leave this page and come back.
@@ -142,7 +142,7 @@ export function ScanPanel({ config }: { config: ScreenerConfig }) {
         ) : config.latest_scan ? (
           <ScanSummary scan={config.latest_scan} />
         ) : (
-          <p className="text-sm text-slate-500">No scan yet. Run one to get ranked ideas.</p>
+          <p className="text-sm text-fg-subtle">No scan yet. Run one to get ranked ideas.</p>
         )}
       </div>
     </Card>
