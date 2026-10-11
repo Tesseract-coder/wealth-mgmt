@@ -88,7 +88,7 @@ export function Technical() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">Analysis</h1>
+          <h1 className="text-xl font-semibold">Analysis</h1>
           <p className="text-sm text-slate-500">
             Buy / Hold / Sell signals with the scores and readings behind them, under any investing style.
           </p>
@@ -129,7 +129,7 @@ export function Technical() {
       </div>
       {ticker && (
         <div className="flex flex-wrap items-baseline gap-3">
-          <h2 className="text-xl font-semibold">{ticker}</h2>
+          <h2 className="text-lg font-semibold">{ticker}</h2>
           <Link to={`/analysis${analysisQuery(style, view)}`} className="text-sm underline">
             ← all holdings
           </Link>

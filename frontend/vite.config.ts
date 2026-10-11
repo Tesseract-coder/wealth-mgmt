@@ -34,5 +34,7 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
+    // tokens.test.ts reads these as text (?raw); other CSS stays stubbed out for speed.
+    css: { include: [/src\/styles\/tokens\.css/, /src\/index\.css/] },
   },
 });

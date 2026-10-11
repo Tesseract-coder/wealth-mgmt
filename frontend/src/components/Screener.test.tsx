@@ -189,7 +189,7 @@ describe("Watchlist", () => {
     expect(screen.getAllByText("Buy / Add")).toHaveLength(2); // the pill, and the last change
     expect(screen.getByText("Was Hold when added")).toBeInTheDocument();
     expect(screen.getByText("+12.0 since added")).toBeInTheDocument();
-    expect(screen.getByText("+7.14% since added")).toBeInTheDocument();
+    expect(screen.getByText("+7.1% since added")).toBeInTheDocument();
     expect(screen.getByText("on 08 Oct 2026")).toBeInTheDocument();
     expect(screen.getByText(/No prices downloaded yet/)).toBeInTheDocument();
     expect(screen.getByText("results on 20th")).toBeInTheDocument();

@@ -1,0 +1,126 @@
+/* Design tokens: the single source for colour, type, spacing, radius and motion.
+ * Light values sit on :root, dark values on .dark (dark is the default theme, see useTheme).
+ * A .light or .dark wrapper re-themes just its subtree (used by /dev/components to show both).
+ * Tailwind utilities are generated from these in index.css (`bg-surface`, `text-fg-muted`, `text-good` …).
+ * charts/palette.ts mirrors the chart colours; tokens.test.ts keeps the two in step and checks
+ * WCAG AA contrast for every text/background pair listed there. */
+
+:root,
+.light {
+  /* Surfaces */
+  --bg: #f4f6fb;
+  --surface: #ffffff;
+  --surface-2: #eef1f8;
+  --surface-3: #e2e7f1;
+  --border: #d5dcea;
+  --border-strong: #7f8ca8;
+
+  /* Text */
+  --fg: #111a2e;
+  --fg-muted: #46516b;
+  --fg-subtle: #5b6680;
+
+  /* Brand accent ("iris") */
+  --accent: #5546d6;
+  --accent-hover: #4637c0;
+  --accent-fg: #ffffff;
+  --accent-soft: #ebe8fd;
+  --accent-text: #4637c0;
+  --focus: #5546d6;
+
+  /* Semantic: text-strength colour + soft background + border */
+  --good: #0b7a52;
+  --good-soft: #e3f5ec;
+  --good-border: #9fd9bd;
+  --caution: #8a5300;
+  --caution-soft: #fdf1dc;
+  --caution-border: #ecc98a;
+  --bad: #b8282e;
+  --bad-soft: #fde8e8;
+  --bad-border: #f0b0b2;
+  --neutral: #4f5a72;
+  --neutral-soft: #edf0f6;
+  --neutral-border: #c9d1e1;
+
+  /* Score scale, weak → strong (shape fills; always paired with a number in text) */
+  --score-1: #d63c45;
+  --score-2: #e06c2b;
+  --score-3: #b07f00;
+  --score-4: #4e8f1c;
+  --score-5: #12935f;
+
+  /* Charts */
+  --chart-grid: #e2e7f1;
+  --chart-axis: #46516b;
+  --chart-up: #0b7a52;
+  --chart-down: #b8282e;
+  --chart-1: #5546d6;
+  --chart-2: #b87500;
+  --chart-3: #0e8f8a;
+  --chart-4: #c2417a;
+  --chart-5: #3f7fd9;
+  --chart-6: #6b8e23;
+
+  /* Elevation */
+  --shadow-card: 0 1px 2px rgb(17 26 46 / 0.06), 0 1px 1px rgb(17 26 46 / 0.04);
+  --shadow-pop: 0 8px 24px rgb(17 26 46 / 0.14);
+
+  --color-slate-500: #5b6680; /* see the .dark override below */
+}
+
+.dark {
+  --bg: #0a1120;
+  --surface: #111a2e;
+  --surface-2: #16213a;
+  --surface-3: #1e2b48;
+  --border: #24324f;
+  --border-strong: #56698f;
+
+  --fg: #e8edf7;
+  --fg-muted: #aeb9cf;
+  --fg-subtle: #8f9bb5;
+
+  --accent: #8f82ff;
+  --accent-hover: #a397ff;
+  --accent-fg: #0a1120;
+  --accent-soft: #231f4d;
+  --accent-text: #aaa0ff;
+  --focus: #a397ff;
+
+  --good: #45d29a;
+  --good-soft: #0e2f2a;
+  --good-border: #1d5c48;
+  --caution: #f3be55;
+  --caution-soft: #33270f;
+  --caution-border: #6b5220;
+  --bad: #ff8a8a;
+  --bad-soft: #3a1820;
+  --bad-border: #7a2f3a;
+  --neutral: #aeb9cf;
+  --neutral-soft: #1a2540;
+  --neutral-border: #34456a;
+
+  --score-1: #f0545c;
+  --score-2: #f58a45;
+  --score-3: #f0c03e;
+  --score-4: #9ccf4f;
+  --score-5: #34c98a;
+
+  --chart-grid: #1e2b48;
+  --chart-axis: #aeb9cf;
+  --chart-up: #45d29a;
+  --chart-down: #ff8a8a;
+  --chart-1: #8f82ff;
+  --chart-2: #f3be55;
+  --chart-3: #3fd0c9;
+  --chart-4: #f27fb0;
+  --chart-5: #6aa7ff;
+  --chart-6: #a5cf5a;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.35);
+  --shadow-pop: 0 12px 32px rgb(0 0 0 / 0.5);
+
+  /* Older pages use text-slate-500 with no dark variant. No grey passes AA on both white and
+   * navy, so the dark theme lifts it. Removed once every page uses the semantic tokens. */
+  --color-slate-500: #8f9bb5;
+}

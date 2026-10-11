@@ -32,3 +32,6 @@ real_data/
 .DS_Store
 .idea/
 .vscode/
+
+# Full screenshot sets (frontend/scripts/screenshots.sh); a curated few are committed in Phase 9
+docs/screenshots/

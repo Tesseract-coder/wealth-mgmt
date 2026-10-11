@@ -51,7 +51,7 @@ function Perf({ title, p, trades }: { title: string; p: BacktestPerformance | nu
   return (
     <div className="rounded border border-slate-200 p-3 dark:border-slate-800">
       <div className="text-xs uppercase tracking-wide text-slate-500">{title}</div>
-      <div className={`text-xl font-semibold tabular-nums ${p && p.total_return < 0 ? "text-red-700 dark:text-red-400" : "text-emerald-700 dark:text-emerald-400"}`}>
+      <div className={`text-lg font-semibold tabular-nums ${p && p.total_return < 0 ? "text-red-700 dark:text-red-400" : "text-emerald-700 dark:text-emerald-400"}`}>
         {pct(p?.total_return)}
       </div>
       <div className="text-xs text-slate-500">

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatDate, formatFreshness, formatINR, formatNumber, formatPct } from "./format";
+import { formatDate, formatFreshness, formatINR, formatINRCompact, formatNumber, formatPct } from "./format";
 
 describe("formatINR", () => {
   it.each([
@@ -34,9 +34,34 @@ describe("formatDate / formatNumber / formatPct", () => {
     expect(formatNumber(null)).toBe("—");
   });
   it("signs percentages", () => {
-    expect(formatPct(1.234)).toBe("+1.23%");
-    expect(formatPct(-0.65)).toBe("−0.65%");
-    expect(formatPct(0)).toBe("0.00%");
+    expect(formatPct(1.234)).toBe("+1.2%");
+    expect(formatPct(-0.65)).toBe("−0.7%");
+    expect(formatPct(0)).toBe("0.0%");
+    expect(formatPct(-0.04)).toBe("0.0%");
+    expect(formatPct(1.234, 2)).toBe("+1.23%");
     expect(formatPct(null)).toBe("—");
+  });
+});
+
+describe("formatINRCompact", () => {
+  it.each([
+    [0, "₹0"],
+    [45230.4, "₹45,230"],
+    [99999, "₹99,999"],
+    [124000, "₹1.2 L"],
+    [1240000, "₹12.4 L"],
+    [9999999, "₹1.0 Cr"],
+    [32000000, "₹3.2 Cr"],
+    [15837053400000, "₹15,83,705 Cr"],
+    [-1328.67, "−₹1,329"],
+    [-612221, "−₹6.1 L"],
+  ])("%s -> %s", (amount, expected) => {
+    expect(formatINRCompact(amount)).toBe(expected);
+  });
+
+  it("signs gains on request and shows a dash for missing values", () => {
+    expect(formatINRCompact(8948.27, { signed: true })).toBe("+₹8,948");
+    expect(formatINRCompact(-8948.27, { signed: true })).toBe("−₹8,948");
+    expect(formatINRCompact(null)).toBe("—");
   });
 });

@@ -189,7 +189,7 @@ export function StockSignalBody({ s }: { s: StockSignal }) {
           <span className="text-lg">
             <SignalPill signal={s.signal} label={s.signal_label} />
           </span>
-          <span className="text-2xl font-semibold tabular-nums">{fmtScore(sc.composite)}</span>
+          <span className="text-xl font-semibold tabular-nums">{fmtScore(sc.composite)}</span>
           <span className="text-sm text-slate-500">composite score</span>
           <ConfidenceTag c={sc.confidence} title={sc.confidence_reason} />
         </div>

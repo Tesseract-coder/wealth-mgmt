@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { Holdings } from "./pages/Holdings";
@@ -10,6 +11,9 @@ import { Screener } from "./pages/Screener";
 import { Settings } from "./pages/Settings";
 import { Technical } from "./pages/Technical";
 import { Watchlist } from "./pages/Watchlist";
+import { SkeletonCard } from "./components/ui";
+
+const DevComponents = lazy(() => import("./pages/DevComponents").then((m) => ({ default: m.DevComponents })));
 
 export function App() {
   return (
@@ -27,6 +31,14 @@ export function App() {
         <Route path="screener" element={<Screener />} />
         <Route path="watchlist" element={<Watchlist />} />
         <Route path="settings" element={<Settings />} />
+        <Route
+          path="dev/components"
+          element={
+            <Suspense fallback={<SkeletonCard label="component preview" />}>
+              <DevComponents />
+            </Suspense>
+          }
+        />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

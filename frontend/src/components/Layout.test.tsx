@@ -32,6 +32,17 @@ describe("Layout", () => {
     fireEvent.click(btn);
     expect(btn).toHaveAttribute("aria-expanded", "true");
   });
+
+  it("starts dark and has a labelled theme switch", () => {
+    localStorage.clear();
+    renderLayout();
+    expect(document.documentElement).toHaveClass("dark");
+    fireEvent.click(screen.getByRole("button", { name: "Light mode" }));
+    expect(document.documentElement).not.toHaveClass("dark");
+    expect(localStorage.getItem("theme")).toBe("light");
+    expect(screen.getByRole("button", { name: "Dark mode" })).toBeInTheDocument();
+    localStorage.clear();
+  });
 });
 
 describe("Freshness line", () => {

@@ -43,9 +43,31 @@ export function formatNumber(value: number | null | undefined, decimals = 2): st
   }).format(value);
 }
 
-/** +1.23% / −0.65% */
-export function formatPct(value: number | null | undefined): string {
+/** +1.2% / −0.7% (one decimal by default). Uses a true minus sign. */
+export function formatPct(value: number | null | undefined, decimals = 1): string {
   if (value === null || value === undefined || Number.isNaN(value)) return "—";
-  const sign = value > 0 ? "+" : value < 0 ? "−" : "";
-  return `${sign}${Math.abs(value).toFixed(2)}%`;
+  const rounded = Number(Math.abs(value).toFixed(decimals));
+  const sign = rounded === 0 ? "" : value > 0 ? "+" : "−";
+  return `${sign}${rounded.toFixed(decimals)}%`;
+}
+
+const LAKH = 1e5;
+const CRORE = 1e7;
+
+/** Short rupee amounts for cards and hero figures: ₹45,230 · ₹12.4 L · ₹3.2 Cr · ₹15,83,705 Cr.
+ * `signed` adds "+" to gains; losses always get "−". Use formatINR where the exact amount matters. */
+export function formatINRCompact(amount: number | null | undefined, { signed = false } = {}): string {
+  if (amount === null || amount === undefined || Number.isNaN(amount)) return "—";
+  const abs = Math.abs(amount);
+  const group = (v: number, d: number) =>
+    new Intl.NumberFormat("en-IN", { minimumFractionDigits: d, maximumFractionDigits: d }).format(v);
+  let body: string;
+  if (abs >= 100 * CRORE) body = `₹${group(abs / CRORE, 0)} Cr`;
+  else if (abs >= CRORE) body = `₹${group(abs / CRORE, 1)} Cr`;
+  else if (abs >= LAKH) body = `₹${group(abs / LAKH, 1)} L`;
+  else body = `₹${group(Math.round(abs), 0)}`;
+  // "₹100.0 L" reads oddly; it rounds up into crore.
+  body = body.replace("₹100.0 L", "₹1.0 Cr");
+  const sign = amount < 0 && body !== "₹0" ? "−" : signed && amount > 0 ? "+" : "";
+  return `${sign}${body}`;
 }

@@ -1,4 +1,5 @@
-/** Chart colours for light and dark mode. Every series also has a text label in its legend,
+/** Chart colours for light and dark mode, mirroring styles/tokens.css (tokens.test.ts checks they match;
+ * charts need literal colours, not CSS variables). Every series also has a text label in its legend,
  * so nothing is told by colour alone. */
 export interface Palette {
   bg: string;
@@ -16,30 +17,30 @@ export interface Palette {
 
 const light: Palette = {
   bg: "#ffffff",
-  text: "#334155",
-  grid: "#e2e8f0",
-  up: "#059669",
-  down: "#dc2626",
-  neutral: "#64748b",
-  stop: "#dc2626",
-  target: "#059669",
-  support: "#0284c7",
-  resistance: "#d97706",
-  series: ["#2563eb", "#d97706", "#7c3aed", "#0d9488", "#db2777", "#65a30d", "#ea580c", "#475569", "#0891b2", "#9333ea"],
+  text: "#46516b",
+  grid: "#e2e7f1",
+  up: "#0b7a52",
+  down: "#b8282e",
+  neutral: "#4f5a72",
+  stop: "#b8282e",
+  target: "#0b7a52",
+  support: "#3f7fd9",
+  resistance: "#b87500",
+  series: ["#5546d6", "#b87500", "#0e8f8a", "#c2417a", "#3f7fd9", "#6b8e23", "#d4553a", "#5b6680", "#0b8fb8", "#9a4fc4"],
 };
 
 const dark: Palette = {
-  bg: "#0f172a",
-  text: "#cbd5e1",
-  grid: "#1e293b",
-  up: "#34d399",
-  down: "#f87171",
-  neutral: "#94a3b8",
-  stop: "#f87171",
-  target: "#34d399",
-  support: "#38bdf8",
-  resistance: "#fbbf24",
-  series: ["#60a5fa", "#fbbf24", "#a78bfa", "#2dd4bf", "#f472b6", "#a3e635", "#fb923c", "#94a3b8", "#22d3ee", "#c084fc"],
+  bg: "#111a2e",
+  text: "#aeb9cf",
+  grid: "#1e2b48",
+  up: "#45d29a",
+  down: "#ff8a8a",
+  neutral: "#aeb9cf",
+  stop: "#ff8a8a",
+  target: "#45d29a",
+  support: "#6aa7ff",
+  resistance: "#f3be55",
+  series: ["#8f82ff", "#f3be55", "#3fd0c9", "#f27fb0", "#6aa7ff", "#a5cf5a", "#ff8f6b", "#aeb9cf", "#45c4f0", "#c792ff"],
 };
 
 export const palette = (isDark: boolean): Palette => (isDark ? dark : light);

@@ -29,7 +29,7 @@ export function Settings() {
   };
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Settings</h1>
+      <h1 className="text-xl font-semibold">Settings</h1>
       <div role="tablist" className="flex flex-wrap gap-1 border-b border-slate-200 dark:border-slate-800">
         {TABS.map((t) => (
           <button

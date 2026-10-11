@@ -72,7 +72,7 @@ describe("MarketData", () => {
     expect(screen.getByText("22,520.45")).toBeInTheDocument(); // index level: no ₹
     expect(screen.getByText("₹1,170.30")).toBeInTheDocument();
     expect(screen.getByText("₹219.8160")).toBeInTheDocument();
-    expect(screen.getByText("−0.65%")).toBeInTheDocument();
+    expect(screen.getByText("−0.7%")).toBeInTheDocument();
     expect(screen.getByText("No data. Last attempt failed: HTTP 503")).toBeInTheDocument();
     expect(screen.getByText("Data from 08 Oct 2026, never refreshed.")).toBeInTheDocument();
     expect(screen.getByText("08 Oct 2026")).toBeInTheDocument();

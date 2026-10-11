@@ -30,7 +30,7 @@ export function Holdings() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">Holdings</h1>
+          <h1 className="text-xl font-semibold">Holdings</h1>
           <p className="text-sm text-slate-500">
             A Buy / Hold / Sell signal for each stock, with the rule and readings behind it. View them under any style or
             risk level; your saved profile is the default.

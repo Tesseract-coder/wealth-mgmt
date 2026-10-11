@@ -24,7 +24,7 @@ export function Overview() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-semibold">Overview</h1>
+          <h1 className="text-xl font-semibold">Overview</h1>
           {style && risk && (
             <p className="text-sm text-slate-500">
               {style.label} style · {risk.label} risk (max {Math.round(risk.max_weight_per_stock * 100)}% per stock,{" "}

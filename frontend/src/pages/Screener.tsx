@@ -220,7 +220,7 @@ export function Screener() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold">Screener</h1>
+        <h1 className="text-xl font-semibold">Screener</h1>
         <p className="text-sm text-slate-500">
           Scores every stock in a universe with your style and risk, then ranks the ones that pass a screen, with an entry
           zone, stop-loss and targets for each. Switching screens is instant; run a new scan for fresh data.

@@ -43,7 +43,7 @@ export function Import() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Import holdings</h1>
+      <h1 className="text-xl font-semibold">Import holdings</h1>
       <Card>
         <div role="tablist" className="mb-4 flex flex-wrap gap-1 border-b border-slate-200 dark:border-slate-800">
           {TABS.map((t) => (

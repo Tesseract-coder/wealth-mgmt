@@ -235,7 +235,7 @@ export function Watchlist() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold">Watchlist</h1>
+        <h1 className="text-xl font-semibold">Watchlist</h1>
         <p className="text-sm text-slate-500">
           Ideas you're tracking. Scores and signals are recomputed from cached data each time you open this page; the daily
           refresh downloads their prices and records their signals, so changes show with a date.

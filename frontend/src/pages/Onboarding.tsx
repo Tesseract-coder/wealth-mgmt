@@ -44,7 +44,7 @@ export function ProfileForm({ config, profile, firstRun = false }: { config: App
     <div className="space-y-4">
       {firstRun && (
         <div>
-          <h1 className="text-2xl font-semibold">Welcome</h1>
+          <h1 className="text-xl font-semibold">Welcome</h1>
           <p className="text-sm text-slate-500">
             Two choices set how holdings are scored. You can change them any time in Settings. Nothing here asks for broker logins: data
             comes only from files you export or a Google Sheet you share.

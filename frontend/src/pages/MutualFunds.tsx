@@ -7,7 +7,7 @@ export function MutualFunds() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold">Mutual funds</h1>
+        <h1 className="text-xl font-semibold">Mutual funds</h1>
         <p className="text-sm text-slate-500">
           Returns, risk, cost and overlap for each fund, against its category benchmark, with a Continue / Review / Switch signal and the reasons.
         </p>

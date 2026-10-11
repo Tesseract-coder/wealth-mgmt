@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { TriangleAlert } from "lucide-react";
 import { Link } from "react-router-dom";
 import { marketApi, type MarketStatus } from "../api/client";
 import { formatDate, formatFreshness } from "../lib/format";
@@ -26,12 +27,13 @@ export function FreshnessBar() {
   if (!q.data) return null;
   const f = freshnessText(q.data);
   return (
-    <p className="flex flex-wrap gap-x-3 text-xs text-slate-500" aria-live="polite">
+    <p className="flex flex-wrap gap-x-3 text-xs text-fg-subtle" aria-live="polite">
       <span>{f.prices}</span>
       {f.navs && <span>{f.navs}</span>}
       {f.stale > 0 && (
-        <Link to="/settings#data" className="text-amber-800 underline dark:text-amber-300">
-          ⚠ {f.stale} item{f.stale === 1 ? "" : "s"} stale or unavailable
+        <Link to="/settings#data" className="inline-flex items-center gap-1 text-caution underline">
+          <TriangleAlert aria-hidden className="size-3.5" />
+          {f.stale} item{f.stale === 1 ? "" : "s"} stale or unavailable
         </Link>
       )}
       <span>Yahoo Finance prices are delayed, end of day.</span>
