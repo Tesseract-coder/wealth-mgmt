@@ -1,68 +1,101 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { api, signalApi, type RiskKey, type StyleKey } from "../api/client";
-import { HoldingsTable } from "../components/HoldingsTable";
-import { Alert, Card, inputClass } from "../components/ui";
+import { api, checksApi, signalApi, type RiskKey, type StyleKey } from "../api/client";
+import { HoldingsView, type HoldingsLayout } from "../components/portfolio/HoldingsView";
+import { ErrorState, inputClass, Loading, PageHeader, Skeleton } from "../components/ui";
 import { analysisQuery } from "./Technical";
 
-function HoldingsData({ style, risk }: { style: StyleKey | null; risk: RiskKey | null }) {
-  const q = useQuery({ queryKey: ["signal-holdings", style, risk], queryFn: () => signalApi.holdings(style, risk) });
-  if (q.isError) return <Alert tone="error">{q.error.message}</Alert>;
-  if (!q.data) return <Card>Scoring your holdings…</Card>;
-  return <HoldingsTable d={q.data} linkQuery={analysisQuery(style)} />;
+const LAYOUT_KEY = "holdings-layout";
+
+function savedLayout(): HoldingsLayout {
+  try {
+    return localStorage.getItem(LAYOUT_KEY) === "table" ? "table" : "cards";
+  } catch {
+    return "cards";
+  }
 }
 
-/** Every stock holding with its signal, scores, weight and suggested action. */
+function HoldingsData({ style, risk, layout, onLayout }: { style: StyleKey | null; risk: RiskKey | null; layout: HoldingsLayout; onLayout: (l: HoldingsLayout) => void }) {
+  const q = useQuery({ queryKey: ["signal-holdings", style, risk], queryFn: () => signalApi.holdings(style, risk) });
+  // Shapes come separately: the table and cards show as soon as the signals are in.
+  const shapes = useQuery({ queryKey: ["checks-holdings", style, risk], queryFn: () => checksApi.holdings(style, risk), enabled: q.isSuccess });
+  if (q.isError) return <ErrorState title="Couldn't score your holdings" detail={q.error.message} hint="Check the backend is running, then retry." onRetry={() => void q.refetch()} />;
+  if (!q.data)
+    return (
+      <Loading label="your holdings">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 6 }, (_, i) => (
+            <Skeleton key={i} className="h-56 w-full" />
+          ))}
+        </div>
+      </Loading>
+    );
+  return <HoldingsView d={q.data} shapes={shapes.data?.holdings} linkQuery={analysisQuery(style)} layout={layout} onLayout={onLayout} />;
+}
+
+/** Every stock holding with its signal, Score Shape, scores, weight and suggested action. */
 export function Holdings() {
   const [params, setParams] = useSearchParams();
   const config = useQuery({ queryKey: ["config"], queryFn: api.config });
   const profile = useQuery({ queryKey: ["profile"], queryFn: api.profile });
   const style = (params.get("style") as StyleKey | null) ?? profile.data?.style ?? null;
   const risk = (params.get("risk") as RiskKey | null) ?? profile.data?.risk ?? null;
+  const layout: HoldingsLayout = params.get("layout") === "table" ? "table" : params.get("layout") === "cards" ? "cards" : savedLayout();
   const ready = (params.has("style") && params.has("risk")) || profile.isSuccess || profile.isError;
-  const set = (k: "style" | "risk", v: string) => {
+  const set = (k: "style" | "risk" | "layout", v: string) => {
     const p = new URLSearchParams(params);
     if (v) p.set(k, v);
     else p.delete(k);
-    setParams(p);
+    setParams(p, { replace: k === "layout" });
+  };
+  const onLayout = (l: HoldingsLayout) => {
+    try {
+      localStorage.setItem(LAYOUT_KEY, l);
+    } catch {
+      /* private window: the URL still remembers it */
+    }
+    set("layout", l);
   };
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Holdings</h1>
-          <p className="text-sm text-slate-500">
-            A Buy / Hold / Sell signal for each stock, with the rule and readings behind it. View them under any style or
-            risk level; your saved profile is the default.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-500">Style</span>
-            <select className={inputClass} value={style ?? ""} onChange={(e) => set("style", e.target.value)}>
-              <option value="">Your saved style</option>
-              {config.data &&
-                Object.entries(config.data.styles).map(([k, s]) => (
-                  <option key={k} value={k}>
-                    {s.label}
-                  </option>
-                ))}
-            </select>
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-500">Risk</span>
-            <select className={inputClass} value={risk ?? ""} onChange={(e) => set("risk", e.target.value)}>
-              {config.data &&
-                Object.entries(config.data.risk_levels).map(([k, r]) => (
-                  <option key={k} value={k}>
-                    {r.label}
-                  </option>
-                ))}
-            </select>
-          </label>
-        </div>
-      </div>
-      {ready ? <HoldingsData style={style} risk={risk} /> : <Card>Loading…</Card>}
+      <PageHeader
+        title="Holdings"
+        description="A signal and a Score Shape for each stock. View them under any style or risk level; your saved profile is the default."
+        actions={
+          <div className="flex flex-wrap gap-3">
+            <label className="text-sm">
+              <span className="mb-1 block text-xs font-medium text-fg-muted">Style</span>
+              <select className={inputClass} value={style ?? ""} onChange={(e) => set("style", e.target.value)}>
+                <option value="">Your saved style</option>
+                {config.data &&
+                  Object.entries(config.data.styles).map(([k, s]) => (
+                    <option key={k} value={k}>
+                      {s.label}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <label className="text-sm">
+              <span className="mb-1 block text-xs font-medium text-fg-muted">Risk</span>
+              <select className={inputClass} value={risk ?? ""} onChange={(e) => set("risk", e.target.value)}>
+                {config.data &&
+                  Object.entries(config.data.risk_levels).map(([k, r]) => (
+                    <option key={k} value={k}>
+                      {r.label}
+                    </option>
+                  ))}
+              </select>
+            </label>
+          </div>
+        }
+      />
+      {ready ? (
+        <HoldingsData style={style} risk={risk} layout={layout} onLayout={onLayout} />
+      ) : (
+        <Loading label="your profile">
+          <Skeleton className="h-40 w-full" />
+        </Loading>
+      )}
     </div>
   );
 }

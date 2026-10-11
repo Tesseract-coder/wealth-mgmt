@@ -7,7 +7,8 @@ import type { AppConfig, HoldingSignal, HoldingSignals, Profile, Thresholds } fr
 import { fromDisplay, ThresholdsForm, toDisplay } from "../pages/Settings";
 import { ProfileForm } from "../pages/Onboarding";
 import { ActionListBody } from "./ActionList";
-import { HoldingsTable, sortHoldings } from "./HoldingsTable";
+import { sortHoldings } from "./HoldingsTable";
+import { HoldingsView } from "./portfolio/HoldingsView";
 
 function wrap(node: ReactNode, path = "/") {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
@@ -51,7 +52,7 @@ describe("Holdings table", () => {
   it("sorts by signal urgency by default, with missing values last either way", () => {
     expect(sortHoldings(holdings, "composite", -1).map((h) => h.label)).toEqual(["Alpha", "Beta Bank", "Gamma"]);
     expect(sortHoldings(holdings, "composite", 1).map((h) => h.label)).toEqual(["Beta Bank", "Alpha", "Gamma"]);
-    wrap(<HoldingsTable d={d} />);
+    wrap(<HoldingsView d={d} layout="table" onLayout={() => undefined} />);
     expect(names()).toEqual(["Beta Bank", "Alpha", "Gamma"]);
     expect(within(screen.getByRole("table")).getByText("Sell / Exit")).toBeInTheDocument(); // pill has text, not just colour
     expect(screen.getByText(/Promoter pledge 60%/)).toBeInTheDocument();
@@ -59,11 +60,11 @@ describe("Holdings table", () => {
   });
 
   it("re-sorts on header click and filters", () => {
-    wrap(<HoldingsTable d={d} />);
+    wrap(<HoldingsView d={d} layout="table" onLayout={() => undefined} />);
     fireEvent.click(screen.getByRole("button", { name: "P&L" }));
     expect(names()).toEqual(["Alpha", "Gamma", "Beta Bank"]);
     expect(screen.getByRole("columnheader", { name: /P&L/ })).toHaveAttribute("aria-sort", "descending");
-    fireEvent.change(screen.getByLabelText("Sector"), { target: { value: "IT" } });
+    fireEvent.click(within(screen.getByRole("group", { name: "Sector" })).getByRole("button", { name: /^IT/ }));
     expect(names()).toEqual(["Alpha", "Gamma"]);
     fireEvent.change(screen.getByLabelText("Search"), { target: { value: "gam" } });
     expect(names()).toEqual(["Gamma"]);
@@ -71,7 +72,7 @@ describe("Holdings table", () => {
   });
 
   it("opens the stock on row click", () => {
-    wrap(<HoldingsTable d={d} />);
+    wrap(<HoldingsView d={d} layout="table" onLayout={() => undefined} />);
     fireEvent.click(screen.getAllByText("₹110.00", { selector: "td" })[0]!);
     expect(screen.getByText("detail page")).toBeInTheDocument();
   });

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
@@ -132,12 +132,14 @@ describe("Portfolio summary", () => {
   it("shows KPIs, warnings, allocation, beta and performance vs Nifty", () => {
     wrap(<PortfolioSummaryBody s={s} />);
     expect(screen.getByText("₹6,11,682")).toBeInTheDocument();
-    expect(screen.getByText("+1.30%")).toBeInTheDocument();
-    expect(screen.getByText(/needs purchase dates/)).toBeInTheDocument();
+    expect(screen.getByText("+1.3%")).toBeInTheDocument(); // day change, 1 decimal like every percentage
+    expect(screen.getAllByText(/needs purchase dates/).length).toBeGreaterThan(0);
     expect(screen.getByText(/above your 30% sector limit/)).toBeInTheDocument();
+    expect(screen.getByText("Financial Services")).toBeInTheDocument(); // allocation opens on sectors
+    fireEvent.click(screen.getByRole("radio", { name: "Holding" }));
     expect(screen.getByText("State Bank of India")).toBeInTheDocument();
     expect(screen.getByText(/Portfolio beta 0.92/)).toBeInTheDocument();
-    expect(screen.getByText(/portfolio -10.7%, Nifty 50 -10.9%/)).toBeInTheDocument();
+    expect(screen.getByText(/portfolio −10.7%, Nifty 50 −10.9%, so you're ahead by 0.2 pp/)).toBeInTheDocument();
     expect(screen.getAllByText("0.50")).toHaveLength(2);
   });
 

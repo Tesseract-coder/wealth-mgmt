@@ -23,7 +23,7 @@ export function AllocationDonut({ items, title }: { items: Slice[]; title: strin
   const data = topSlices(items);
   return (
     <figure>
-      <figcaption className="mb-1 text-sm font-semibold">{title}</figcaption>
+      <figcaption className="mb-1 text-sm font-semibold text-fg">{title}</figcaption>
       <div className="flex flex-col items-center gap-3 sm:flex-row">
         <div className="h-44 w-44 shrink-0" aria-hidden="true">
           <ResponsiveContainer width="100%" height="100%">
@@ -44,7 +44,7 @@ export function AllocationDonut({ items, title }: { items: Slice[]; title: strin
                 <span aria-hidden="true" className="inline-block h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: seriesColor(p, i) }} />
                 <span className="truncate">{s.label}</span>
               </span>
-              <span className="whitespace-nowrap tabular-nums text-slate-600 dark:text-slate-400">
+              <span className="whitespace-nowrap tabular-nums text-fg-muted">
                 {pct1(s.weight)} · {formatINR(s.value, 0)}
               </span>
             </li>
@@ -61,8 +61,8 @@ export function SectorBars({ items, limit }: { items: Slice[]; limit: number | n
   const data = items.map((s) => ({ ...s, pct: +(s.weight * 100).toFixed(1), over: limit !== null && s.limited !== false && s.weight > limit }));
   return (
     <figure>
-      <figcaption className="mb-1 text-sm font-semibold">
-        Sectors{limit !== null && <span className="font-normal text-slate-500"> · dashed line = your {Math.round(limit * 100)}% sector limit</span>}
+      <figcaption className="mb-1 text-sm font-semibold text-fg">
+        Sectors{limit !== null && <span className="font-normal text-fg-subtle"> · dashed line = your {Math.round(limit * 100)}% sector limit</span>}
       </figcaption>
       <div style={{ height: Math.max(120, data.length * 28 + 30) }} aria-hidden="true">
         <ResponsiveContainer width="100%" height="100%">
@@ -88,8 +88,8 @@ export function SectorBars({ items, limit }: { items: Slice[]; limit: number | n
         ))}
       </ul>
       {data.some((d) => d.over) && (
-        <p className="text-xs text-amber-800 dark:text-amber-300">
-          ⚠ Above limit: {data.filter((d) => d.over).map((d) => `${d.label} ${d.pct}%`).join(", ")}
+        <p className="text-xs text-caution">
+          <span aria-hidden="true">⚠ </span>Above limit: {data.filter((d) => d.over).map((d) => `${d.label} ${d.pct}%`).join(", ")}
         </p>
       )}
     </figure>
@@ -123,8 +123,13 @@ export function ComparisonLine({
           <CartesianGrid stroke={p.grid} vertical={false} />
           <XAxis dataKey="d" tickFormatter={(d: string) => formatDate(d).slice(3)} minTickGap={40} tick={{ fill: p.text, fontSize: 12 }} />
           <YAxis domain={["auto", "auto"]} unit={unit} width={52} tick={{ fill: p.text, fontSize: 12 }} />
-          <Tooltip labelFormatter={(d) => formatDate(String(d))} formatter={(v) => [`${Number(v).toFixed(2)}${unit}`]} />
-          <Legend />
+          <Tooltip
+            labelFormatter={(d) => formatDate(String(d))}
+            formatter={(v, n) => [`${Number(v).toFixed(2)}${unit}`, String(n)]}
+            contentStyle={{ background: p.bg, border: `1px solid ${p.grid}`, borderRadius: 8, fontSize: 12 }}
+            labelStyle={{ color: p.text }}
+          />
+          <Legend wrapperStyle={{ fontSize: 12, color: p.text }} />
           {zeroLine && <ReferenceLine y={0} stroke={p.neutral} />}
           {series.map((s, i) => (
             <Line key={s.name} dataKey={s.name} stroke={seriesColor(p, i)} strokeDasharray={s.dashed ? "5 4" : undefined} dot={false} strokeWidth={2} connectNulls isAnimationActive={false} />
