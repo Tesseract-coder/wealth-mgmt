@@ -57,10 +57,16 @@ export function PriceChart({
   ticker,
   levels,
   sr = [],
+  panes = true,
+  embedded = false,
 }: {
   ticker: string;
   levels?: PriceLevels | null;
   sr?: SRLevel[];
+  /** Open with the RSI and MACD panes showing (the stock page starts with them collapsed). */
+  panes?: boolean;
+  /** Inside a page section that already has the heading and the card around it. */
+  embedded?: boolean;
 }) {
   const [interval, setIv] = useState<ChartInterval>("1d");
   // Open on the style's timeframe (where the stop and targets live) once the signal arrives,
@@ -74,7 +80,7 @@ export function PriceChart({
     }
   }, [levels?.interval]);
   const [months, setMonths] = useState(12);
-  const [on, setOn] = useState<Set<Overlay>>(new Set(["ma", "sr", "stops", "volume", "rsi", "macd"]));
+  const [on, setOn] = useState<Set<Overlay>>(() => new Set<Overlay>(["ma", "sr", "stops", "volume", ...(panes ? (["rsi", "macd"] as const) : [])]));
   const start = useMemo(() => startFor(months), [months]);
   const config = useQuery({ queryKey: ["config"], queryFn: api.config });
   const prices = useQuery({
@@ -103,7 +109,8 @@ export function PriceChart({
   const showStops = !!levels && on.has("stops") && levels.interval === interval;
   return (
     <Card
-      title="Price chart"
+      title={embedded ? undefined : "Price chart"}
+      className={embedded ? "border-0! bg-transparent! p-0! shadow-none!" : ""}
       actions={
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <Segmented options={INTERVALS.map((i) => ({ key: i.key, label: i.label }))} value={interval} onChange={(v) => {

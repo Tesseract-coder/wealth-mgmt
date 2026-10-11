@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { TechnicalReport, TechnicalSummary } from "../api/client";
+import { stockRoute } from "../test/stockRoutes";
 import { Technical } from "./Technical";
 
 const report: TechnicalReport = {
@@ -44,7 +45,8 @@ function mockFetch() {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string) => {
-      const body = url.includes("/series")
+      const stock = stockRoute(url);
+      const body = stock !== undefined ? stock : url.includes("/series")
         ? { ticker: "RELIANCE.NS", interval: "1d", t: [], columns: {} }
         : url.includes("/market/prices/")
           ? { ticker: "RELIANCE.NS", interval: "1d", source: "yahoo", delayed: true, last_complete: true, freshness: { status: "fresh", reason: "" }, fetch_error: null, bars: [] }
@@ -88,7 +90,7 @@ describe("Technical page", () => {
     expect(screen.getByText("(minor)")).toBeInTheDocument();
     expect(screen.getByText(/Delivery % \(no NSE bhavcopy data yet\)/)).toBeInTheDocument();
     expect(screen.getByText(/Could not refresh: \^NSEI: HTTP 503/)).toBeInTheDocument();
-    expect(screen.getByText("₹1,251.50")).toBeInTheDocument(); // resistance
+    expect(screen.getAllByText("₹1,251.50").length).toBeGreaterThan(0); // resistance
   });
 
   it("lists holdings with their data status", async () => {
@@ -113,6 +115,8 @@ describe("Analysis tabs", () => {
       </QueryClientProvider>,
     );
     expect(await screen.findByText(/13\.6% below its 200-day SMA/)).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Technical" })).toHaveAttribute("aria-selected", "true");
+    // The Technical tab's content now sits under Momentum on the stock page, opened by ?view=technical.
+    expect(screen.getByRole("link", { name: /^Momentum/ })).toHaveAttribute("aria-current", "location");
+    expect(screen.getByText("Every technical reading, by timeframe").closest("details")).toHaveAttribute("open");
   });
 });

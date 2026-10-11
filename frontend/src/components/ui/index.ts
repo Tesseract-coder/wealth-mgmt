@@ -4,6 +4,7 @@ export { Card, PageHeader } from "./Card";
 export { Alert, EmptyState, ErrorState, type Tone } from "./Feedback";
 export { Badge, Delta, Stat, StatusIcon, type CheckStatus, type Semantic } from "./Indicators";
 export { InfoTip, Segmented, Tabs, Tooltip } from "./Overlay";
+export { Disclosure } from "./Disclosure";
 export { Loading, Skeleton, SkeletonCard, SkeletonText } from "./Skeleton";
 
 export const inputClass =

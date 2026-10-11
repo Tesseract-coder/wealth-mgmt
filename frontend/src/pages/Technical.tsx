@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
@@ -11,13 +12,12 @@ import {
   type StyleKey,
   type TimeframeReport,
 } from "../api/client";
-import { BacktestView } from "../components/Backtest";
 import { FreshnessBadge } from "../components/MarketData";
-import { FundamentalHoldings, FundamentalReportView } from "../components/FundamentalView";
+import { FundamentalHoldings } from "../components/FundamentalView";
 import { HoldingSignalsView } from "../components/SignalView";
-import { StockDetail } from "../components/StockDetail";
+import { StockStory } from "../components/stock/StockStory";
 import { PriceChart } from "../charts/PriceChart";
-import { Alert, Card, inputClass } from "../components/ui";
+import { Alert, Card, inputClass, SkeletonCard } from "../components/ui";
 import { useDebounced } from "../hooks/useDebounced";
 import { formatDate, formatINR } from "../lib/format";
 
@@ -84,30 +84,49 @@ export function Technical() {
     setParams(p);
   };
 
+  const stylePicker = (view !== "fundamental" || ticker) && (
+    <label className="text-sm">
+      <span className="mb-1 block text-fg-muted">Style</span>
+      <select className={inputClass} value={style ?? ""} onChange={(e) => update({ style: e.target.value || null })}>
+        <option value="">{ticker || view === "signal" || view === "backtest" ? "Your saved style" : "Daily only (no style chosen)"}</option>
+        {config.data &&
+          Object.entries(config.data.styles).map(([k, s]) => (
+            <option key={k} value={k}>
+              {s.label} ({s.timeframes.join(", ")})
+            </option>
+          ))}
+      </select>
+    </label>
+  );
+
+  // One stock: the whole story on one page. The old tabs' content lives in its sections.
+  if (ticker)
+    return (
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <Link to={`/analysis${analysisQuery(style)}`} className="inline-flex items-center gap-1 text-sm text-fg-muted hover:text-fg">
+            <ArrowLeft aria-hidden className="size-4" /> All holdings
+          </Link>
+          <div className="flex flex-wrap items-end gap-3">
+            {stylePicker}
+            <TickerSearch style={style} view="signal" />
+          </div>
+        </div>
+        {styleKnown ? <StockStory ticker={ticker} style={style} view={view} /> : <SkeletonCard label={ticker} />}
+      </div>
+    );
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold">Analysis</h1>
           <p className="text-sm text-slate-500">
-            Buy / Hold / Sell signals with the scores and readings behind them, under any investing style.
+            Buy / Hold / Sell signals with the scores and readings behind them, under any investing style. Open a stock for its full story.
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-3">
-          {view !== "fundamental" && (
-            <label className="text-sm">
-              <span className="mb-1 block text-slate-500">Style</span>
-              <select className={inputClass} value={style ?? ""} onChange={(e) => update({ style: e.target.value || null })}>
-                <option value="">{view === "signal" || view === "backtest" ? "Your saved style" : "Daily only (no style chosen)"}</option>
-                {config.data &&
-                  Object.entries(config.data.styles).map(([k, s]) => (
-                    <option key={k} value={k}>
-                      {s.label} ({s.timeframes.join(", ")})
-                    </option>
-                  ))}
-              </select>
-            </label>
-          )}
+          {stylePicker}
           <TickerSearch style={style} view={view} />
         </div>
       </div>
@@ -127,41 +146,15 @@ export function Technical() {
           </button>
         ))}
       </div>
-      {ticker && (
-        <div className="flex flex-wrap items-baseline gap-3">
-          <h2 className="text-lg font-semibold">{ticker}</h2>
-          <Link to={`/analysis${analysisQuery(style, view)}`} className="text-sm underline">
-            ← all holdings
-          </Link>
-        </div>
-      )}
-      {view === "signal" ? (
-        !styleKnown ? (
-          <Card>Loading…</Card>
-        ) : ticker ? (
-          <StockDetail ticker={ticker} style={style} fundamentalLink={`/analysis/${encodeURIComponent(ticker)}${analysisQuery(style, "fundamental")}`} />
-        ) : (
-          <HoldingSignalsView style={style} linkQuery={analysisQuery(style)} />
-        )
+      {/* Wait for the saved profile so we don't analyse twice (once without, once with the style). */}
+      {view === "fundamental" ? (
+        <FundamentalHoldings />
+      ) : !styleKnown ? (
+        <SkeletonCard label="your holdings" />
+      ) : view === "signal" ? (
+        <HoldingSignalsView style={style} linkQuery={analysisQuery(style)} />
       ) : view === "backtest" ? (
-        !styleKnown ? (
-          <Card>Loading…</Card>
-        ) : ticker ? (
-          <BacktestView ticker={ticker} style={style} />
-        ) : (
-          <Card>Choose a stock with the search box above (or open one from your holdings) to replay the signal rules on its history.</Card>
-        )
-      ) : view === "fundamental" ? (
-        ticker ? (
-          <FundamentalReportView ticker={ticker} />
-        ) : (
-          <FundamentalHoldings />
-        )
-      ) : /* Wait for the saved profile so we don't analyse twice (once without, once with the style). */
-      !styleKnown ? (
-        <Card>Loading…</Card>
-      ) : ticker ? (
-        <Report ticker={ticker} style={style} />
+        <Card>Choose a stock with the search box above (or open one from your holdings) to replay the signal rules on its history.</Card>
       ) : (
         <HoldingsSummary style={style} />
       )}
@@ -249,7 +242,7 @@ function HoldingsSummary({ style }: { style: StyleKey | null }) {
             {q.data.map((r) => (
               <tr key={r.ticker} className="border-t border-slate-100 align-top dark:border-slate-800">
                 <td className="py-1 pr-2">
-                  <Link className="underline" to={`/analysis/${encodeURIComponent(r.ticker)}${analysisQuery(style)}`}>
+                  <Link className="underline" to={`/analysis/${encodeURIComponent(r.ticker)}${analysisQuery(style, "technical")}`}>
                     {r.label}
                   </Link>
                   <div className="font-mono text-xs text-slate-500">{r.ticker}</div>
@@ -277,7 +270,8 @@ function HoldingsSummary({ style }: { style: StyleKey | null }) {
   );
 }
 
-function Report({ ticker, style }: { ticker: string; style: StyleKey | null }) {
+/** Every timeframe's readings. `chart` false when the page already shows the price chart. */
+export function TechnicalReportView({ ticker, style, chart = true }: { ticker: string; style: StyleKey | null; chart?: boolean }) {
   const q = useQuery({ queryKey: ["technical", ticker, style], queryFn: () => analysisApi.technical(ticker, style) });
   if (q.isError) return <Alert tone="error">{q.error.message}</Alert>;
   if (!q.data) return <Card>Analysing {ticker}… (the first look at a stock downloads its price history)</Card>;
@@ -294,7 +288,7 @@ function Report({ ticker, style }: { ticker: string; style: StyleKey | null }) {
           {n}
         </Alert>
       ))}
-      <PriceChart ticker={ticker} sr={r.timeframes.find((t) => t.interval === "1d")?.analysis.levels ?? r.context.levels} />
+      {chart && <PriceChart ticker={ticker} sr={r.timeframes.find((t) => t.interval === "1d")?.analysis.levels ?? r.context.levels} />}
       {r.timeframes.map((tf) => (
         <TimeframeCard key={tf.interval} tf={tf} isIndex={ticker.startsWith("^")} />
       ))}

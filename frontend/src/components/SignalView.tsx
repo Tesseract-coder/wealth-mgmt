@@ -85,7 +85,7 @@ export function StockSignalView({ ticker, style, risk }: { ticker: string; style
   return <StockSignalBody s={q.data} />;
 }
 
-function ReasonList({ items, empty }: { items: Reading[]; empty: string }) {
+export function ReasonList({ items, empty }: { items: Reading[]; empty: string }) {
   if (items.length === 0) return <p className="text-sm text-slate-500">{empty}</p>;
   return (
     <ol className="space-y-1 text-sm">
@@ -150,6 +150,33 @@ function SideBreakdown({ title, side, weight }: { title: string; side: SideScore
   );
 }
 
+/** Composite, technical and fundamental scores with their sub-scores and every reading's points. */
+export function ScoreBreakdown({ s }: { s: StockSignal }) {
+  const sc = s.scores;
+  return (
+    <>
+      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+        <ScoreBar value={sc.composite} label="Composite" />
+        <ScoreBar value={sc.technical.score} label={`Technical (${Math.round(sc.technical_weight * 100)}%)`} />
+        <ScoreBar value={sc.fundamental.score} label={`Fundamental (${Math.round(sc.fundamental_weight * 100)}%)`} />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <SideBreakdown title="Technical" side={sc.technical} weight={sc.technical_weight} />
+        <SideBreakdown title="Fundamental" side={sc.fundamental} weight={sc.fundamental_weight} />
+      </div>
+      <details className="mt-3 text-sm">
+        <summary className="cursor-pointer text-slate-600 dark:text-slate-400">All {s.readings.length} readings and their points</summary>
+        <ReasonList items={s.readings.filter((r) => r.points !== 0)} empty="None scored" />
+        {s.readings.some((r) => r.points === 0) && (
+          <p className="mt-2 text-xs text-slate-500">
+            Not scored (neutral or for information): {s.readings.filter((r) => r.points === 0).map((r) => r.text).join("; ")}
+          </p>
+        )}
+      </details>
+    </>
+  );
+}
+
 export function StockSignalBody({ s }: { s: StockSignal }) {
   const sc = s.scores;
   const lv = s.levels;
@@ -205,24 +232,7 @@ export function StockSignalBody({ s }: { s: StockSignal }) {
       </Card>
 
       <Card title="Score breakdown">
-        <div className="mb-4 grid gap-3 sm:grid-cols-3">
-          <ScoreBar value={sc.composite} label="Composite" />
-          <ScoreBar value={sc.technical.score} label={`Technical (${Math.round(sc.technical_weight * 100)}%)`} />
-          <ScoreBar value={sc.fundamental.score} label={`Fundamental (${Math.round(sc.fundamental_weight * 100)}%)`} />
-        </div>
-        <div className="grid gap-4 lg:grid-cols-2">
-          <SideBreakdown title="Technical" side={sc.technical} weight={sc.technical_weight} />
-          <SideBreakdown title="Fundamental" side={sc.fundamental} weight={sc.fundamental_weight} />
-        </div>
-        <details className="mt-3 text-sm">
-          <summary className="cursor-pointer text-slate-600 dark:text-slate-400">All {s.readings.length} readings and their points</summary>
-          <ReasonList items={s.readings.filter((r) => r.points !== 0)} empty="None scored" />
-          {s.readings.some((r) => r.points === 0) && (
-            <p className="mt-2 text-xs text-slate-500">
-              Not scored (neutral or for information): {s.readings.filter((r) => r.points === 0).map((r) => r.text).join("; ")}
-            </p>
-          )}
-        </details>
+        <ScoreBreakdown s={s} />
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
