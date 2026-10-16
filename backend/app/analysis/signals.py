@@ -15,8 +15,9 @@ With no composite score and no rule-1/2 trigger the result is "Insufficient data
 never guesses.
 """
 
+import threading
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Literal
 
 import numpy as np
@@ -37,6 +38,7 @@ from app.analysis.positions import (
 )
 from app.analysis.scoring import Composite, Reading, composite, top_reasons
 from app.analysis.technical import INTRADAY, Interval, TechnicalReport, analyse
+from app.core.db import write_version
 from app.core.formatting import format_inr, now_ist
 from app.core.profiles import Profiles, RiskKey, StyleKey, get_profiles
 from app.data.provider import CachedProvider, DataProvider
@@ -512,11 +514,30 @@ def evaluate_holdings(
     *,
     save: bool = True,
 ) -> tuple[Portfolio, list[StockSignal]]:
-    """Signals for every current holding from cached data; saved to the history by default."""
+    """Signals for every current holding from cached data; saved to the history by default.
+
+    The result is shared (see `_shared_holdings`): treat it as read-only."""
+    pf, out = _shared_holdings(session, provider, style, risk, custom_technical_weight)
+    if save:
+        from app.analysis.checks import record_shape  # checks builds on this module
+
+        for s in out:
+            record(session, s)
+            record_shape(session, s, provider.daily(s.ticker).frame)
+        session.commit()
+    return pf, out
+
+
+def _analyse_holdings(
+    session: Session,
+    provider: DataProvider,
+    style: StyleKey | None,
+    risk: RiskKey,
+    custom_technical_weight: float,
+) -> tuple[Portfolio, list[StockSignal]]:
     pf = load_portfolio(session, provider, get_profiles().rebalance)
-    out = []
-    for ticker, pos in pf.positions.items():
-        s = analyse_stock(
+    out = [
+        analyse_stock(
             session,
             provider,
             ticker,
@@ -527,15 +548,49 @@ def evaluate_holdings(
             label=pos.label,
             fetch=False,
         )
-        if save:
-            record(session, s)
-            from app.analysis.checks import record_shape  # checks builds on this module
-
-            record_shape(session, s, provider.daily(ticker).frame)
-        out.append(s)
-    if save:
-        session.commit()
+        for ticker, pos in pf.positions.items()
+    ]
     return pf, out
+
+
+# The Overview asks for signals, checks and actions at once, and each needs every holding
+# analysed (about 12 s for 170 stocks). One analysis per style and risk is shared: requests
+# that arrive while it runs wait for it, and later ones reuse it until any analysis input is
+# written (imports, refreshes, settings) or HOLDINGS_MAX_AGE passes (freshness labels depend
+# on the time of day).
+HOLDINGS_MAX_AGE = timedelta(minutes=5)
+_holdings_lock = threading.Lock()
+_holdings_key_locks: dict[tuple[object, ...], threading.Lock] = {}
+_holdings_cache: dict[tuple[object, ...], tuple[int, datetime, Portfolio, list[StockSignal]]] = {}
+
+
+def _shared_holdings(
+    session: Session,
+    provider: DataProvider,
+    style: StyleKey | None,
+    risk: RiskKey,
+    custom_technical_weight: float,
+) -> tuple[Portfolio, list[StockSignal]]:
+    if type(provider) is not CachedProvider:  # test doubles and other sources: no sharing
+        return _analyse_holdings(session, provider, style, risk, custom_technical_weight)
+    key = (id(session.get_bind()), id(get_profiles()), style, risk, custom_technical_weight)
+    with _holdings_lock:
+        key_lock = _holdings_key_locks.setdefault(key, threading.Lock())
+    with key_lock:
+        hit = _holdings_cache.get(key)
+        if hit and hit[0] == write_version() and now_ist() - hit[1] < HOLDINGS_MAX_AGE:
+            return hit[2], hit[3]
+        version, started = write_version(), now_ist()
+        pf, out = _analyse_holdings(session, provider, style, risk, custom_technical_weight)
+        # Stamped with the version from before the run: a write during it makes this stale.
+        _holdings_cache[key] = (version, started, pf, out)
+        return pf, out
+
+
+def forget_shared_holdings() -> None:
+    """Drop the shared analysis (tests, or after changing data outside this process)."""
+    with _holdings_lock:
+        _holdings_cache.clear()
 
 
 def record_holdings_step(session: Session) -> RefreshResult:

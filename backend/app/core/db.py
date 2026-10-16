@@ -1,3 +1,5 @@
+import re
+import threading
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -19,7 +21,32 @@ def get_engine() -> Engine:
         _engine = create_engine(url, connect_args={"check_same_thread": False, "timeout": 30})
         if url.startswith("sqlite"):
             event.listen(_engine, "connect", _sqlite_pragmas)
+        event.listen(_engine, "after_cursor_execute", _count_write)
     return _engine
+
+
+# --------------------------------------------------------------------------- write version
+
+# Tables the analysis writes as a by-product (history, job progress, sync logs): writing them
+# doesn't change any analysis input, so it doesn't count as a data change.
+_LOG_TABLES = frozenset({"signalrecord", "axisrecord", "job", "sheetsync", "screenerscan"})
+_WRITE = re.compile(r'^\s*(?:INSERT(?:\s+OR\s+\w+)?\s+INTO|UPDATE|DELETE\s+FROM)\s+"?(\w+)', re.I)
+_version = 0
+_version_lock = threading.Lock()
+
+
+def _count_write(_conn: Any, _cur: Any, statement: str, *_: Any) -> None:
+    m = _WRITE.match(statement)
+    if m and m.group(1).lower() not in _LOG_TABLES:
+        global _version
+        with _version_lock:
+            _version += 1
+
+
+def write_version() -> int:
+    """Goes up on every write to an analysis input in this process (imports, refreshes,
+    settings, overrides). Cached results built at an older version are out of date."""
+    return _version
 
 
 def _sqlite_pragmas(dbapi_conn: Any, _: Any) -> None:

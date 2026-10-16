@@ -1,5 +1,9 @@
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
+
+from tests.conftest import _isolate, _teardown
 
 
 def test_health(client: TestClient) -> None:
@@ -44,17 +48,26 @@ def test_timestamps_returned_in_ist(client: TestClient) -> None:
     assert client.get("/settings/profile").json()["updated_at"].endswith("+05:30")
 
 
-def test_unexpected_errors_answer_in_plain_words(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_unexpected_errors_answer_in_plain_words(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     from app.api import system
     from app.main import create_app
+
+    # A throwaway database, like the client fixture: starting the app otherwise opened the real
+    # one and ran the start-up price refresh against it.
+    _isolate(tmp_path, monkeypatch)
 
     def boom() -> None:
         raise RuntimeError("disk on fire")
 
     monkeypatch.setattr(system, "get_profiles", boom)
     app = create_app()
-    with TestClient(app, raise_server_exceptions=False) as c:
-        r = c.get("/meta")
+    try:
+        with TestClient(app, raise_server_exceptions=False) as c:
+            r = c.get("/meta")
+    finally:
+        _teardown()
     assert r.status_code == 500
     detail = r.json()["detail"]
     assert "RuntimeError: disk on fire" in detail and "backend log" in detail
