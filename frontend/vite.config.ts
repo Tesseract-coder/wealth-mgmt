@@ -1,12 +1,17 @@
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+import { readFileSync } from "node:fs";
 import { defineConfig } from "vitest/config";
 
 // The browser calls /api/*; Vite forwards it to FastAPI with the /api prefix stripped.
 const backend = process.env.VITE_BACKEND_URL ?? "http://localhost:8000";
 
+const { version } = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")) as { version: string };
+
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  // The app version, for the feedback link.
+  define: { __APP_VERSION__: JSON.stringify(version) },
   build: {
     rollupOptions: {
       output: {

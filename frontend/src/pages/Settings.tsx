@@ -3,8 +3,9 @@ import { useEffect, useMemo, useState } from "react";
 import { api, dashboardApi, EXPORTS, REPORT_URL, sheetsApi, type Threshold, type Thresholds } from "../api/client";
 import { GoogleSheetsSettings, SheetsExportButton } from "../components/GoogleSheets";
 import { MarketData } from "../components/MarketData";
-import { Download, FileText } from "lucide-react";
+import { Download, FileText, MessageSquare } from "lucide-react";
 import { Alert, Button, buttonClass, Card, ErrorState, inputClass, PageHeader, Skeleton, SkeletonCard, Stat } from "../components/ui";
+import { feedbackUrl } from "../lib/feedback";
 import { ProfileForm } from "./Onboarding";
 
 const TABS = [
@@ -124,10 +125,18 @@ function SystemCard() {
           ["Database", h?.database],
           ["Config version", h ? String(h.config_version) : undefined],
           ["Server time", h?.server_time_ist],
+          ["App version", __APP_VERSION__],
         ].map(([k, v]) => (
           <Stat key={k} label={k!} value={v ?? <Skeleton className="h-5 w-20" />} />
         ))}
       </dl>
+      <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-4 text-sm text-fg-muted">
+        <a href={feedbackUrl("/settings")} target="_blank" rel="noreferrer" className={LINK_BTN}>
+          <MessageSquare aria-hidden className="size-4" />
+          Send feedback<span className="sr-only"> (opens a new GitHub issue in a new tab)</span>
+        </a>
+        <span>Opens a GitHub issue with the app version filled in. Describe the problem; don't paste your holdings or values.</span>
+      </div>
     </Card>
   );
 }

@@ -19,6 +19,7 @@ PAGES=(
   "fund-detail|/mutual-funds/122639"
   "screener|/screener"
   "watchlist|/watchlist"
+  "compare|/compare?t=RELIANCE.NS,TCS.NS,INFY.NS"
   "import|/import"
   "settings|/settings"
   "onboarding|/onboarding"
