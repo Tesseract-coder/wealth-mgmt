@@ -7,6 +7,7 @@ from typing import Any, Literal
 
 import pandas as pd
 from sqlalchemy import delete, func
+from sqlalchemy import select as sa_select
 from sqlalchemy.dialects.sqlite import insert
 from sqlmodel import Session, SQLModel, col, select
 
@@ -59,14 +60,17 @@ def upsert_daily(session: Session, ticker: str, df: pd.DataFrame) -> None:
 
 
 def read_daily(session: Session, ticker: str, start: date | None = None) -> pd.DataFrame:
-    q = select(DailyBar).where(DailyBar.ticker == ticker)
-    if start:
-        q = q.where(DailyBar.date >= start)
-    bars = session.exec(q.order_by(col(DailyBar.date))).all()
     cols = ["open", "high", "low", "close", "adj_close", "volume"]
+    # Plain column tuples, not ORM objects: building one object per bar was most of the cost.
+    q = sa_select(col(DailyBar.date), *(col(getattr(DailyBar, c)) for c in cols)).where(
+        col(DailyBar.ticker) == ticker
+    )
+    if start:
+        q = q.where(col(DailyBar.date) >= start)
+    rows = session.execute(q.order_by(col(DailyBar.date))).all()
     return pd.DataFrame(
-        [[getattr(b, c) for c in cols] for b in bars],
-        index=pd.Index([b.date for b in bars], name="date"),
+        [r[1:] for r in rows],
+        index=pd.Index([r[0] for r in rows], name="date"),
         columns=cols,
         dtype="float64",
     )

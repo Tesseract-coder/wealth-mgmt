@@ -1024,10 +1024,16 @@ def screener_for(
 def store_metrics(
     session: Session, ticker: str, sector_key: str | None, m: dict[str, Metric]
 ) -> None:
-    row = session.get(FundamentalMetrics, ticker) or FundamentalMetrics(ticker=ticker)
+    metrics_json = json.dumps({k: x.value for k, x in m.items() if k in PEER_METRICS})
+    row = session.get(FundamentalMetrics, ticker)
+    if row is not None and row.sector_key == sector_key and row.metrics_json == metrics_json:
+        # Unchanged: skip the write. Every read-only request used to rewrite this row for every
+        # holding, and those writes queued behind each other on SQLite's single write lock.
+        return
+    row = row or FundamentalMetrics(ticker=ticker)
     row.sector_key = sector_key
     row.computed_at = utcnow()
-    row.metrics_json = json.dumps({k: x.value for k, x in m.items() if k in PEER_METRICS})
+    row.metrics_json = metrics_json
     session.add(row)
 
 

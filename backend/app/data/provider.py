@@ -60,9 +60,22 @@ class CachedProvider:
 
     def __init__(self, session: Session) -> None:
         self.session = session
+        # Daily bars already read through this provider (one per request or job step). Analysing
+        # one stock reads its history about five times and the Nifty 50's twice; across every
+        # holding that was hundreds of identical reads. Cleared when a refresh may change them.
+        self._daily: dict[tuple[str, DailyInterval, date | None], Bars] = {}
 
     def daily(self, ticker: str, interval: DailyInterval = "1d", start: date | None = None) -> Bars:
-        return prices.get_daily(self.session, ticker, interval, start)
+        key = (ticker, interval, start)
+        bars = self._daily.pop(key, None) or prices.get_daily(self.session, ticker, interval, start)
+        self._daily[key] = bars  # most recently used last
+        if len(self._daily) > 32:  # a screener scan walks hundreds of stocks: keep only recent ones
+            del self._daily[next(iter(self._daily))]
+        return bars
+
+    def _forget_daily(self, ticker: str) -> None:
+        for key in [k for k in self._daily if k[0] == ticker]:
+            del self._daily[key]
 
     def intraday(self, ticker: str, interval: IntradayInterval) -> Bars:
         return prices.get_intraday(self.session, ticker, interval)
@@ -71,6 +84,7 @@ class CachedProvider:
         self, ticker: str, label: str | None = None, force: bool = False
     ) -> RefreshResult:
         """Fetch only when nothing is cached or the cache is stale (or force)."""
+        self._forget_daily(ticker)
         return prices.refresh_daily(self.session, ticker, label, force=force)
 
     def ensure_intraday(
