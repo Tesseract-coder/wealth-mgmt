@@ -53,12 +53,15 @@ function toggle<T>(set: Set<T>, v: T): Set<T> {
 export function HoldingsView({
   d,
   shapes = [],
+  shapesLoading = false,
   linkQuery = "",
   layout,
   onLayout,
 }: {
   d: HoldingSignals;
   shapes?: HoldingShape[];
+  /** The shapes are still being worked out: show placeholders, not "No shape yet". */
+  shapesLoading?: boolean;
   linkQuery?: string;
   layout: HoldingsLayout;
   onLayout: (l: HoldingsLayout) => void;
@@ -122,11 +125,12 @@ export function HoldingsView({
           <button
             type="button"
             onClick={() => setSort((s) => ({ ...s, dir: s.dir === 1 ? -1 : 1 }))}
-            aria-label={sort.dir === 1 ? "Ascending: switch to descending" : "Descending: switch to ascending"}
             className="inline-flex h-[34px] items-center gap-1 rounded-control border border-border-strong bg-surface px-2.5 text-xs text-fg-muted hover:text-fg"
           >
             {sort.dir === 1 ? <ArrowUpNarrowWide aria-hidden className="size-4" /> : <ArrowDownWideNarrow aria-hidden className="size-4" />}
             {sort.dir === 1 ? "Low → high" : "High → low"}
+            {/* The name starts with the visible words, so voice control ("click Low to high") works. */}
+            <span className="sr-only">{sort.dir === 1 ? ", ascending: press for high to low" : ", descending: press for low to high"}</span>
           </button>
           <div className="ml-auto">
             <Segmented
@@ -188,16 +192,19 @@ export function HoldingsView({
       {rows.length === 0 ? (
         <EmptyState title="No holdings match">Clear a filter or change the search.</EmptyState>
       ) : layout === "cards" ? (
-        <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,19rem),1fr))] gap-4">
-          {rows.map((h) => (
-            <li key={h.ticker}>
-              <HoldingCard h={h} shape={byTicker.get(h.ticker)} linkQuery={linkQuery} />
-            </li>
-          ))}
-        </ul>
+        <>
+          <h2 className="sr-only">Your holdings</h2>
+          <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,19rem),1fr))] gap-4">
+            {rows.map((h) => (
+              <li key={h.ticker}>
+                <HoldingCard h={h} shape={byTicker.get(h.ticker)} shapeLoading={shapesLoading} linkQuery={linkQuery} />
+              </li>
+            ))}
+          </ul>
+        </>
       ) : (
         <div className="rounded-card border border-border bg-surface p-4 shadow-card">
-          <HoldingsTable rows={rows} shapes={byTicker} sort={sort} onSort={onSort} linkQuery={linkQuery} />
+          <HoldingsTable rows={rows} shapes={byTicker} shapesLoading={shapesLoading} sort={sort} onSort={onSort} linkQuery={linkQuery} />
           <p className="mt-2 text-xs text-fg-subtle">Uses cached data only; run Refresh now in Settings → Data refresh first. Click a row for the full story.</p>
         </div>
       )}

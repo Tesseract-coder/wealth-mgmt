@@ -10,7 +10,7 @@ export function MutualFunds() {
     <div className="space-y-4">
       {code ? (
         <>
-          <Link to="/mutual-funds" className="inline-flex items-center gap-1 text-sm text-fg-muted hover:text-fg">
+          <Link to="/mutual-funds" className="inline-flex min-h-6 items-center gap-1 py-1 text-sm text-fg-muted hover:text-fg">
             <ArrowLeft aria-hidden className="size-4" /> All funds
           </Link>
           <FundReportView code={code} />

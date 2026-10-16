@@ -15,7 +15,7 @@ import { FundPortfolioImport } from "../components/FundPortfolioImport";
 import { SheetImport } from "../components/GoogleSheets";
 import { ScreenerImport } from "../components/ScreenerImport";
 import { FileDrop, ImportSteps, type ImportStage } from "../components/FileDrop";
-import { Alert, Button, Card, EmptyState, ErrorState, inputClass, PageHeader } from "../components/ui";
+import { Alert, Button, Card, EmptyState, ErrorState, inputClass, PageHeader, SkeletonCard } from "../components/ui";
 import { UnresolvedFixer } from "../components/UnresolvedFixer";
 import { formatINR } from "../lib/format";
 
@@ -79,7 +79,9 @@ export function Import() {
       {holdings.isError && <ErrorState title="Couldn't load your holdings" detail={holdings.error.message} onRetry={() => void holdings.refetch()} />}
       {holdings.data && <UnresolvedFixer stocks={holdings.data.stocks} funds={holdings.data.mf} />}
       {holdings.data && <LatestHoldings stocks={holdings.data.stocks} funds={holdings.data.mf} />}
-      <SnapshotHistory />
+      {holdings.isPending && <SkeletonCard label="your imported holdings" lines={6} />}
+      {/* After the holdings, so it isn't drawn first and then pushed down the page. */}
+      {!holdings.isPending && <SnapshotHistory />}
     </div>
   );
 }

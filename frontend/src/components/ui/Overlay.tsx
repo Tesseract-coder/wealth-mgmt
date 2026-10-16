@@ -30,7 +30,7 @@ export function Tooltip({ content, children, side = "top" }: { content: ReactNod
 export function InfoTip({ label, children }: { label: string; children: ReactNode }) {
   return (
     <Tooltip content={children}>
-      <button type="button" aria-label={`About ${label}`} className="inline-grid size-4 place-items-center rounded-full text-fg-subtle hover:text-fg">
+      <button type="button" aria-label={`About ${label}`} className="relative inline-grid size-4 place-items-center rounded-full text-fg-subtle after:absolute after:-inset-1 hover:text-fg">
         <Info aria-hidden className="size-3.5" />
       </button>
     </Tooltip>
@@ -91,14 +91,14 @@ export function Segmented<T extends string>({
       aria-label={label}
       value={value}
       onValueChange={(v) => v && onChange(v as T)}
-      className="inline-flex rounded-control border border-border bg-surface-2 p-0.5"
+      className="inline-flex max-w-full flex-wrap rounded-control border border-border bg-surface-2 p-0.5"
     >
       {options.map((o) => (
         <RToggle.Item
           key={o.value}
           value={o.value}
           aria-label={o.hideLabel ? o.label : undefined}
-          className="inline-flex h-7 items-center gap-1.5 rounded-[calc(var(--radius-control)-2px)] px-2.5 text-xs font-medium text-fg-muted hover:text-fg data-[state=on]:bg-surface data-[state=on]:text-fg data-[state=on]:shadow-card"
+          className="inline-flex h-7 items-center gap-1.5 whitespace-nowrap rounded-[calc(var(--radius-control)-2px)] px-2.5 text-xs font-medium text-fg-muted hover:text-fg data-[state=on]:bg-surface data-[state=on]:text-fg data-[state=on]:shadow-card"
         >
           {o.icon && <o.icon aria-hidden className="size-3.5" />}
           {!o.hideLabel && o.label}

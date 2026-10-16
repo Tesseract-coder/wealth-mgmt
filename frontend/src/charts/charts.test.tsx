@@ -6,6 +6,7 @@ import type { Bar, FundChart, IndicatorSeries, PriceLevels } from "../api/client
 import { FundChartsBody } from "./FundCharts";
 import { topSlices } from "./PortfolioCharts";
 import { buildChartData, movingAverages, nearestLevels, rsiColumn, startFor } from "./priceData";
+import { thinIndices } from "./thin";
 
 // lightweight-charts draws on canvas, which jsdom lacks: record what the chart is asked to draw.
 const calls = vi.hoisted(() => ({ series: [] as { type: string; pane: number | undefined; options: Record<string, unknown> }[], priceLines: [] as { title: string; price: number }[], removed: 0 }));
@@ -179,5 +180,36 @@ describe("Fund charts", () => {
   it("says why there's no chart", () => {
     render(<FundChartsBody c={{ ...c, fund: [], dates: [], bench: [], rolling: [], notes: ["No NAV history downloaded yet"] }} />);
     expect(screen.getByText(/No NAV history downloaded yet/)).toBeInTheDocument();
+  });
+});
+
+describe("Charts load on first use", () => {
+  it("shows a loading placeholder, then the chart", async () => {
+    const { SectorBars } = await import("./lazy");
+    render(<SectorBars items={[{ key: "IT", label: "IT", value: 100, weight: 0.5 }]} limit={0.4} />);
+    expect(screen.getByRole("status")).toHaveTextContent("Loading the chart…");
+    expect(await screen.findByText(/Above limit: IT 50%/, {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+});
+
+describe("thinIndices", () => {
+  it("keeps short lines whole", () => {
+    expect(thinIndices(5, [[1, 2, 3, 4, 5]], 10)).toEqual([0, 1, 2, 3, 4]);
+  });
+
+  it("draws at most about max points, always with the ends and each line's high and low", () => {
+    const n = 1230;
+    const a = Array.from({ length: n }, (_, i) => Math.sin(i / 50));
+    a[617] = -9; // the deepest fall, between the evenly spread points
+    const b: (number | null)[] = Array.from({ length: n }, (_, i) => (i % 2 ? null : i));
+    b[1001] = 5000; // the peak, on an odd index that a plain stride would skip
+    const idx = thinIndices(n, [a, b], 300);
+    expect(idx.length).toBeLessThanOrEqual(300 + 4);
+    expect(idx[0]).toBe(0);
+    expect(idx.at(-1)).toBe(n - 1);
+    expect(idx).toContain(617);
+    expect(idx).toContain(1001);
+    expect([...idx].sort((x, y) => x - y)).toEqual(idx);
   });
 });

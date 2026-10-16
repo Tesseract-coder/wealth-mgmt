@@ -94,6 +94,30 @@ body {
   outline-offset: 2px;
 }
 
+/* Native checkboxes: a bigger tap target and the theme's accent. In the base layer so
+   utilities (e.g. sr-only on the card choices) still win. */
+@layer base {
+  input[type="checkbox"] {
+    width: 1rem;
+    height: 1rem;
+    accent-color: var(--accent);
+  }
+
+  /* A grid with no grid-cols-* is one column, and that column may shrink below its content.
+     Otherwise a chart or a toggle row widens the column past a phone's screen.
+     Any grid-cols-* utility (including lg:/md: ones) still overrides this. */
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Scrollers contain their absolutely positioned children (e.g. sr-only labels in table
+     cells); otherwise those are placed against the page and widen it on a phone. */
+  .overflow-x-auto,
+  .overflow-auto {
+    position: relative;
+  }
+}
+
 @keyframes shimmer {
   from {
     background-position: 100% 0;

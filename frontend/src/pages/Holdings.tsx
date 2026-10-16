@@ -30,7 +30,7 @@ function HoldingsData({ style, risk, layout, onLayout }: { style: StyleKey | nul
         </div>
       </Loading>
     );
-  return <HoldingsView d={q.data} shapes={shapes.data?.holdings} linkQuery={analysisQuery(style)} layout={layout} onLayout={onLayout} />;
+  return <HoldingsView d={q.data} shapes={shapes.data?.holdings} shapesLoading={shapes.isLoading} linkQuery={analysisQuery(style)} layout={layout} onLayout={onLayout} />;
 }
 
 /** Every stock holding with its signal, Score Shape, scores, weight and suggested action. */

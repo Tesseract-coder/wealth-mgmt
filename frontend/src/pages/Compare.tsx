@@ -1,5 +1,5 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
-import { Plus, X } from "lucide-react";
+import { LoaderCircle, Plus, X } from "lucide-react";
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api, checksApi, portfolioApi, summaryApi, type StockChecks } from "../api/client";
@@ -201,6 +201,12 @@ export function Compare() {
         </Loading>
       ) : loaded.length >= 2 ? (
         <>
+          {loading && (
+            <p role="status" className="flex items-center gap-2 text-sm text-fg-muted">
+              <LoaderCircle aria-hidden className="size-4 animate-spin" />
+              Still loading {tickers.filter((_, i) => results[i]?.isLoading).join(", ")}: it's added below when ready (the first look downloads its data).
+            </p>
+          )}
           <Card title="Score Shapes">
             <ShapeOverlay series={loaded.map((s) => ({ name: s.label, axes: axesFromSections(s.sections), total: s.total, maxTotal: s.max_total }))} />
             <p className="mt-3 text-center text-sm text-fg-muted">

@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { summaryApi, type HoldingsChecks, type PortfolioSummary } from "../api/client";
-import { AllocationDonut, ComparisonLine, SectorBars } from "../charts/PortfolioCharts";
+import { AllocationDonut, ComparisonLine, SectorBars } from "../charts/lazy";
 import { formatDate, formatINR, formatINRCompact, formatPct } from "../lib/format";
 import { axesFromPortfolio, ChartCaption, ScoreShape } from "./analysis";
 import { Alert, Card, Delta, Disclosure, EmptyState, ErrorState, Loading, Segmented, Skeleton, SkeletonText, Stat } from "./ui";
@@ -132,7 +132,7 @@ export function PortfolioCharts({ s, sectorLimit }: { s: PortfolioSummary; secto
   const last = s.performance_portfolio.length - 1;
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card title="Allocation" actions={<Segmented label="Allocation by" value={dim} onChange={setDim} options={DIMENSIONS.map((d) => ({ value: d.value, label: d.label }))} />}>
           <AllocationDonut items={s[dim]} title={`By ${label.toLowerCase()}`} />
           <p className="mt-2 text-sm text-fg-muted">{allocationCaption(s, dim, sectorLimit ?? null)}</p>
@@ -155,7 +155,7 @@ export function PortfolioCharts({ s, sectorLimit }: { s: PortfolioSummary; secto
         </Card>
       </div>
       <Disclosure summary="Sector limits, beta and correlation">
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <SectorBars items={s.by_sector} limit={sectorLimit ?? null} />
           <div className="space-y-4 text-sm">
             <p className="text-fg">

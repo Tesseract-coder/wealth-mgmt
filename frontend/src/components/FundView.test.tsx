@@ -159,13 +159,13 @@ describe("Portfolio summary", () => {
     disclaimer: "x",
   };
 
-  it("shows KPIs, warnings, allocation, beta and performance vs Nifty", () => {
+  it("shows KPIs, warnings, allocation, beta and performance vs Nifty", async () => {
     wrap(<PortfolioSummaryBody s={s} />);
     expect(screen.getByText("₹6,11,682")).toBeInTheDocument();
     expect(screen.getByText("+1.3%")).toBeInTheDocument(); // day change, 1 decimal like every percentage
     expect(screen.getAllByText(/needs purchase dates/).length).toBeGreaterThan(0);
     expect(screen.getByText(/above your 30% sector limit/)).toBeInTheDocument();
-    expect(screen.getByText("Financial Services")).toBeInTheDocument(); // allocation opens on sectors
+    expect(await screen.findByText("Financial Services", {}, { timeout: 5000 })).toBeInTheDocument(); // allocation opens on sectors (the chart loads on first use)
     fireEvent.click(screen.getByRole("radio", { name: "Holding" }));
     expect(screen.getByText("State Bank of India")).toBeInTheDocument();
     expect(screen.getByText(/Portfolio beta 0.92/)).toBeInTheDocument();

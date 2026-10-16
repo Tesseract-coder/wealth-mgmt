@@ -4,7 +4,7 @@ import { chartApi, type FundChart } from "../api/client";
 import { ChartCaption } from "../components/analysis";
 import { Card, ErrorState, Loading, Segmented, Skeleton } from "../components/ui";
 import { formatDate, formatPct } from "../lib/format";
-import { ComparisonLine } from "./PortfolioCharts";
+import { ComparisonLine } from "./lazy";
 
 const YEARS = ["1", "3", "5", "10"] as const;
 

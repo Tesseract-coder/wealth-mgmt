@@ -16,7 +16,7 @@ import {
   type StockSignal,
   type StyleKey,
 } from "../../api/client";
-import { PriceChart } from "../../charts/PriceChart";
+import { PriceChart } from "../../charts/lazy";
 import { startFor } from "../../charts/priceData";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { formatDate, formatINR } from "../../lib/format";

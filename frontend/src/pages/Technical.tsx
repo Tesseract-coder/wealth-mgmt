@@ -16,7 +16,7 @@ import { FreshnessBadge } from "../components/MarketData";
 import { FundamentalHoldings } from "../components/FundamentalView";
 import { HoldingSignalsView } from "../components/SignalView";
 import { StockStory } from "../components/stock/StockStory";
-import { PriceChart } from "../charts/PriceChart";
+import { PriceChart } from "../charts/lazy";
 import { Alert, Card, ErrorState, inputClass, SkeletonCard } from "../components/ui";
 import { useDebounced } from "../hooks/useDebounced";
 import { formatDate, formatINR } from "../lib/format";
@@ -104,7 +104,7 @@ export function Technical() {
     return (
       <div className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <Link to={`/analysis${analysisQuery(style)}`} className="inline-flex items-center gap-1 text-sm text-fg-muted hover:text-fg">
+          <Link to={`/analysis${analysisQuery(style)}`} className="inline-flex min-h-6 items-center gap-1 py-1 text-sm text-fg-muted hover:text-fg">
             <ArrowLeft aria-hidden className="size-4" /> All holdings
           </Link>
           <div className="flex flex-wrap items-end gap-3">

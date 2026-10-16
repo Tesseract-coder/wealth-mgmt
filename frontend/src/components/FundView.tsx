@@ -150,6 +150,7 @@ export function FundHoldingsBody({ d, checks = [] }: { d: MFHoldingsAnalysis; ch
           ]}
         />
       </div>
+      <h2 className="sr-only">Your funds</h2>
       {layout === "cards" ? (
         <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,19rem),1fr))] gap-4">
           {funds.map((f) => (
@@ -329,7 +330,9 @@ function OverlapMatrix({ d }: { d: MFHoldingsAnalysis }) {
 function RiskRow({ label, r }: { label: string; r: RiskStats | null }) {
   return (
     <tr className="border-b border-border">
-      <td className="py-1.5 pr-2 text-fg">{label}</td>
+      <th scope="row" className="py-1.5 pr-2 text-left font-normal text-fg">
+        {label}
+      </th>
       <td className="pr-2 text-right">{r ? `${r.volatility.toFixed(1)}%` : "—"}</td>
       <td className="pr-2 text-right">{r?.sharpe?.toFixed(2) ?? "—"}</td>
       <td className="pr-2 text-right">{r?.sortino?.toFixed(2) ?? "—"}</td>
@@ -532,12 +535,16 @@ export function FundReportBody({ f, charts, checks, checksLoading = false }: { f
           <table className="w-full text-sm">
             <thead className="text-left text-xs text-fg-muted">
               <tr className="border-b border-border">
-                <th className="py-1.5" />
+                <th className="py-1.5">
+                  <span className="sr-only">Series</span>
+                </th>
                 <th className="text-right font-medium">Volatility</th>
                 <th className="text-right font-medium">Sharpe</th>
                 <th className="text-right font-medium">Sortino</th>
                 <th className="text-right font-medium">Max fall</th>
-                <th />
+                <th>
+                  <span className="sr-only">Max fall period</span>
+                </th>
               </tr>
             </thead>
             <tbody>

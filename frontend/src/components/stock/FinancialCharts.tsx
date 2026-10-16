@@ -71,7 +71,7 @@ export function RevenueProfitChart({ years, unit }: { years: Years; unit: string
   const f = cr(unit);
   return (
     <Frame table={<SrTable caption={`Revenue and net profit (${unit})`} head={["Year", "Revenue", "Net profit"]} rows={data.map((d) => [d.fy, f(d.Revenue), f(d["Net profit"])])} />}>
-      <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+      <BarChart accessibilityLayer={false} data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
         {a.grid}
         <XAxis dataKey="fy" tick={a.tick} stroke={p.grid} />
         <YAxis tick={a.tick} tickFormatter={short} width={44} stroke={p.grid} />
@@ -94,7 +94,7 @@ export function QuarterChart({ quarters, unit }: { quarters: Quarters; unit: str
   const f = cr(unit);
   return (
     <Frame height={200} table={<SrTable caption={`Quarterly revenue and net profit (${unit})`} head={["Quarter", "Revenue", "Net profit"]} rows={data.map((d) => [d.q, f(d.Revenue), f(d["Net profit"])])} />}>
-      <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+      <BarChart accessibilityLayer={false} data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
         {a.grid}
         <XAxis dataKey="q" tick={a.tick} stroke={p.grid} />
         <YAxis tick={a.tick} tickFormatter={short} width={44} stroke={p.grid} />
@@ -115,7 +115,7 @@ export function MarginRoeChart({ years }: { years: Years }) {
   const keys = (["Operating margin", "Net margin", "ROE"] as const).filter((k) => data.some((d) => d[k] !== null));
   return (
     <Frame table={<SrTable caption="Margins and ROE (%)" head={["Year", ...keys]} rows={data.map((d) => [d.fy, ...keys.map((k) => pctFmt(d[k]))])} />}>
-      <LineChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+      <LineChart accessibilityLayer={false} data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
         {a.grid}
         <XAxis dataKey="fy" tick={a.tick} stroke={p.grid} />
         <YAxis tick={a.tick} unit="%" width={44} stroke={p.grid} />
@@ -137,7 +137,7 @@ export function BalanceChart({ years, unit }: { years: Years; unit: string }) {
   const f = cr(unit);
   return (
     <Frame table={<SrTable caption={`Debt, equity and cash (${unit})`} head={["Year", "Debt", "Equity", "Cash"]} rows={data.map((d) => [d.fy, f(d.Debt), f(d.Equity), f(d.Cash)])} />}>
-      <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+      <BarChart accessibilityLayer={false} data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
         {a.grid}
         <XAxis dataKey="fy" tick={a.tick} stroke={p.grid} />
         <YAxis tick={a.tick} tickFormatter={short} width={44} stroke={p.grid} />
@@ -161,7 +161,7 @@ export function DividendChart({ years, unit }: { years: Years; unit: string }) {
     <Frame
       table={<SrTable caption={`Dividends paid (${unit}) and payout ratio`} head={["Year", "Dividends paid", "Payout"]} rows={data.map((d) => [d.fy, f(d["Dividends paid"]), pctFmt(d["Payout (% of profit)"])])} />}
     >
-      <ComposedChart data={data} margin={{ top: 8, right: 0, left: 0, bottom: 0 }}>
+      <ComposedChart accessibilityLayer={false} data={data} margin={{ top: 8, right: 0, left: 0, bottom: 0 }}>
         {a.grid}
         <XAxis dataKey="fy" tick={a.tick} stroke={p.grid} />
         <YAxis yAxisId="amt" tick={a.tick} tickFormatter={short} width={44} stroke={p.grid} />

@@ -1,20 +1,32 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, type ComponentType } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Layout } from "./components/Layout";
-import { Compare } from "./pages/Compare";
-import { Holdings } from "./pages/Holdings";
-import { Import } from "./pages/Import";
-import { MutualFunds } from "./pages/MutualFunds";
 import { NotFound } from "./pages/NotFound";
-import { Onboarding } from "./pages/Onboarding";
 import { Overview } from "./pages/Overview";
-import { Screener } from "./pages/Screener";
-import { Settings } from "./pages/Settings";
-import { Technical } from "./pages/Technical";
-import { Watchlist } from "./pages/Watchlist";
 import { SkeletonCard } from "./components/ui";
 
-const DevComponents = lazy(() => import("./pages/DevComponents").then((m) => ({ default: m.DevComponents })));
+/** Every page but the Overview loads on first visit, so the app opens with less to download. */
+function page<K extends string>(load: () => Promise<Record<K, ComponentType>>, name: K, label: string) {
+  const Lazy = lazy<ComponentType>(() => load().then((m) => ({ default: m[name] })));
+  return function Page() {
+    return (
+      <Suspense fallback={<SkeletonCard label={label} lines={6} />}>
+        <Lazy />
+      </Suspense>
+    );
+  };
+}
+
+const Onboarding = page(() => import("./pages/Onboarding"), "Onboarding", "setup");
+const Import = page(() => import("./pages/Import"), "Import", "the import page");
+const Holdings = page(() => import("./pages/Holdings"), "Holdings", "your holdings");
+const Technical = page(() => import("./pages/Technical"), "Technical", "the analysis page");
+const MutualFunds = page(() => import("./pages/MutualFunds"), "MutualFunds", "the mutual funds page");
+const Screener = page(() => import("./pages/Screener"), "Screener", "the screener");
+const Watchlist = page(() => import("./pages/Watchlist"), "Watchlist", "your watchlist");
+const Compare = page(() => import("./pages/Compare"), "Compare", "the compare page");
+const Settings = page(() => import("./pages/Settings"), "Settings", "settings");
+const DevComponents = page(() => import("./pages/DevComponents"), "DevComponents", "component preview");
 
 export function App() {
   return (
@@ -33,14 +45,7 @@ export function App() {
         <Route path="watchlist" element={<Watchlist />} />
         <Route path="compare" element={<Compare />} />
         <Route path="settings" element={<Settings />} />
-        <Route
-          path="dev/components"
-          element={
-            <Suspense fallback={<SkeletonCard label="component preview" />}>
-              <DevComponents />
-            </Suspense>
-          }
-        />
+        <Route path="dev/components" element={<DevComponents />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

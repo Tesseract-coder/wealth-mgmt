@@ -326,7 +326,10 @@ export function ScoreShape({
         className={
           size === "lg"
             ? "mt-2 min-h-10 max-w-xs text-center text-xs text-fg-muted"
-            : `pointer-events-none absolute left-1/2 top-full z-10 mt-1 w-56 -translate-x-1/2 rounded-control border border-border bg-surface-3 px-2.5 py-1.5 text-xs text-fg shadow-pop ${current ? "" : "sr-only"}`
+            : current
+              ? "pointer-events-none absolute left-1/2 top-full z-10 mt-1 w-56 max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-control border border-border bg-surface-3 px-2.5 py-1.5 text-xs text-fg shadow-pop"
+              : // Only "sr-only" while hidden: a laid-out w-56 box pokes past a phone's edge.
+                "sr-only"
         }
       >
         {current ? (

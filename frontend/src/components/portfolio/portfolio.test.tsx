@@ -66,7 +66,7 @@ describe("Holdings view", () => {
     wrap(<HoldingsView d={SAMPLE_SIGNALS} shapes={SAMPLE_HOLDINGS.holdings} layout="cards" onLayout={() => undefined} />);
     fireEvent.change(screen.getByLabelText("Sort by"), { target: { value: "axis:past" } });
     expect(["Tata Consultancy Services Ltd", "Infosys Ltd"]).toContain(cardNames()[0]); // both 6/6 on Past Performance
-    fireEvent.click(screen.getByRole("button", { name: /switch to ascending/ }));
+    fireEvent.click(screen.getByRole("button", { name: /press for low to high/ }));
     expect(cardNames()[0]).toBe("HDFC Bank Ltd");
   });
 

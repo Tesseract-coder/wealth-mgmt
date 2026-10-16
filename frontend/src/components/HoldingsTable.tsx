@@ -100,12 +100,14 @@ export function FlagLine({ f }: { f: HoldingSignal["flags"][number] }) {
 export function HoldingsTable({
   rows,
   shapes,
+  shapesLoading = false,
   sort,
   onSort,
   linkQuery = "",
 }: {
   rows: HoldingSignal[];
   shapes: Map<string, HoldingShape>;
+  shapesLoading?: boolean;
   sort: Sort;
   onSort: (k: SortKey) => void;
   linkQuery?: string;
@@ -170,6 +172,8 @@ export function HoldingsTable({
                         <span className="text-fg-subtle">/{s.max_total}</span>
                       </span>
                     </span>
+                  ) : shapesLoading ? (
+                    <span aria-hidden className="skeleton ml-auto block h-8 w-20 rounded-control" />
                   ) : (
                     <span className="block text-right text-fg-subtle">—</span>
                   )}

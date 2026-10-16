@@ -91,7 +91,9 @@ export function Layout() {
           <FreshnessBar />
         </div>
       </header>
-      <main id="main" className="mx-auto w-full min-w-0 max-w-7xl flex-1 px-4 py-6">
+      {/* At least a screen tall, so the footer starts below the fold instead of jumping down
+          as the page's data arrives. */}
+      <main id="main" className="mx-auto min-h-screen w-full min-w-0 max-w-7xl flex-1 px-4 py-6">
         <ErrorBoundary resetKey={pathname}>
           <Outlet />
         </ErrorBoundary>

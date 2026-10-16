@@ -9,7 +9,17 @@ import { Delta } from "../ui";
  * One holding as a card: a Score Shape, the signal, P&L and weight, and two key facts (strongest
  * and weakest section). The whole card links to the stock page.
  */
-export function HoldingCard({ h, shape, linkQuery = "" }: { h: HoldingSignal; shape?: HoldingShape; linkQuery?: string }) {
+export function HoldingCard({
+  h,
+  shape,
+  shapeLoading = false,
+  linkQuery = "",
+}: {
+  h: HoldingSignal;
+  shape?: HoldingShape;
+  shapeLoading?: boolean;
+  linkQuery?: string;
+}) {
   const over = h.weight !== null && h.weight > h.max_weight;
   return (
     <article className="relative flex flex-col gap-3 rounded-card border border-border bg-surface p-4 shadow-card transition-colors hover:border-border-strong">
@@ -29,6 +39,10 @@ export function HoldingCard({ h, shape, linkQuery = "" }: { h: HoldingSignal; sh
           // Above the stretched link so the shape's own hover readout still works.
           <div className="relative z-10 shrink-0">
             <ScoreShape axes={axesFromRecord(shape.axes)} total={shape.total} maxTotal={shape.max_total} step={shape.step} size="md" name={h.label} animate={false} />
+          </div>
+        ) : shapeLoading ? (
+          <div role="status" className="skeleton grid size-[116px] shrink-0 place-items-center rounded-card">
+            <span className="sr-only">Working out the Score Shape…</span>
           </div>
         ) : (
           <div className="grid size-[116px] shrink-0 place-items-center rounded-card bg-surface-2 text-center text-xs text-fg-subtle">No shape yet</div>

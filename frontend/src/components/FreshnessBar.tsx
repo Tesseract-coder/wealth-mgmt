@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { TriangleAlert } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { marketApi, type MarketStatus } from "../api/client";
 import { formatDate, formatFreshness } from "../lib/format";
@@ -21,11 +22,48 @@ export function freshnessText(s: MarketStatus): { prices: string; navs: string |
   };
 }
 
+type Line = ReturnType<typeof freshnessText>;
+const LAST_KEY = "freshness-line";
+
+/** The last line shown, so a reload draws it straight away instead of growing the header later. */
+function lastLine(): Line | null {
+  try {
+    const v = JSON.parse(localStorage.getItem(LAST_KEY) ?? "null") as Line | null;
+    return v && typeof v.prices === "string" ? v : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Shown under the header on every page. */
 export function FreshnessBar() {
   const q = useQuery({ queryKey: ["market-status"], queryFn: marketApi.status, refetchInterval: 5 * 60_000 });
-  if (!q.data) return null;
-  const f = freshnessText(q.data);
+  const [last] = useState(lastLine);
+  const fresh = q.data ? freshnessText(q.data) : null;
+  const saved = fresh && JSON.stringify(fresh);
+  useEffect(() => {
+    if (!saved) return;
+    try {
+      localStorage.setItem(LAST_KEY, saved);
+    } catch {
+      // Private window or storage blocked: the placeholder below still holds the space.
+    }
+  }, [saved]);
+  if (!fresh && !last && !q.isError)
+    // First visit: same shape as the loaded line (it wraps on a phone), so little moves when it arrives.
+    return (
+      <p className="flex flex-wrap gap-x-3 text-xs text-fg-subtle">
+        <span className="sr-only">Checking price dates…</span>
+        <span aria-hidden className="invisible">
+          Prices as of 12 Oct 2026, 3:30 PM IST
+        </span>
+        <span aria-hidden className="invisible">
+          NAVs as of 09 Oct 2026
+        </span>
+        <span>Yahoo Finance prices are delayed, end of day.</span>
+      </p>
+    );
+  const f = fresh ?? (q.isError ? { prices: "Price dates unavailable", navs: null, stale: 0 } : last!);
   return (
     <p className="flex flex-wrap gap-x-3 text-xs text-fg-subtle" aria-live="polite">
       <span>{f.prices}</span>

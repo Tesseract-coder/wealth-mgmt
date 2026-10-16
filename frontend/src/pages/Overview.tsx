@@ -61,7 +61,10 @@ export function Overview() {
                 Change
               </Link>
             </>
-          ) : undefined
+          ) : profile.isError || config.isError ? undefined : (
+            // Holds the line's space (two lines on a phone) until the profile arrives.
+            <span aria-hidden className="skeleton block h-10 w-[36rem] max-w-full rounded-control sm:h-5" />
+          )
         }
         actions={
           <a href={REPORT_URL} target="_blank" rel="noreferrer" className={buttonClass("secondary", "md")}>
@@ -123,7 +126,7 @@ function HoldingsPreview({
           </h2>
           <p className="text-sm text-fg-muted">Your six largest stocks by value.</p>
         </div>
-        <Link to="/holdings" className="inline-flex items-center gap-1 text-sm font-medium text-accent-text hover:underline">
+        <Link to="/holdings" className="inline-flex min-h-6 items-center gap-1 py-1 text-sm font-medium text-accent-text hover:underline">
           View all <ArrowRight aria-hidden className="size-4" />
         </Link>
       </div>

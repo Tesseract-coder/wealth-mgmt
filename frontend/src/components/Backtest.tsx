@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { analysisApi, type Backtest, type BacktestPerformance, type StyleKey } from "../api/client";
-import { ComparisonLine } from "../charts/PortfolioCharts";
+import { ComparisonLine } from "../charts/lazy";
 import { formatDate } from "../lib/format";
 import { SignalPill } from "./SignalView";
 import { Alert, Button, Card } from "./ui";
