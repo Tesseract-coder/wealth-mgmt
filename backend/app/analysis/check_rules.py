@@ -158,8 +158,8 @@ def pe_vs_history(ctx: StockContext, _: Limits) -> Outcome:
 def peg(ctx: StockContext, lim: Limits) -> Outcome:
     v = ctx.v("peg")
     if v is None:
-        return no_data(ctx.why_missing("PEG", "needs P/E and positive 3-year profit growth"))
-    growth = ctx.v("profit_cagr_3y")
+        return no_data(ctx.why_missing("PEG", "needs P/E and positive expected profit growth"))
+    growth = ctx.v("forward_growth")
     return judge(v <= lim.t, v, lim.threshold, growth=pct(growth) if growth else "—")
 
 

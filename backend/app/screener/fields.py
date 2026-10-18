@@ -97,7 +97,7 @@ FIELDS: tuple[Field, ...] = (
     ),
     Field("pb", "P/B", "Fundamental", "x", "Market cap ÷ equity"),
     Field("ev_ebitda", "EV/EBITDA", "Fundamental", "x", "Not used for financials", True),
-    Field("peg", "PEG", "Fundamental", "x", "P/E ÷ profit growth"),
+    Field("peg", "PEG", "Fundamental", "x", "P/E ÷ expected profit growth"),
     Field("dividend_yield", "Dividend yield", "Fundamental", "%", "Trailing"),
     Field("roe", "ROE", "Fundamental", "%", "Return on equity"),
     Field(

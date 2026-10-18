@@ -7,7 +7,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, Path, Query
 from sqlmodel import Session
 
-from app.analysis.fundamental import FundamentalReport, analyse_fundamentals
+from app.analysis.fundamental import FundamentalReport, analyse_fundamentals, forward_growth
 from app.analysis.technical import (
     FrameAnalysis,
     Interval,
@@ -27,6 +27,8 @@ from app.models.schemas import (
     FTestOut,
     FundamentalReportOut,
     FundamentalSummaryOut,
+    GrowthGuidanceIn,
+    GrowthGuidanceOut,
     IndicatorSeriesOut,
     LevelOut,
     MetricOut,
@@ -35,7 +37,7 @@ from app.models.schemas import (
     TechnicalSummaryOut,
     TimeframeOut,
 )
-from app.models.tables import UserProfile
+from app.models.tables import GrowthGuidance, UserProfile, utcnow
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
 
@@ -160,6 +162,46 @@ def fundamental(
         fetch=fetch,
     )
     return fundamental_out(r)
+
+
+def _guidance_out(session: Session, ticker: str) -> GrowthGuidanceOut:
+    raw = CachedProvider(session).fundamentals(ticker)
+    analyst, basis = forward_growth(raw.info if raw else {}, None)
+    gg = session.get(GrowthGuidance, ticker)
+    return GrowthGuidanceOut(
+        ticker=ticker,
+        growth_pct=gg.growth_pct if gg else None,
+        analyst_pct=None if analyst is None else round(analyst, 2),
+        analyst_basis=basis,
+    )
+
+
+@router.get("/growth-guidance/{ticker}", response_model=GrowthGuidanceOut)
+def get_growth_guidance(
+    ticker: str = Path(pattern=TICKER), session: Session = Depends(get_session)
+) -> GrowthGuidanceOut:
+    """The expected growth behind the PEG: yours if entered, and the analyst consensus."""
+    return _guidance_out(session, ticker.upper())
+
+
+@router.put("/growth-guidance/{ticker}", response_model=GrowthGuidanceOut)
+def put_growth_guidance(
+    body: GrowthGuidanceIn,
+    ticker: str = Path(pattern=TICKER),
+    session: Session = Depends(get_session),
+) -> GrowthGuidanceOut:
+    """Save your yearly growth guidance for a stock (used for its PEG); null clears it."""
+    t = ticker.upper()
+    gg = session.get(GrowthGuidance, t)
+    if body.growth_pct is None:
+        if gg:
+            session.delete(gg)
+    else:
+        gg = gg or GrowthGuidance(ticker=t, growth_pct=body.growth_pct)
+        gg.growth_pct, gg.updated_at = body.growth_pct, utcnow()
+        session.add(gg)
+    session.commit()
+    return _guidance_out(session, t)
 
 
 def _active_style(session: Session) -> StyleKey | None:

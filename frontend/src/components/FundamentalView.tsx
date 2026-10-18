@@ -16,7 +16,7 @@ const GROUPS: { title: string; keys: string[] }[] = [
   { title: "Profitability", keys: ["roe", "roce", "op_margin", "op_margin_change", "net_margin", "net_margin_change"] },
   {
     title: "Growth",
-    keys: ["revenue_cagr_3y", "profit_cagr_3y", "revenue_cagr_5y", "profit_cagr_5y", "revenue_qoq_yoy", "profit_qoq_yoy"],
+    keys: ["revenue_cagr_3y", "profit_cagr_3y", "revenue_cagr_5y", "profit_cagr_5y", "revenue_qoq_yoy", "profit_qoq_yoy", "forward_growth"],
   },
   {
     title: "Financial health",

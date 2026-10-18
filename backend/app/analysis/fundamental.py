@@ -25,7 +25,7 @@ from app.data.freshness import Freshness, as_utc
 from app.data.indices import nifty500_by_symbol
 from app.data.provider import DataProvider
 from app.importers.reference import ticker_resolver
-from app.models.tables import FundamentalMetrics, ScreenerData, utcnow
+from app.models.tables import FundamentalMetrics, GrowthGuidance, ScreenerData, utcnow
 
 Direction = Literal["bullish", "bearish", "neutral"]
 Category = FundCategory
@@ -205,6 +205,24 @@ def quarter_yoy(q: pd.DataFrame, key: str) -> tuple[float | None, str | None]:
     return (latest / base - 1) * 100, f"{_qtr(latest_d)} vs {_qtr(prior[0])}"
 
 
+def forward_growth(info: dict[str, Any], guidance: float | None) -> tuple[float | None, str]:
+    """Expected yearly profit growth (%) for the PEG: your guidance, else analyst EPS consensus.
+
+    Analysts cover this year and next, so the consensus is annualised over those two years
+    (one year when only this year's estimate exists)."""
+    if guidance is not None:
+        return guidance, "your guidance"
+    e = info.get("eps_estimates") or {}
+    base, fy0, fy1 = _f(e.get("base")), _f(e.get("fy0")), _f(e.get("fy1"))
+    n = _f(e.get("analysts"))
+    who = f", {n:.0f} analysts" if n else ""
+    if base and base > 0 and fy1 and fy1 > 0:
+        return float(((fy1 / base) ** 0.5 - 1) * 100), f"analyst EPS consensus, 2 years ahead{who}"
+    if base and base > 0 and fy0 is not None:
+        return float((fy0 / base - 1) * 100), f"analyst EPS consensus, this year{who}"
+    return None, ""
+
+
 def compute_metrics(
     st: Statements,
     *,
@@ -213,6 +231,7 @@ def compute_metrics(
     info: dict[str, Any],
     screener: dict[str, Any],
     financial: bool,
+    guidance: float | None = None,
 ) -> tuple[dict[str, Metric], list[str]]:
     """All metrics with their basis, plus 'not available' reasons."""
     a, q = st.annual, st.quarterly
@@ -323,11 +342,17 @@ def compute_metrics(
             put(key, label, float(screener[sk]), "%", "Screener.in")
         else:
             na.append(f"{label} (needs the same quarter last year)")
-    pc = m.get("profit_cagr_3y")
-    if "pe" in m and pc and pc.value and pc.value > 0:
-        put("peg", "PEG", m["pe"].value / pc.value, "x", "P/E ÷ 3-year profit CAGR")  # type: ignore[operator]
+    g, g_basis = forward_growth(info, guidance)
+    if g is not None:
+        put("forward_growth", "Expected profit growth", g, "%", g_basis)
+    else:
+        na.append("Expected profit growth (no analyst estimate; you can enter your own guidance)")
+    if "pe" in m and g is not None and g > 0:
+        put("peg", "PEG", m["pe"].value / g, "x", f"Current P/E ÷ expected growth ({g_basis})")  # type: ignore[operator]
+    elif "pe" in m and g is not None:
+        na.append("PEG (expected profit growth is not positive)")
     elif "pe" in m:
-        na.append("PEG (needs positive 3-year profit growth)")
+        na.append("PEG (needs expected growth: no analyst estimate and no guidance entered)")
 
     # ---------------- profitability
     ni = _val(a, "net_income")
@@ -1147,8 +1172,15 @@ def analyse_fundamentals(
     elif _f(info.get("currentPrice")):
         price = float(info["currentPrice"])
         price_basis = f"Yahoo price {format_inr(price)}"
+    gg = session.get(GrowthGuidance, ticker)
     metrics, na = compute_metrics(
-        st, price=price, price_basis=price_basis, info=info, screener=fields, financial=financial
+        st,
+        price=price,
+        price_basis=price_basis,
+        info=info,
+        screener=fields,
+        financial=financial,
+        guidance=gg.growth_pct if gg else None,
     )
     if sector_key:
         store_metrics(session, ticker, sector_key, metrics)

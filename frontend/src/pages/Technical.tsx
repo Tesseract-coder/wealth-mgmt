@@ -65,39 +65,19 @@ export function analysisQuery(style: StyleKey | null, view: View = "signal"): st
 export function Technical() {
   const { ticker } = useParams();
   const [params, setParams] = useSearchParams();
-  const config = useQuery({ queryKey: ["config"], queryFn: api.config });
   const profile = useQuery({ queryKey: ["profile"], queryFn: api.profile });
   const style = (params.get("style") as StyleKey | null) ?? profile.data?.style ?? null;
   const raw = params.get("view");
   const view: View = raw === "fundamental" || raw === "technical" || raw === "backtest" ? raw : "signal";
   const styleKnown = params.has("style") || profile.isSuccess || profile.isError;
-  const update = (next: { style?: string | null; view?: View }) => {
+  const update = (next: { view?: View }) => {
     const p = new URLSearchParams(params);
-    if (next.style !== undefined) {
-      if (next.style) p.set("style", next.style);
-      else p.delete("style");
-    }
     if (next.view !== undefined) {
       if (next.view === "signal") p.delete("view");
       else p.set("view", next.view);
     }
     setParams(p);
   };
-
-  const stylePicker = (view !== "fundamental" || ticker) && (
-    <label className="text-sm">
-      <span className="mb-1 block text-fg-muted">Style</span>
-      <select className={inputClass} value={style ?? ""} onChange={(e) => update({ style: e.target.value || null })}>
-        <option value="">{ticker || view === "signal" || view === "backtest" ? "Your saved style" : "Daily only (no style chosen)"}</option>
-        {config.data &&
-          Object.entries(config.data.styles).map(([k, s]) => (
-            <option key={k} value={k}>
-              {s.label} ({s.timeframes.join(", ")})
-            </option>
-          ))}
-      </select>
-    </label>
-  );
 
   // One stock: the whole story on one page. The old tabs' content lives in its sections.
   if (ticker)
@@ -108,7 +88,6 @@ export function Technical() {
             <ArrowLeft aria-hidden className="size-4" /> All holdings
           </Link>
           <div className="flex flex-wrap items-end gap-3">
-            {stylePicker}
             <TickerSearch style={style} view="signal" />
           </div>
         </div>
@@ -122,11 +101,10 @@ export function Technical() {
         <div>
           <h1 className="text-xl font-semibold">Analysis</h1>
           <p className="text-sm text-fg-subtle">
-            Buy / Hold / Sell signals with the scores and readings behind them, under any investing style. Open a stock for its full story.
+            Buy / Hold / Sell signals with the scores and readings behind them, under your investing style (change it at the top of the page). Open a stock for its full story.
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-3">
-          {stylePicker}
           <TickerSearch style={style} view={view} />
         </div>
       </div>

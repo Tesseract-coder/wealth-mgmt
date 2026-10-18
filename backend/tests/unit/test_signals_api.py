@@ -112,6 +112,9 @@ def test_holdings_signals_cached_only_and_history(
     assert len(rows) == 11
     rel = rows["RELIANCE.NS"]
     assert rel["composite"] is not None and rel["top_bullish"] and rel["stop"] is not None
+    assert rel["day_change"] is not None and rel["day_change_pct"] is not None
+    assert rel["peg"] is not None and "analyst" in rel["peg_basis"]
+    assert rel["invested"] > 0
     tcs = rows["TCS.NS"]  # nothing cached: no score, no guess
     assert tcs["composite"] is None and tcs["signal"] in ("no_signal", "reduce")
     assert sum(h["weight"] for h in body["holdings"]) < 1  # funds take the rest

@@ -30,7 +30,7 @@ afterEach(() => vi.unstubAllGlobals());
 const base: HoldingSignal = {
   ticker: "A.NS", label: "Alpha", signal: "hold", signal_label: "Hold", rule: "Composite 52 is between 45 and 70",
   composite: 52, technical: 40, fundamental: 70, confidence: "medium", weight: 0.05, max_weight: 0.12, quantity: 10,
-  avg_price: 100, price: 110, invested: 1000, value: 1100, pnl: 100, pnl_pct: 10, sector: "IT", flags: [], top_bullish: [],
+  avg_price: 100, price: 110, invested: 1000, value: 1100, pnl: 100, pnl_pct: 10, day_change: 20, day_change_pct: 1.85, peg: 1.2, peg_basis: null, sector: "IT", flags: [], top_bullish: [],
   top_bearish: [], rebalance: { action: "none", quantity: 0, value: null, target_weight: null, text: "No change suggested." },
   stop: 95, stop_breached: false, price_freshness: { status: "fresh", reason: "ok" },
 };

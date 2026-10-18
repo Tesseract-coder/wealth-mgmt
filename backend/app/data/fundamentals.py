@@ -50,7 +50,10 @@ def refresh_fundamentals(
     key = fund_key(ticker)
     st = store.status_row(session, key, "fundamentals", "yahoo", label)
     label = st.label or ticker
-    if not force and fundamentals_freshness(st, now).status == "fresh":
+    row = session.get(FundamentalsRaw, ticker)
+    # Rows cached before analyst estimates were fetched lack the key; fetch those once more.
+    has_estimates = row is not None and "eps_estimates" in json.loads(row.info_json)
+    if not force and has_estimates and fundamentals_freshness(st, now).status == "fresh":
         return RefreshResult(key, label, "skipped", "Already up to date")
     st.last_attempt_at = store.to_utc(now)
     try:
@@ -59,7 +62,7 @@ def refresh_fundamentals(
         st.last_error = str(e)
         session.commit()
         return RefreshResult(key, label, "failed", str(e))
-    row = session.get(FundamentalsRaw, ticker) or FundamentalsRaw(ticker=ticker)
+    row = row or FundamentalsRaw(ticker=ticker)
     row.fetched_at = store.to_utc(now)
     row.info_json = json.dumps(info)
     row.statements_json = json.dumps(statements)

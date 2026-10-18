@@ -115,9 +115,24 @@ def test_fundamental_endpoint_yahoo(client: TestClient, monkeypatch: pytest.Monk
     assert body["fscore"]["score"] == 9
     assert any("Sector medians (0 Construction peer(s)" in u for u in body["unavailable"])
     assert "not investment advice" in body["disclaimer"]
-    assert len(calls) == 5
+    assert len(calls) == 6
     client.get("/analysis/fundamental/LT.NS")
-    assert len(calls) == 5  # cached for fundamentals_stale_after_days
+    assert len(calls) == 6  # cached for fundamentals_stale_after_days
+    assert metrics["peg"]["basis"].startswith("Current P/E ÷ expected growth (analyst")
+    g = client.get("/analysis/growth-guidance/LT.NS").json()
+    assert g["growth_pct"] is None and g["analyst_pct"] == pytest.approx(20.0)
+    assert client.put("/analysis/growth-guidance/LT.NS", json={"growth_pct": 40}).json()[
+        "growth_pct"
+    ] == pytest.approx(40)
+    peg = {m["key"]: m for m in client.get("/analysis/fundamental/LT.NS").json()["metrics"]}["peg"]
+    assert peg["value"] == pytest.approx(round(metrics["pe"]["value"] / 40, 2), abs=0.01)
+    assert "your guidance" in peg["basis"]
+    assert (
+        client.put("/analysis/growth-guidance/LT.NS", json={"growth_pct": None}).json()[
+            "growth_pct"
+        ]
+        is None
+    )
 
 
 def test_screener_company_statements_take_over(

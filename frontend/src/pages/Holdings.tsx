@@ -42,7 +42,7 @@ export function Holdings() {
   const risk = (params.get("risk") as RiskKey | null) ?? profile.data?.risk ?? null;
   const layout: HoldingsLayout = params.get("layout") === "table" ? "table" : params.get("layout") === "cards" ? "cards" : savedLayout();
   const ready = (params.has("style") && params.has("risk")) || profile.isSuccess || profile.isError;
-  const set = (k: "style" | "risk" | "layout", v: string) => {
+  const set = (k: "risk" | "layout", v: string) => {
     const p = new URLSearchParams(params);
     if (v) p.set(k, v);
     else p.delete(k);
@@ -60,21 +60,9 @@ export function Holdings() {
     <div className="space-y-4">
       <PageHeader
         title="Holdings"
-        description="A signal and a Score Shape for each stock. View them under any style or risk level; your saved profile is the default."
+        description="A signal and a Score Shape for each stock. Change the style at the top of any page; view them under any risk level here."
         actions={
           <div className="flex flex-wrap gap-3">
-            <label className="text-sm">
-              <span className="mb-1 block text-xs font-medium text-fg-muted">Style</span>
-              <select className={inputClass} value={style ?? ""} onChange={(e) => set("style", e.target.value)}>
-                <option value="">Your saved style</option>
-                {config.data &&
-                  Object.entries(config.data.styles).map(([k, s]) => (
-                    <option key={k} value={k}>
-                      {s.label}
-                    </option>
-                  ))}
-              </select>
-            </label>
             <label className="text-sm">
               <span className="mb-1 block text-xs font-medium text-fg-muted">Risk</span>
               <select className={inputClass} value={risk ?? ""} onChange={(e) => set("risk", e.target.value)}>

@@ -13,6 +13,10 @@ export type SortKey =
   | "quantity"
   | "avg_price"
   | "price"
+  | "invested"
+  | "day_change"
+  | "day_change_pct"
+  | "peg"
   | "pnl"
   | "pnl_pct"
   | "weight"
@@ -44,12 +48,15 @@ const COLUMNS: { key: SortKey; label: string; numeric?: boolean }[] = [
   { key: "quantity", label: "Qty", numeric: true },
   { key: "avg_price", label: "Avg price", numeric: true },
   { key: "price", label: "LTP", numeric: true },
+  { key: "invested", label: "Invested", numeric: true },
+  { key: "day_change", label: "Today", numeric: true },
   { key: "pnl", label: "P&L", numeric: true },
   { key: "weight", label: "Weight", numeric: true },
+  { key: "peg", label: "PEG", numeric: true },
 ];
 
 /** Numbers sort biggest first on the first click; names and signals A→Z / most urgent first. */
-export const isNumericSort = (k: SortKey) => k.startsWith("axis:") || !!COLUMNS.find((c) => c.key === k)?.numeric || k === "pnl_pct";
+export const isNumericSort = (k: SortKey) => k.startsWith("axis:") || !!COLUMNS.find((c) => c.key === k)?.numeric || k === "pnl_pct" || k === "day_change_pct";
 
 function sortValue(h: HoldingSignal, k: SortKey, shape?: HoldingShape): number | string | null {
   if (k === "signal") return SIGNAL_RANK[h.signal];
@@ -114,7 +121,10 @@ export function HoldingsTable({
 }) {
   const navigate = useNavigate();
   const open = (t: string) => navigate(`/analysis/${encodeURIComponent(t)}${linkQuery}`);
-  const totals = rows.reduce((a, h) => ({ value: a.value + (h.value ?? 0), pnl: a.pnl + (h.pnl ?? 0), invested: a.invested + (h.invested ?? 0) }), { value: 0, pnl: 0, invested: 0 });
+  const totals = rows.reduce(
+    (a, h) => ({ value: a.value + (h.value ?? 0), pnl: a.pnl + (h.pnl ?? 0), invested: a.invested + (h.invested ?? 0), day: a.day + (h.day_change ?? 0) }),
+    { value: 0, pnl: 0, invested: 0, day: 0 },
+  );
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -190,6 +200,11 @@ export function HoldingsTable({
                 <td className="py-2 pr-3 text-right">{h.quantity ?? "—"}</td>
                 <td className="whitespace-nowrap py-2 pr-3 text-right">{formatINR(h.avg_price)}</td>
                 <td className="whitespace-nowrap py-2 pr-3 text-right">{formatINR(h.price)}</td>
+                <td className="whitespace-nowrap py-2 pr-3 text-right">{formatINR(h.invested, 0)}</td>
+                <td className="whitespace-nowrap py-2 pr-3 text-right">
+                  <Delta value={h.day_change} format="inr" />
+                  <div className="text-xs text-fg-muted">{h.day_change_pct === null ? "" : formatPct(h.day_change_pct, 2)}</div>
+                </td>
                 <td className="whitespace-nowrap py-2 pr-3 text-right">
                   <Delta value={h.pnl} format="inr" />
                   <div className="text-xs text-fg-muted">{h.pnl_pct === null ? "" : formatPct(h.pnl_pct)}</div>
@@ -197,6 +212,9 @@ export function HoldingsTable({
                 <td className={`py-2 pr-3 text-right ${over ? "font-semibold text-caution" : ""}`}>
                   {h.weight === null ? "—" : `${(h.weight * 100).toFixed(1)}%`}
                   {over && <div className="text-xs font-normal">max {Math.round(h.max_weight * 100)}%</div>}
+                </td>
+                <td className="py-2 pr-3 text-right" title={h.peg_basis ?? "No expected growth: add your own guidance on the stock page"}>
+                  {h.peg === null ? "—" : h.peg.toFixed(2)}
                 </td>
                 <td className="py-2 pr-3 text-xs text-fg-muted">{h.rebalance.action === "none" ? "—" : h.rebalance.text}</td>
                 <td className="py-2">
@@ -209,12 +227,16 @@ export function HoldingsTable({
         <tfoot>
           <tr className="text-sm font-medium">
             <td className="py-2 pr-3" colSpan={10}>
-              Shown: value {formatINR(totals.value, 0)}, invested {formatINR(totals.invested, 0)}
+              Shown: value {formatINR(totals.value, 0)}
+            </td>
+            <td className="whitespace-nowrap py-2 pr-3 text-right">{formatINR(totals.invested, 0)}</td>
+            <td className="whitespace-nowrap py-2 pr-3 text-right">
+              <Delta value={totals.day} format="inr" />
             </td>
             <td className="whitespace-nowrap py-2 pr-3 text-right">
               <Delta value={totals.pnl} format="inr" />
             </td>
-            <td colSpan={3} />
+            <td colSpan={4} />
           </tr>
         </tfoot>
       </table>

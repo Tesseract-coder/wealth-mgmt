@@ -29,12 +29,15 @@ const shapes = new Map(SAMPLE_HOLDINGS.holdings.map((h) => [h.ticker, h]));
 const cardNames = () => screen.getAllByRole("article").map((a) => within(a).getByRole("heading").textContent);
 
 describe("Holdings view", () => {
-  it("shows each holding as a card with its shape, signal, P&L and two key facts", () => {
+  it("shows each holding as a card with its shape, signal, P&L, invested, today, PEG and two key facts", () => {
     wrap(<HoldingsView d={SAMPLE_SIGNALS} shapes={SAMPLE_HOLDINGS.holdings} layout="cards" onLayout={() => undefined} />);
     const card = screen.getByRole("heading", { name: "Reliance Industries Ltd" }).closest("article")!;
     expect(within(card).getByRole("img", { name: /^Score Shape for Reliance Industries Ltd: .*total 19 of 36/ })).toBeInTheDocument();
     expect(within(card).getByText("Sell / Exit")).toBeInTheDocument();
-    expect(within(card).getByText("Down")).toBeInTheDocument(); // the loss says so in words
+    expect(within(card).getAllByText("Down")).toHaveLength(2); // the loss and today's fall say so in words
+    expect(within(card).getByText("Invested")).toBeInTheDocument();
+    expect(within(card).getByText("Today")).toBeInTheDocument();
+    expect(within(card).getByText("2.98")).toHaveAttribute("title", expect.stringContaining("Current P/E ÷ expected growth"));
     expect(within(card).getByText("Strongest: Financial Health 6/6")).toBeInTheDocument();
     expect(within(card).getByRole("link", { name: "Reliance Industries Ltd" })).toHaveAttribute("href", "/analysis/RELIANCE.NS");
   });
@@ -83,7 +86,7 @@ describe("Holdings view", () => {
       </QueryClientProvider>,
     );
     const headers = screen.getAllByRole("columnheader").map((h) => h.textContent);
-    expect(headers).toEqual(["Stock", "Shape", "Signal", "Confidence", "Score", "Tech", "Fund", "Qty", "Avg price", "LTP", "P&L", "Weight", "Suggested", "Prices"]);
+    expect(headers).toEqual(["Stock", "Shape", "Signal", "Confidence", "Score", "Tech", "Fund", "Qty", "Avg price", "LTP", "Invested", "Today", "P&L", "Weight", "PEG", "Suggested", "Prices"]);
     expect(screen.getByText("19")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /^Score Shape for Tata Consultancy/ })).toHaveAttribute("width", "32");
   });

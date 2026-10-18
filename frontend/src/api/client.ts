@@ -545,9 +545,20 @@ export interface FundamentalSummary {
   top_bearish: string[];
 }
 
+/** The expected yearly growth behind the PEG: yours when entered, else the analyst consensus. */
+export interface GrowthGuidance {
+  ticker: string;
+  growth_pct: number | null;
+  analyst_pct: number | null;
+  analyst_basis: string;
+}
+
 export const fundamentalApi = {
   report: (ticker: string) => request<FundamentalReport>(`/analysis/fundamental/${encodeURIComponent(ticker)}`),
   holdings: () => request<FundamentalSummary[]>("/analysis/fundamental/holdings"),
+  guidance: (ticker: string) => request<GrowthGuidance>(`/analysis/growth-guidance/${encodeURIComponent(ticker)}`),
+  saveGuidance: (ticker: string, growth_pct: number | null) =>
+    request<GrowthGuidance>(`/analysis/growth-guidance/${encodeURIComponent(ticker)}`, { method: "PUT", body: JSON.stringify({ growth_pct }) }),
 };
 
 // ---------------------------------------------------------------- scores & signals
@@ -709,6 +720,11 @@ export interface HoldingSignal {
   value: number | null;
   pnl: number | null;
   pnl_pct: number | null;
+  /** ₹ since the previous close. */
+  day_change: number | null;
+  day_change_pct: number | null;
+  peg: number | null;
+  peg_basis: string | null;
   sector: string | null;
   flags: Flag[];
   top_bullish: string[];
