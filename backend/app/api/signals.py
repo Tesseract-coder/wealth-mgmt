@@ -161,6 +161,7 @@ def holdings_signals(
     out: list[HoldingSignalOut] = []
     for s in sigs:
         pos = s.position
+        peg = s.fundamental.metrics.get("peg")
         out.append(
             HoldingSignalOut(
                 ticker=s.ticker,
@@ -183,6 +184,14 @@ def holdings_signals(
                 pnl_pct=None
                 if pos is None or pos.pnl is None or not pos.invested
                 else round(pos.pnl / pos.invested * 100, 2),
+                day_change=None
+                if pos is None or pos.day_change is None
+                else round(pos.day_change, 2),
+                day_change_pct=None
+                if pos is None or pos.day_change_pct is None
+                else round(pos.day_change_pct, 2),
+                peg=peg.value if peg else None,
+                peg_basis=peg.basis if peg else None,
                 sector=s.sector,
                 flags=[FlagOut(**f.__dict__) for f in s.flags],
                 top_bullish=[r.text for r in s.bullish],

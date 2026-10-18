@@ -70,6 +70,11 @@ def statements_frames() -> dict[str, pd.DataFrame]:
         "balance_sheet": bal,
         "cashflow": _df(CASHFLOW, YEARS),
         "quarterly_income_stmt": _df(QUARTERLY, QUARTERS),
+        # Analyst EPS consensus: 20% a year from last year's EPS of 10 to 14.4 two years out.
+        "earnings_estimate": pd.DataFrame(
+            {"avg": [12.0, 14.4], "yearAgoEps": [10.0, 12.0], "numberOfAnalysts": [8, 8]},
+            index=["0y", "+1y"],
+        ),
     }
 
 

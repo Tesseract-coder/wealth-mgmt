@@ -7,6 +7,7 @@ import { Disclaimer } from "./Disclaimer";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { FreshnessBar } from "./FreshnessBar";
 import { Logo } from "./Logo";
+import { StyleSwitcher } from "./StyleSwitcher";
 
 export const NAV = [
   { to: "/", label: "Overview" },
@@ -77,12 +78,13 @@ export function Layout() {
               </NavLink>
             ))}
           </nav>
+          <StyleSwitcher className={`${open ? "flex" : "hidden"} md:ml-auto md:flex`} />
           <button
             type="button"
             onClick={toggle}
             aria-label={themeLabel}
             title={themeLabel}
-            className={`${open ? "inline-flex" : "hidden"} size-9 items-center justify-center rounded-control border border-border-strong text-fg-muted hover:bg-surface-2 hover:text-fg md:ml-auto md:inline-flex`}
+            className={`${open ? "inline-flex" : "hidden"} size-9 items-center justify-center rounded-control border border-border-strong text-fg-muted hover:bg-surface-2 hover:text-fg md:inline-flex`}
           >
             <ThemeIcon aria-hidden className="size-4" />
           </button>

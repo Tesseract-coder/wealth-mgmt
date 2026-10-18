@@ -53,9 +53,9 @@ stock:
         label: PEG below 1.5
         threshold: 1.5
         unit: x
-        help: "PEG: the P/E divided by yearly profit growth. Below 1.5 means growth helps justify the price."
-        pass: PEG of {value} suggests the price is backed by {growth} a year of profit growth.
-        fail: PEG of {value} is above {threshold}, so the price runs ahead of profit growth.
+        help: "PEG: today's P/E divided by expected yearly profit growth (your guidance, else analyst consensus). Below 1.5 means growth helps justify the price."
+        pass: PEG of {value} suggests the price is backed by {growth} a year of expected profit growth.
+        fail: PEG of {value} is above {threshold}, so the price runs ahead of expected profit growth.
       - id: fair_value
         label: Price below the estimated fair value
         unit: inr

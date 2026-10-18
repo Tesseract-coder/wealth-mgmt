@@ -1,13 +1,13 @@
 import { Link } from "react-router-dom";
 import type { HoldingShape, HoldingSignal } from "../../api/client";
-import { formatPct } from "../../lib/format";
+import { formatINRCompact, formatPct } from "../../lib/format";
 import { axesFromRecord, ScoreShape, SignalPill } from "../analysis";
 import { extraFlags, FlagLine } from "../HoldingsTable";
 import { Delta } from "../ui";
 
 /**
- * One holding as a card: a Score Shape, the signal, P&L and weight, and two key facts (strongest
- * and weakest section). The whole card links to the stock page.
+ * One holding as a card: a Score Shape, the signal, P&L and weight; invested, today's change and
+ * PEG; and two key facts (strongest and weakest section). The whole card links to the stock page.
  */
 export function HoldingCard({
   h,
@@ -69,6 +69,24 @@ export function HoldingCard({
           </div>
         </dl>
       </div>
+      <dl className="grid grid-cols-3 gap-2 border-t border-border pt-2 text-sm">
+        <div className="min-w-0">
+          <dt className="text-xs text-fg-subtle">Invested</dt>
+          <dd className="truncate text-fg">{formatINRCompact(h.invested)}</dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-xs text-fg-subtle">Today</dt>
+          <dd className="truncate">
+            <Delta value={h.day_change} format="inr-compact" /> <span className="text-xs text-fg-muted">{h.day_change_pct === null ? "" : formatPct(h.day_change_pct, 2)}</span>
+          </dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-xs text-fg-subtle">PEG</dt>
+          <dd className="truncate text-fg" title={h.peg_basis ?? "No expected growth: add your own guidance on the stock page"}>
+            {h.peg === null ? "—" : h.peg.toFixed(2)}
+          </dd>
+        </div>
+      </dl>
       {(shape?.top.length || extraFlags(h).length > 0) && (
         <div className="space-y-1 border-t border-border pt-2 text-xs text-fg-muted">
           {shape?.top.map((t) => (

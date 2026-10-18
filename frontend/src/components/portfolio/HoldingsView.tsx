@@ -1,9 +1,9 @@
 import { ArrowDownWideNarrow, ArrowUpNarrowWide, LayoutGrid, Search, Table2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { ConfidenceLevel, HoldingShape, HoldingSignal, HoldingSignals, SignalKey } from "../../api/client";
-import { formatINR } from "../../lib/format";
+import { formatINR, formatPct } from "../../lib/format";
 import { HoldingsTable, isNumericSort, sortHoldings, type Sort, type SortKey } from "../HoldingsTable";
-import { Alert, Chip, ChipGroup, EmptyState, inputClass, Segmented } from "../ui";
+import { Alert, Chip, ChipGroup, Delta, EmptyState, inputClass, Segmented } from "../ui";
 import { HoldingCard } from "./HoldingCard";
 
 export type HoldingsLayout = "cards" | "table";
@@ -28,7 +28,11 @@ const SORTS: { key: SortKey; label: string }[] = [
   { key: "composite", label: "Signal score" },
   { key: "pnl", label: "P&L (₹)" },
   { key: "pnl_pct", label: "P&L (%)" },
+  { key: "day_change", label: "Today's change (₹)" },
+  { key: "day_change_pct", label: "Today's change (%)" },
+  { key: "invested", label: "Invested" },
   { key: "weight", label: "Weight" },
+  { key: "peg", label: "PEG" },
   { key: "label", label: "Name" },
   { key: "axis:valuation", label: "Valuation axis" },
   { key: "axis:growth", label: "Future Growth axis" },
@@ -89,6 +93,11 @@ export function HoldingsView({
     );
     return sortHoldings(f, sort.key, sort.dir, byTicker);
   }, [d, q, signals, sectors, conf, sort, byTicker]);
+
+  // Today's change across every stock (not just the filtered ones), against yesterday's value.
+  const dayTotal = d.holdings.reduce((a, h) => a + (h.day_change ?? 0), 0);
+  const prevValue = d.holdings.reduce((a, h) => a + (h.day_change !== null && h.value !== null ? h.value - h.day_change : 0), 0);
+  const dayPct = prevValue > 0 ? (dayTotal / prevValue) * 100 : null;
 
   if (d.holdings.length === 0)
     return <EmptyState title="No stock holdings yet">Import your Groww holdings on the Import page to see a signal and a Score Shape for each stock.</EmptyState>;
@@ -168,6 +177,10 @@ export function HoldingsView({
           ))}
         </ChipGroup>
         <p className="flex flex-wrap items-center gap-x-3 text-xs text-fg-subtle">
+          <span>
+            Stocks today <Delta value={dayTotal} format="inr" />
+            {dayPct !== null && <span className="text-fg-muted"> ({formatPct(dayPct, 2)})</span>}
+          </span>
           <span>
             {rows.length} of {d.holdings.length} · {d.style_label} style (technical {Math.round(d.technical_weight * 100)}%), {d.risk_label} risk · weights are of the whole portfolio (
             {formatINR(d.total_value, 0)})

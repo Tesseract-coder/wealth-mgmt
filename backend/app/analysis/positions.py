@@ -43,10 +43,23 @@ class Position:
     value: float | None
     sector: str | None
     lots: list[Lot]
+    prev_close: float | None = None  # the close before `price`, when price is a cached close
 
     @property
     def pnl(self) -> float | None:
         return None if self.value is None else self.value - self.invested
+
+    @property
+    def day_change(self) -> float | None:
+        if self.price is None or self.prev_close is None:
+            return None
+        return (self.price - self.prev_close) * self.quantity
+
+    @property
+    def day_change_pct(self) -> float | None:
+        if self.price is None or not self.prev_close:
+            return None
+        return (self.price / self.prev_close - 1) * 100
 
 
 @dataclass
@@ -71,14 +84,18 @@ class Portfolio:
         return self.sector_values.get(sector, 0.0) / self.total
 
 
-def _latest_close(session: Session, ticker: str) -> tuple[float, date] | None:
-    bar = session.exec(
+def _latest_close(session: Session, ticker: str) -> tuple[float, date, float | None] | None:
+    """(latest close, its date, the close before it)."""
+    bars = session.exec(
         select(DailyBar)
         .where(DailyBar.ticker == ticker, col(DailyBar.close).is_not(None))
         .order_by(col(DailyBar.date).desc())
-        .limit(1)
-    ).first()
-    return (float(bar.close), bar.date) if bar and bar.close is not None else None
+        .limit(2)
+    ).all()
+    if not bars or bars[0].close is None:
+        return None
+    prev = float(bars[1].close) if len(bars) > 1 and bars[1].close is not None else None
+    return float(bars[0].close), bars[0].date, prev
 
 
 def stock_sector(provider: DataProvider, ticker: str) -> str | None:
@@ -115,9 +132,11 @@ def load_portfolio(
         invested = sum(h.invested for h in hs)
         latest = _latest_close(session, ticker)
         imported = next((h.close_price for h in hs if h.close_price), None)
+        prev: float | None = None
         if latest:
             price: float | None = latest[0]
             src = f"close on {latest[1]:%d %b %Y}"
+            prev = latest[2]
         elif imported:
             price, src = imported, "your import"
         else:
@@ -134,6 +153,7 @@ def load_portfolio(
             value=None if price is None else price * qty,
             sector=stock_sector(provider, ticker),
             lots=[Lot(h.quantity, h.avg_price, h.purchase_date) for h in hs],
+            prev_close=prev,
         )
     fund_value = 0.0
     msnap = latest_snapshot(session, "mf")

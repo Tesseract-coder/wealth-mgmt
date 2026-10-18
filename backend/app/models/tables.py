@@ -228,6 +228,16 @@ class FundamentalsRaw(SQLModel, table=True):
     statements_json: str = "{}"  # {"income": {row: {date: value}}, "balance": …, …}
 
 
+class GrowthGuidance(SQLModel, table=True):
+    """Your own yearly profit growth expectation for a stock (e.g. management's 3-year guidance).
+
+    Replaces the analyst estimate in the PEG ratio."""
+
+    ticker: str = Field(primary_key=True)
+    growth_pct: float
+    updated_at: datetime = Field(default_factory=utcnow)
+
+
 class FundamentalMetrics(SQLModel, table=True):
     """Computed metrics per stock, kept so sector medians are a cheap lookup."""
 

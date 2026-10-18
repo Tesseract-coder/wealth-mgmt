@@ -24,6 +24,7 @@ import { TechnicalReportView } from "../../pages/Technical";
 import { axesFromSections, ChartCaption, ChartFigure, CheckBar, CheckList, RewardsRisks, ScoreShape, SectionHeader, stepFor } from "../analysis";
 import { BacktestView } from "../Backtest";
 import { FundamentalBody } from "../FundamentalView";
+import { GrowthGuidanceEditor } from "./GrowthGuidance";
 import { Alert, Badge, Delta, Disclosure, EmptyState, ErrorState, Loading, Skeleton, SkeletonText, Stat } from "../ui";
 import {
   debtCaption,
@@ -531,6 +532,7 @@ function CheckSection({
       <SectionHeader section={section} />
       {visuals}
       <CheckList checks={section.checks} label={`${section.label} checks`} />
+      {k === "valuation" && metric("pe") && <GrowthGuidanceEditor ticker={ticker} pe={metric("pe")?.value ?? null} peg={metric("peg")?.value ?? null} />}
       {k === "past" && (
         <Disclosure summary="F-score and every fundamental figure" hint="the old Fundamental tab" defaultOpen={view === "fundamental"}>
           {fund ? <FundamentalBody r={fund} /> : <SkeletonText lines={4} />}

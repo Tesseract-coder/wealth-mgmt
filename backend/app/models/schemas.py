@@ -422,6 +422,19 @@ class FundamentalReportOut(BaseModel):
     disclaimer: str
 
 
+class GrowthGuidanceIn(BaseModel):
+    growth_pct: float | None = Field(
+        None, ge=-100, le=500, description="Yearly profit growth you expect (%); null clears it"
+    )
+
+
+class GrowthGuidanceOut(BaseModel):
+    ticker: str
+    growth_pct: float | None  # yours, when entered
+    analyst_pct: float | None
+    analyst_basis: str
+
+
 class FundamentalSummaryOut(BaseModel):
     ticker: str
     label: str
@@ -604,6 +617,10 @@ class HoldingSignalOut(BaseModel):
     value: float | None
     pnl: float | None
     pnl_pct: float | None
+    day_change: float | None  # ₹ since the previous close
+    day_change_pct: float | None
+    peg: float | None
+    peg_basis: str | None
     sector: str | None
     flags: list[FlagOut]
     top_bullish: list[str]

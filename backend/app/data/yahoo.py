@@ -136,6 +136,30 @@ def _fund_download(ticker: str, what: str) -> Any:
     return t.info if what == "info" else getattr(t, what)
 
 
+ESTIMATES = "earnings_estimate"
+
+
+def _eps_estimates(df: pd.DataFrame | None) -> dict[str, float] | None:
+    """Analyst EPS consensus: last full year's EPS ("base"), this year ("fy0") and next ("fy1")."""
+    if df is None or df.empty or "avg" not in df.columns:
+        return None
+
+    def cell(col: str, row: str) -> float | None:
+        if col not in df.columns or row not in df.index:
+            return None
+        v = df.at[row, col]
+        return None if v is None or pd.isna(v) else float(v)
+
+    out = {
+        "base": cell("yearAgoEps", "0y"),
+        "fy0": cell("avg", "0y"),
+        "fy1": cell("avg", "+1y"),
+        "analysts": cell("numberOfAnalysts", "+1y") or cell("numberOfAnalysts", "0y"),
+    }
+    clean = {k: v for k, v in out.items() if v is not None}
+    return clean if "base" in clean and ("fy0" in clean or "fy1" in clean) else None
+
+
 def _frame_json(df: pd.DataFrame | None) -> dict[str, dict[str, float]]:
     if df is None or df.empty:
         return {}
@@ -158,7 +182,7 @@ def fetch_fundamentals(ticker: str) -> tuple[dict[str, Any], dict[str, Any]]:
     cfg = get_profiles().data
     results: dict[str, Any] = {}
     errors: list[str] = []
-    for what in ("info", *STATEMENTS.values()):
+    for what in ("info", *STATEMENTS.values(), ESTIMATES):
         for attempt in range(cfg.http_retries + 1):
             limiter("yahoo").acquire()
             try:
@@ -175,7 +199,9 @@ def fetch_fundamentals(ticker: str) -> tuple[dict[str, Any], dict[str, Any]]:
     info_raw = results.get("info") or {}
     info = {k: info_raw.get(k) for k in INFO_KEYS if info_raw.get(k) is not None}
     statements = {key: _frame_json(results.get(attr)) for key, attr in STATEMENTS.items()}
-    if not info and not any(statements.values()):
+    # Always present after a fetch (None = no analyst cover), so a cache without it is refetched.
+    info["eps_estimates"] = _eps_estimates(results.get(ESTIMATES))
+    if not any(v is not None for v in info.values()) and not any(statements.values()):
         detail = "; ".join(errors) if errors else "nothing returned"
         raise FetchError(f"Yahoo Finance has no fundamentals for {ticker} ({detail})")
     return info, statements

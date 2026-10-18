@@ -234,6 +234,10 @@ export const SAMPLE_SIGNALS: HoldingSignals = {
         value: 29257.5,
         pnl: -31005.0,
         pnl_pct: -51.45,
+        day_change: -412.5,
+        day_change_pct: -1.9,
+        peg: 2.98,
+        peg_basis: "Current P/E ÷ expected growth (analyst EPS consensus, 2 years ahead, 18 analysts)",
         sector: "Oil Gas & Consumable Fuels",
         flags: [],
         top_bullish: [
@@ -270,6 +274,10 @@ export const SAMPLE_SIGNALS: HoldingSignals = {
         value: 21560.0,
         pnl: -14640.0,
         pnl_pct: -40.44,
+        day_change: 1180.2,
+        day_change_pct: 0.84,
+        peg: 1.12,
+        peg_basis: "Current P/E ÷ expected growth (analyst EPS consensus, 2 years ahead, 18 analysts)",
         sector: "Information Technology",
         flags: [],
         top_bullish: [
@@ -306,6 +314,10 @@ export const SAMPLE_SIGNALS: HoldingSignals = {
         value: 28290.0,
         pnl: -31520.0,
         pnl_pct: -52.7,
+        day_change: -96,
+        day_change_pct: -0.6,
+        peg: null,
+        peg_basis: null,
         sector: "Financial Services",
         flags: [],
         top_bullish: [
@@ -342,6 +354,10 @@ export const SAMPLE_SIGNALS: HoldingSignals = {
         value: 30702.0,
         pnl: -11382.0,
         pnl_pct: -27.05,
+        day_change: 2310,
+        day_change_pct: 1.25,
+        peg: 0.88,
+        peg_basis: "Current P/E ÷ expected growth (analyst EPS consensus, 2 years ahead, 18 analysts)",
         sector: "Information Technology",
         flags: [],
         top_bullish: [

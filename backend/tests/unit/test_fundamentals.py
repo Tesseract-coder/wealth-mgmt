@@ -92,7 +92,10 @@ def test_metrics_values(raw) -> None:  # type: ignore[no-untyped-def]
     assert v["dividend_yield"] == pytest.approx(1.5)
     assert v["revenue_cagr_3y"] == pytest.approx(10.0)
     assert v["profit_cagr_3y"] == pytest.approx(round(((150 / 100) ** (1 / 3) - 1) * 100, 2))
-    assert v["peg"] == pytest.approx(round(v["pe"] / v["profit_cagr_3y"], 2), abs=0.01)
+    # PEG uses expected growth: analyst EPS 10 → 14.4 over two years is 20% a year.
+    assert v["forward_growth"] == pytest.approx(20.0)
+    assert "8 analysts" in m["forward_growth"].basis
+    assert v["peg"] == pytest.approx(round(v["pe"] / 20, 2), abs=0.01)
     assert v["roe"] == pytest.approx(round(150 / 1050 * 100, 2))  # average equity
     assert v["roce"] == pytest.approx(round(230 / (1800 - 450) * 100, 2))
     assert v["op_margin"] == pytest.approx(round(220 / 1331 * 100, 2))
@@ -105,6 +108,24 @@ def test_metrics_values(raw) -> None:  # type: ignore[no-untyped-def]
     assert v["consecutive_loss_years"] == 0 and v["debt_change"] == -10
     assert any("CAGR 5y (needs 6 years of results, have 4)" in u for u in na)
     assert any("Ownership" in u for u in na)
+
+
+def test_peg_uses_guidance_then_analysts(raw) -> None:  # type: ignore[no-untyped-def]
+    st = from_yahoo(raw["statements"])
+    kw = {"price": 300, "price_basis": "", "screener": {}, "financial": False}
+    m, _ = compute_metrics(st, info=raw["info"], guidance=25.0, **kw)  # type: ignore[arg-type]
+    assert m["forward_growth"].value == 25 and m["forward_growth"].basis == "your guidance"
+    assert m["peg"].value == pytest.approx(round(m["pe"].value / 25, 2), abs=0.01)
+    one_year = {**raw["info"], "eps_estimates": {"base": 10.0, "fy0": 13.0}}
+    m, _ = compute_metrics(st, info=one_year, **kw)  # type: ignore[arg-type]
+    assert (
+        m["forward_growth"].value == pytest.approx(30.0)
+        and "this year" in m["forward_growth"].basis
+    )
+    m, na = compute_metrics(st, info={**raw["info"], "eps_estimates": None}, **kw)  # type: ignore[arg-type]
+    assert "peg" not in m and any("no guidance entered" in u for u in na)
+    m, na = compute_metrics(st, info=raw["info"], guidance=-5.0, **kw)  # type: ignore[arg-type]
+    assert "peg" not in m and any("not positive" in u for u in na)
 
 
 def test_ttm_requires_consecutive_quarters() -> None:
