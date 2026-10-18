@@ -15,7 +15,14 @@ from sqlmodel import Session, col, delete, select
 from app.importers import groww
 from app.importers.groww import NeedsMapping, UserMapping
 from app.importers.reference import scheme_resolver
-from app.importers.tabular import Grid, ImportFileError, cell_text, parse_number, read_grid
+from app.importers.tabular import (
+    Grid,
+    ImportFileError,
+    cell_text,
+    parse_number,
+    read_grid,
+    sheet_rows,
+)
 from app.models.tables import FundPortfolioRow, FundPortfolioUpload
 
 SKIP = ("total", "sub total", "subtotal", "grand total", "net assets", "net current assets")
@@ -44,7 +51,7 @@ def _sheet(content: bytes, sheet: str) -> Grid:
                 f"No sheet named '{sheet}'. Sheets in this file: "
                 + ", ".join(w.title for w in wb.worksheets)
             )
-        return [list(r) for r in ws.iter_rows(values_only=True)]
+        return sheet_rows(ws)
     finally:
         wb.close()
 

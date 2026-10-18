@@ -165,6 +165,32 @@ def test_upload_size_limit(client: TestClient, monkeypatch: pytest.MonkeyPatch) 
     assert r.status_code == 413
 
 
+def test_kite_stocks_xlsx(client: TestClient) -> None:
+    # Kite: symbol only (no name column), table at B23, and three sheets including a Combined one
+    # that also lists mutual funds; the Equity sheet must be the one used.
+    r = upload(client, "/import/groww-stocks", "kite_holdings.xlsx")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["status"] == "imported"
+    assert body["snapshot"]["row_count"] == 3
+    stocks = {s["symbol"]: s for s in client.get("/portfolio/holdings").json()["stocks"]}
+    assert set(stocks) == {"RELIANCE", "TCS", "ITC"}
+    assert stocks["RELIANCE"]["name"] == "RELIANCE"
+    assert stocks["RELIANCE"]["quantity"] == 25
+    assert stocks["RELIANCE"]["invested"] == pytest.approx(25 * 2410.50)
+    assert stocks["RELIANCE"]["close_price"] == pytest.approx(2875.10)
+
+
+def test_kite_mf_xlsx(client: TestClient) -> None:
+    body = upload(client, "/import/groww-mf", "kite_holdings.xlsx").json()
+    assert body["status"] == "imported"
+    assert body["snapshot"]["row_count"] == 1
+    (fund,) = client.get("/portfolio/holdings").json()["mf"]
+    assert fund["amfi_code"] == "122639"
+    assert fund["units"] == pytest.approx(812.345)
+    assert fund["invested"] == pytest.approx(812.345 * 67.70, abs=0.01)
+
+
 # --------------------------------------------------------------------------- mutual funds
 
 

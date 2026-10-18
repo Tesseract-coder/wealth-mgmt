@@ -1,8 +1,9 @@
 """Find the real header row in a messy export and map its columns to canonical fields.
 
-Groww renames columns from time to time, so each field has several known aliases and headers are
-matched fuzzily. If the required fields can't all be found, the caller asks the user to map them
-by hand; that mapping is remembered by the header row's signature.
+Brokers (Groww, Zerodha Kite, ...) name columns differently and rename them from time to time, so
+each field has several known aliases and headers are matched fuzzily. If the required fields can't
+all be found, the caller asks the user to map them by hand; that mapping is remembered by the header
+row's signature.
 """
 
 import hashlib
@@ -21,6 +22,9 @@ class FieldSpec:
     label: str
     aliases: tuple[str, ...]
     required: bool = False
+    # A required field also counts as present when this field is mapped (Kite has no name column,
+    # only the trading symbol).
+    fallback: str | None = None
 
 
 STOCK_FIELDS: tuple[FieldSpec, ...] = (
@@ -38,17 +42,27 @@ STOCK_FIELDS: tuple[FieldSpec, ...] = (
             "stock",
         ),
         True,
+        fallback="symbol",
     ),
     FieldSpec("isin", "ISIN", ("isin", "isin code", "isin number")),
     FieldSpec(
         "symbol",
         "Symbol / ticker",
-        ("symbol", "ticker", "nse symbol", "trading symbol", "scrip code"),
+        ("symbol", "ticker", "nse symbol", "trading symbol", "tradingsymbol", "scrip code"),
     ),
     FieldSpec(
         "quantity",
         "Quantity",
-        ("quantity", "qty", "shares", "no of shares", "quantity available", "holding quantity"),
+        (
+            "quantity",
+            "qty",
+            "shares",
+            "no of shares",
+            "quantity available",
+            "holding quantity",
+            "total quantity",
+            "net qty",
+        ),
         True,
     ),
     FieldSpec(
@@ -63,6 +77,7 @@ STOCK_FIELDS: tuple[FieldSpec, ...] = (
             "average cost",
             "buy avg",
             "buy price",
+            "avg cost price",
         ),
         True,
     ),
@@ -84,8 +99,11 @@ STOCK_FIELDS: tuple[FieldSpec, ...] = (
         (
             "closing price",
             "close price",
+            "previous closing price",
+            "prev close",
             "ltp",
             "last traded price",
+            "last price",
             "current price",
             "market price",
         ),
@@ -120,7 +138,8 @@ MF_FIELDS: tuple[FieldSpec, ...] = (
     FieldSpec(
         "scheme_name",
         "Scheme name",
-        ("scheme name", "fund name", "scheme", "fund", "mutual fund", "name"),
+        # Kite puts the scheme name in its "Symbol" column.
+        ("scheme name", "fund name", "scheme", "fund", "mutual fund", "name", "symbol"),
         True,
     ),
     FieldSpec("amc", "AMC", ("amc", "amc name", "fund house")),
@@ -130,7 +149,24 @@ MF_FIELDS: tuple[FieldSpec, ...] = (
     FieldSpec("folio", "Folio number", ("folio no", "folio number", "folio")),
     FieldSpec("isin", "ISIN", ("isin", "isin code")),
     FieldSpec("amfi_code", "AMFI scheme code", ("amfi code", "scheme code", "amfi")),
-    FieldSpec("units", "Units", ("units", "balance units", "unit balance", "closing units"), True),
+    FieldSpec(
+        "units",
+        "Units",
+        (
+            "units",
+            "balance units",
+            "unit balance",
+            "closing units",
+            "quantity available",
+            "quantity",
+        ),
+        True,
+    ),
+    FieldSpec(
+        "avg_nav",
+        "Average buy NAV",
+        ("average nav", "avg nav", "average price", "avg price", "average cost", "avg cost"),
+    ),
     FieldSpec(
         "invested",
         "Invested value",
@@ -149,7 +185,11 @@ MF_FIELDS: tuple[FieldSpec, ...] = (
         "Current value",
         ("current value", "market value", "valuation", "present value", "value"),
     ),
-    FieldSpec("nav", "NAV", ("nav", "current nav", "latest nav")),
+    FieldSpec(
+        "nav",
+        "NAV",
+        ("nav", "current nav", "latest nav", "previous closing price", "closing price", "ltp"),
+    ),
     FieldSpec(
         "purchase_date",
         "First purchase date",
@@ -343,6 +383,14 @@ def _match_row(
     return mapping, scores
 
 
+def _missing(kind: str, mapping: dict[str, int]) -> list[str]:
+    return [
+        s.key
+        for s in FIELDS[kind]
+        if s.required and s.key not in mapping and not (s.fallback and s.fallback in mapping)
+    ]
+
+
 def detect(grid: Grid, kind: str, cfg: ImportConfig) -> MappingResult:
     """Scan the top of the file for the row that looks most like the holdings header."""
     specs = FIELDS[kind]
@@ -354,7 +402,7 @@ def detect(grid: Grid, kind: str, cfg: ImportConfig) -> MappingResult:
         if sum(1 for h in headers if h) < 2:
             continue
         mapping, scores = _match_row(headers, specs, cfg.column_match_min_score)
-        rank = (sum(1 for k in required if k in mapping), len(mapping))
+        rank = (len(required) - len(_missing(kind, mapping)), len(mapping))
         if rank > best_rank:
             best_rank = rank
             best = MappingResult(idx, headers, mapping, scores)
@@ -371,8 +419,42 @@ def detect(grid: Grid, kind: str, cfg: ImportConfig) -> MappingResult:
         headers = [cell_text(c) for c in grid[guess]] if grid else []
         mapping = best.mapping if best and best.header_row == guess else {}
         best = MappingResult(guess, headers, mapping, best.scores if best else {})
-    best.missing_required = [k for k in required if k not in best.mapping]
+    best.missing_required = _missing(kind, best.mapping)
     return best
+
+
+# Sheet titles that hint at what a multi-sheet workbook (e.g. Kite: Equity / Mutual Funds /
+# Combined) keeps on each sheet.
+_SHEET_HINTS = {
+    "stocks": ("equity", "stock", "share"),
+    "mf": ("mutual", "fund", "mf"),
+}
+_MIXED_SHEETS = ("combined", "summary")
+
+
+def _sheet_hint(kind: str, title: str) -> int:
+    t = title.lower()
+    if any(w in t for w in _MIXED_SHEETS):
+        return -1
+    if any(w in t for w in _SHEET_HINTS.get(kind, ())):
+        return 1
+    if any(w in t for k, words in _SHEET_HINTS.items() if k != kind for w in words):
+        return -2
+    return 0
+
+
+def pick_sheet(sheets: list[tuple[str, Grid]], kind: str, cfg: ImportConfig) -> Grid:
+    """The sheet whose header best fits `kind`; ties go to the sheet named for it, then size."""
+    if len(sheets) == 1:
+        return sheets[0][1]
+
+    def rank(sheet: tuple[str, Grid]) -> tuple[int, int, int, int]:
+        title, grid = sheet
+        m = detect(grid, kind, cfg)
+        found = len(FIELDS[kind]) - len(m.missing_required)
+        return (found, _sheet_hint(kind, title), len(m.mapping), len(grid))
+
+    return max(sheets, key=rank, default=("", []))[1]
 
 
 def manual(grid: Grid, kind: str, header_row: int, mapping: dict[str, int]) -> MappingResult:
@@ -389,7 +471,6 @@ def manual(grid: Grid, kind: str, header_row: int, mapping: dict[str, int]) -> M
             raise ValueError(f"Column {col} for '{k}' is outside the header row")
     if len(set(mapping.values())) != len(mapping):
         raise ValueError("The same column is mapped to two fields")
-    required = [s.key for s in FIELDS[kind] if s.required]
     result = MappingResult(header_row, headers, dict(mapping))
-    result.missing_required = [k for k in required if k not in mapping]
+    result.missing_required = _missing(kind, mapping)
     return result

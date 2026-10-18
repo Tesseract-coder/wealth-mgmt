@@ -21,8 +21,8 @@ import { formatINR } from "../lib/format";
 
 type Tab = "stocks" | "mf" | "cas" | "manual" | "sheets" | "screener" | "fund_portfolio";
 const TABS: { key: Tab; label: string }[] = [
-  { key: "stocks", label: "Groww stocks" },
-  { key: "mf", label: "Groww mutual funds" },
+  { key: "stocks", label: "Stocks (Groww, Kite…)" },
+  { key: "mf", label: "Mutual funds (Groww, Kite…)" },
   { key: "cas", label: "CAS PDF" },
   { key: "manual", label: "Add fund manually" },
   { key: "sheets", label: "Google Sheet" },
@@ -45,7 +45,7 @@ export function Import() {
     <div className="space-y-6">
       <PageHeader
         title="Import"
-        description="Bring in your holdings from Groww, a CAS statement, a Google Sheet or by hand, plus optional Screener.in data and fund portfolios."
+        description="Bring in your holdings from Groww, Zerodha Kite or another broker's export, a CAS statement, a Google Sheet or by hand, plus optional Screener.in data and fund portfolios."
       />
       <Card>
         <div role="tablist" aria-label="What to import" className="mb-4 flex gap-1 overflow-x-auto border-b border-border">
@@ -106,8 +106,8 @@ function TabularImport({ kind, onDone }: { kind: HoldingKind; onDone: (r: Import
       <ImportSteps stage={stage} needsAction={!!need} />
       <p className="text-sm text-fg-muted">
         {kind === "stocks"
-          ? "Groww web → Stocks → Holdings → Download (XLSX or CSV)."
-          : "Groww web → Mutual Funds → Dashboard → Download holdings (XLSX or CSV)."}{" "}
+          ? "Groww web → Stocks → Holdings → Download, or Kite Console → Portfolio → Holdings → Download (XLSX or CSV). Other brokers' holdings exports usually work too."
+          : "Groww web → Mutual Funds → Dashboard → Download holdings, or Kite Console → Portfolio → Holdings → Download (XLSX or CSV)."}{" "}
         See docs/GROWW_EXPORT_GUIDE.md.
       </p>
       {need ? (
@@ -140,8 +140,8 @@ export function importHelp(kind: HoldingKind | "cas", message: string): string {
   if (kind === "cas" && /password|decrypt|encrypt/i.test(message))
     return "The PDF password didn't open the file. Use the password you set when requesting the statement, or the one given in the email it came with.";
   if (kind === "cas") return "Check it's a Consolidated Account Statement PDF from CAMS, KFintech, NSDL or CDSL (not a contract note or a scanned image).";
-  if (kind === "stocks") return "Check it's the Holdings file from Groww web (Stocks → Holdings → Download), saved as XLSX or CSV and not edited. If the column names differ, you'll be asked to match them.";
-  return "Check it's the holdings file from Groww web (Mutual Funds → Dashboard → Download holdings), saved as XLSX or CSV and not edited.";
+  if (kind === "stocks") return "Check it's the holdings file from your broker (Groww: Stocks → Holdings → Download; Kite Console: Portfolio → Holdings → Download), saved as XLSX or CSV and not edited. If the column names differ, you'll be asked to match them.";
+  return "Check it's the holdings file from your broker (Groww: Mutual Funds → Dashboard → Download holdings; Kite Console: Portfolio → Holdings → Download), saved as XLSX or CSV and not edited.";
 }
 
 function ImportError({ kind, message }: { kind: HoldingKind | "cas"; message: string }) {
@@ -321,7 +321,7 @@ function LatestHoldings({ stocks, funds }: { stocks: StockHolding[]; funds: MFHo
     onSuccess: () => qc.invalidateQueries({ queryKey: ["holdings"] }),
   });
   if (stocks.length === 0 && funds.length === 0)
-    return <EmptyState title="Nothing imported yet">Choose a source above. Groww files are the quickest: download your holdings from Groww web and drop the file here.</EmptyState>;
+    return <EmptyState title="Nothing imported yet">Choose a source above. Broker files are the quickest: download your holdings from Groww or Kite and drop the file here.</EmptyState>;
   const th = "px-2 py-1 font-medium";
   const td = "px-2 py-1";
   return (

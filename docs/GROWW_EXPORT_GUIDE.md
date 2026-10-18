@@ -1,6 +1,6 @@
 # Getting your holdings into Portfolio Analyzer
 
-The app never logs in to Groww. You download files yourself and upload them on the **Import** page (http://localhost:5173/import).
+The app never logs in to your broker. You download files yourself and upload them on the **Import** page (http://localhost:5173/import).
 
 > Groww changes its menus from time to time. If a step below doesn't match what you see, look for a **Download** or **Export** option on the holdings screen. The importer is built to cope with renamed columns.
 
@@ -9,7 +9,7 @@ The app never logs in to Groww. You download files yourself and upload them on t
 1. Log in at groww.in on a computer (the web app has the download option).
 2. Go to **Stocks → Holdings**.
 3. Click **Download** (or **Reports → Holdings statement**) and choose **XLSX** (CSV also works).
-4. In Portfolio Analyzer: **Import → Groww stocks**, then drop the file in and click **Import**.
+4. In Portfolio Analyzer: **Import → Stocks (Groww, Kite…)**, then drop the file in and click **Import**.
 
 What the importer does:
 - It skips the account details and summary block at the top and finds the real table header on its own.
@@ -17,6 +17,16 @@ What the importer does:
 - It understands ₹ signs, Indian digit grouping (1,23,456.78) and losses written in brackets, e.g. (1,234).
 - It skips "Total" rows, footnotes and zero-quantity rows. The result screen lists every skipped row and the reason.
 - If the same stock appears on two rows (for example a pledged lot), it combines them.
+
+### Zerodha Kite (and other brokers)
+
+1. Log in at console.zerodha.com and go to **Portfolio → Holdings**.
+2. Click **Download** and choose **XLSX** (CSV also works).
+3. Import the same file twice if you want both: **Import → Stocks (Groww, Kite…)** reads the *Equity* sheet, and **Import → Mutual funds (Groww, Kite…)** reads the *Mutual Funds* sheet. The *Combined* sheet is ignored.
+
+Kite files list only the trading symbol (no company name), so the symbol is used as the name. *Quantity Available* is used as the quantity; shares pledged as margin or loan collateral are listed separately by Kite and are not added in.
+
+Other brokers' holdings exports usually import too. When a workbook has several sheets, the app picks the one whose columns best match what you're importing.
 
 ### When columns aren't recognised
 
@@ -41,7 +51,7 @@ Groww's holdings report has no purchase dates, so short-term vs long-term capita
 ### a) Groww mutual fund holdings export
 1. On groww.in go to **Mutual Funds → Dashboard / Investments**.
 2. Use **Download** / **Export holdings** (XLSX or CSV).
-3. **Import → Groww mutual funds**.
+3. **Import → Mutual funds (Groww, Kite…)**.
 
 Each fund is matched to its **AMFI scheme code**, which is needed for NAV history. Matching uses the scheme name **plus** the plan (Direct/Regular) and option (Growth/IDCW). If the file doesn't say Direct or Regular, the app won't guess: you pick from suggestions, because the two plans have different NAVs and costs. Funds that have since been renamed (e.g. "HDFC Mid-Cap Opportunities" → "HDFC Mid Cap Fund") show the new name as the top suggestion.
 

@@ -1,4 +1,4 @@
-"""Groww holdings exports (stocks and mutual funds), XLSX or CSV."""
+"""Broker holdings exports (stocks and mutual funds), XLSX or CSV: Groww, Zerodha Kite, others."""
 
 import json
 import logging
@@ -30,7 +30,7 @@ from app.importers.tabular import (
     parse_date,
     parse_isin,
     parse_number,
-    read_grid,
+    read_sheets,
 )
 from app.models.tables import ColumnMapping, MFHolding, MFTransaction, Snapshot, StockHolding
 
@@ -124,6 +124,11 @@ def _is_total(name: str) -> bool:
     return n.startswith(("total", "grand total", "net total")) or n in ("sum", "summary")
 
 
+def _grid(content: bytes, filename: str, kind: str) -> Grid:
+    """The sheet holding `kind` holdings, in workbooks with several (Kite: Equity, Mutual Funds)."""
+    return column_mapper.pick_sheet(read_sheets(content, filename), kind, get_profiles().importing)
+
+
 def _source(filename: str) -> str:
     return "groww_xlsx" if filename.lower().endswith((".xlsx", ".xlsm")) else "groww_csv"
 
@@ -135,7 +140,7 @@ def import_stocks(
     session: Session, content: bytes, filename: str, user: UserMapping | None = None
 ) -> Imported | NeedsMapping:
     return import_stocks_grid(
-        session, read_grid(content, filename), filename, _source(filename), user
+        session, _grid(content, filename, "stocks"), filename, _source(filename), user
     )
 
 
@@ -153,7 +158,7 @@ def import_stocks_grid(
     resolver, overrides = ticker_resolver(), ticker_overrides(session)
 
     for rownum, rec, text in _records(grid, mapping):
-        name = cell_text(rec.get("name"))
+        name = cell_text(rec.get("name")) or cell_text(rec.get("symbol"))
         if not name:
             skipped.append(SkippedRow(rownum, "No stock name", text))
             continue
@@ -313,7 +318,9 @@ def carry_forward_manual(
 def import_mf(
     session: Session, content: bytes, filename: str, user: UserMapping | None = None
 ) -> Imported | NeedsMapping:
-    return import_mf_grid(session, read_grid(content, filename), filename, _source(filename), user)
+    return import_mf_grid(
+        session, _grid(content, filename, "mf"), filename, _source(filename), user
+    )
 
 
 def import_mf_grid(
@@ -341,11 +348,15 @@ def import_mf_grid(
         if (units is None or units <= 0) and (value is None or value <= 0):
             skipped.append(SkippedRow(rownum, "Units and value missing or zero", text))
             continue
+        invested = parse_number(rec.get("invested"))
+        avg_nav = parse_number(rec.get("avg_nav"))
+        if invested is None and avg_nav is not None and units:
+            invested = units * avg_nav
         holding, notes = build_mf_holding(
             session,
             name=name,
             units=units if units and units > 0 else None,
-            invested=parse_number(rec.get("invested")),
+            invested=invested,
             current_value=value,
             folio=cell_text(rec.get("folio")) or None,
             isin=parse_isin(rec.get("isin")),

@@ -4,6 +4,8 @@ Run from the repo root:  cd backend && uv run python ../sample_data/generate_sam
 """
 
 import csv
+import re
+import zipfile
 from pathlib import Path
 
 from openpyxl import Workbook
@@ -285,6 +287,59 @@ def screener_company_xlsx() -> None:
     wb.save(OUT / "screener_company_ITC.xlsx")
 
 
+def kite_xlsx() -> None:
+    """Mimics a Zerodha Kite Console holdings export: Equity / Mutual Funds / Combined sheets,
+    table starting at B23 with only the trading symbol (no company name), and a wrong sheet size
+    in each sheet's <dimension>, which read-only readers trust."""
+    head = ["Symbol", "ISIN", "Sector", "Quantity Available", "Quantity Discrepant",
+            "Quantity Long Term", "Quantity Pledged (Margin)", "Quantity Pledged (Loan)",
+            "Average Price", "Previous Closing Price", "Unrealized P&L", "Unrealized P&L Pct."]
+    eq = [("RELIANCE", "INE002A01018", "ENERGY", 25, 2410.50, 2875.10),
+          ("TCS", "INE467B01029", "IT", 10, 3620.00, 3412.35),
+          ("ITC", "INE154A01025", "FMCG", 120, 412.10, 438.60)]
+    mf_head = ["Symbol", "ISIN", "Instrument Type", "Quantity Available", "Quantity Discrepant",
+               "Quantity Pledged (Margin)", "Quantity Pledged (Loan)", "Average Price",
+               "Previous Closing Price", "Unrealized P&L", "Unrealized P&L Pct."]
+    mf = [("PARAG PARIKH FLEXI CAP FUND - DIRECT PLAN", "INF879O01027", "Equity - Flexi Cap",
+           812.345, 67.70, 87.66)]
+
+    def sheet(ws, title, header, rows):
+        ws.title = title
+        ws["B7"], ws["C7"] = "Client ID", "XX0000"
+        ws["B9"] = BANNER
+        ws["B11"] = f"{title} Holdings Statement as on 2026-10-17"
+        ws["B13"] = "Summary"
+        for i, h in enumerate(header):
+            ws.cell(23, 2 + i, h)
+        for r, row in enumerate(rows):
+            for i, v in enumerate(row):
+                ws.cell(24 + r, 2 + i, v)
+
+    def pnl_cols(q, a, c):
+        pnl = round(q * (c - a), 2)
+        return [a, c, pnl, round(pnl / (q * a) * 100, 4)]
+
+    wb = Workbook()
+    sheet(wb.active, "Equity", head,
+          [[s, i, sec, q, 0, q, 0, 0] + pnl_cols(q, a, c) for s, i, sec, q, a, c in eq])
+    sheet(wb.create_sheet(), "Mutual Funds", mf_head,
+          [[s, i, t, u, 0, 0, 0] + pnl_cols(u, a, c) for s, i, t, u, a, c in mf])
+    sheet(wb.create_sheet(), "Combined", head[:3] + ["Instrument Type"] + head[3:],
+          [[s, i, sec, "-", q, 0, q, 0, 0] + pnl_cols(q, a, c) for s, i, sec, q, a, c in eq]
+          + [[s, i, "", t, u, 0, 0, 0, 0] + pnl_cols(u, a, c) for s, i, t, u, a, c in mf])
+    path = OUT / "kite_holdings.xlsx"
+    wb.save(path)
+
+    # Shrink each sheet's recorded size to one cell, as in real Kite files.
+    with zipfile.ZipFile(path) as z:
+        parts = {n: z.read(n) for n in z.namelist()}
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
+        for n, data in parts.items():
+            if n.startswith("xl/worksheets/sheet"):
+                data = re.sub(rb'<dimension ref="[^"]*"', b'<dimension ref="A1"', data)
+            z.writestr(n, data)
+
+
 if __name__ == "__main__":
     stocks_xlsx()
     stocks_messy_csv()
@@ -293,4 +348,5 @@ if __name__ == "__main__":
     mf_messy_csv()
     screener_screen_csv()
     screener_company_xlsx()
+    kite_xlsx()
     print("Wrote fake samples to", OUT)

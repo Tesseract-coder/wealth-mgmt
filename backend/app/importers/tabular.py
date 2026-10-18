@@ -17,11 +17,17 @@ class ImportFileError(ValueError):
 
 
 def read_grid(content: bytes, filename: str) -> Grid:
+    """The sheet with the most rows (CSV files have just one)."""
+    return max((g for _, g in read_sheets(content, filename)), key=len, default=[])
+
+
+def read_sheets(content: bytes, filename: str) -> list[tuple[str, Grid]]:
+    """Every sheet as (title, grid); a CSV is a single untitled sheet."""
     name = filename.lower()
     if name.endswith((".xlsx", ".xlsm")):
         return _read_xlsx(content)
     if name.endswith((".csv", ".txt")):
-        return _read_csv(content)
+        return [("", _read_csv(content))]
     if name.endswith(".xls"):
         raise ImportFileError(
             "Old .xls files are not supported. Open it and 'Save As' .xlsx or .csv, then retry."
@@ -29,19 +35,23 @@ def read_grid(content: bytes, filename: str) -> Grid:
     raise ImportFileError(f"Unsupported file type: {filename}. Upload .xlsx or .csv.")
 
 
-def _read_xlsx(content: bytes) -> Grid:
+def sheet_rows(ws: Any) -> Grid:
+    """All rows of a worksheet. Some exporters (e.g. Zerodha Kite) write a wrong sheet size, which
+    read-only mode trusts and would cut the sheet down to one row, so recompute it."""
+    if hasattr(ws, "reset_dimensions"):
+        ws.reset_dimensions()
+    return [list(r) for r in ws.iter_rows(values_only=True)]
+
+
+def _read_xlsx(content: bytes) -> list[tuple[str, Grid]]:
     try:
         wb = load_workbook(io.BytesIO(content), read_only=True, data_only=True)
     except Exception as e:
         raise ImportFileError(f"Could not open the Excel file: {e}") from e
-    # Groww puts holdings on the first sheet; pick the sheet with the most rows if several.
-    best: Grid = []
-    for ws in wb.worksheets:
-        rows: Grid = [list(r) for r in ws.iter_rows(values_only=True)]
-        if len(rows) > len(best):
-            best = rows
-    wb.close()
-    return best
+    try:
+        return [(ws.title, sheet_rows(ws)) for ws in wb.worksheets]
+    finally:
+        wb.close()
 
 
 def _read_csv(content: bytes) -> Grid:

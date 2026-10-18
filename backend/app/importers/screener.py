@@ -24,7 +24,15 @@ from sqlmodel import Session
 from app.importers import groww
 from app.importers.groww import NeedsMapping, UserMapping
 from app.importers.reference import ticker_overrides, ticker_resolver
-from app.importers.tabular import Cell, Grid, ImportFileError, cell_text, parse_date, parse_number
+from app.importers.tabular import (
+    Cell,
+    Grid,
+    ImportFileError,
+    cell_text,
+    parse_date,
+    parse_number,
+    sheet_rows,
+)
 from app.models.tables import ScreenerData, ScreenerUpload, utcnow
 
 logger = logging.getLogger(__name__)
@@ -174,7 +182,7 @@ def _company_grid(content: bytes) -> Grid | None:
     try:
         for ws in wb.worksheets:
             if ws.title.strip().lower() == DATA_SHEET:
-                return [list(r) for r in ws.iter_rows(values_only=True)]
+                return sheet_rows(ws)
         return None
     finally:
         wb.close()
