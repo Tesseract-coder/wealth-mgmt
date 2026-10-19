@@ -74,6 +74,12 @@ class SnapshotOut(BaseModel):
     note: str | None
 
 
+class ClearedOut(BaseModel):
+    kind: Literal["stocks", "mf"]
+    snapshots: int
+    holdings: int
+
+
 class Suggestion(BaseModel):
     symbol: str | None = None
     amfi_code: str | None = None

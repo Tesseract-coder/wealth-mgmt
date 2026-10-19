@@ -272,6 +272,12 @@ export const importApi = {
   },
 };
 
+export interface Cleared {
+  kind: HoldingKind;
+  snapshots: number;
+  holdings: number;
+}
+
 export const portfolioApi = {
   holdings: () => request<Holdings>("/portfolio/holdings"),
   snapshots: () => request<Snapshot[]>("/portfolio/snapshots"),
@@ -286,6 +292,8 @@ export const portfolioApi = {
       body: JSON.stringify({ amfi_code, remember: true }),
     }),
   deleteMf: (id: number) => request<Imported>(`/portfolio/mf/${id}`, { method: "DELETE" }),
+  /** Remove all imported stocks or funds and their snapshot history (ticker/scheme fixes stay). */
+  clear: (kind: HoldingKind) => request<Cleared>(`/portfolio/${kind}`, { method: "DELETE" }),
   searchSecurities: (q: string) =>
     request<Suggestion[]>(`/reference/securities?q=${encodeURIComponent(q)}`),
   searchSchemes: (q: string) =>

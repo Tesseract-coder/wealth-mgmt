@@ -266,6 +266,25 @@ def test_snapshots_listed_newest_first(client: TestClient) -> None:
     assert [s["kind"] for s in snaps] == ["mf", "stocks"]
 
 
+def test_clear_holdings_by_kind(client: TestClient) -> None:
+    upload(client, "/import/groww-stocks", "groww_stocks_holdings.xlsx")
+    upload(client, "/import/groww-mf", "groww_mf_holdings.xlsx")
+    client.post("/import/mf-manual", json={"scheme": "118989", "units": 10, "invested": 2000})
+
+    r = client.delete("/portfolio/mf")
+    assert r.status_code == 200, r.text
+    assert r.json() == {"kind": "mf", "snapshots": 2, "holdings": 11}
+    h = client.get("/portfolio/holdings").json()
+    assert h["mf"] == [] and h["mf_snapshot"] is None
+    assert len(h["stocks"]) == 11
+    assert [s["kind"] for s in client.get("/portfolio/snapshots").json()] == ["stocks"]
+
+    assert client.delete("/portfolio/stocks").json()["holdings"] == 11
+    assert client.get("/portfolio/holdings").json()["stocks"] == []
+    assert client.delete("/portfolio/stocks").json()["snapshots"] == 0
+    assert client.delete("/portfolio/bonds").status_code == 422
+
+
 # --------------------------------------------------------------------------- CAS
 
 

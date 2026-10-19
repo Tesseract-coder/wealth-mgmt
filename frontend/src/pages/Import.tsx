@@ -78,7 +78,7 @@ export function Import() {
       {result && <ResultSummary result={result} />}
       {holdings.isError && <ErrorState title="Couldn't load your holdings" detail={holdings.error.message} onRetry={() => void holdings.refetch()} />}
       {holdings.data && <UnresolvedFixer stocks={holdings.data.stocks} funds={holdings.data.mf} />}
-      {holdings.data && <LatestHoldings stocks={holdings.data.stocks} funds={holdings.data.mf} />}
+      {holdings.data && <LatestHoldings stocks={holdings.data.stocks} funds={holdings.data.mf} onCleared={() => setResult(null)} />}
       {holdings.isPending && <SkeletonCard label="your imported holdings" lines={6} />}
       {/* After the holdings, so it isn't drawn first and then pushed down the page. */}
       {!holdings.isPending && <SnapshotHistory />}
@@ -314,18 +314,55 @@ function Resolution({ value }: { value: string }) {
   );
 }
 
-function LatestHoldings({ stocks, funds }: { stocks: StockHolding[]; funds: MFHolding[] }) {
+const CLEAR_LABEL: Record<HoldingKind, string> = { stocks: "stocks", mf: "mutual funds" };
+
+function LatestHoldings({ stocks, funds, onCleared }: { stocks: StockHolding[]; funds: MFHolding[]; onCleared: () => void }) {
   const qc = useQueryClient();
   const remove = useMutation({
     mutationFn: (id: number) => portfolioApi.deleteMf(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["holdings"] }),
   });
+  const clear = useMutation({
+    mutationFn: (kind: HoldingKind) => portfolioApi.clear(kind),
+    onSuccess: () => {
+      onCleared();
+      // Every analysis page reads the holdings, so refetch everything.
+      void qc.invalidateQueries();
+    },
+  });
+  const confirmClear = (kind: HoldingKind) =>
+    window.confirm(
+      `Clear all imported ${CLEAR_LABEL[kind]}, including their snapshot history? Ticker and scheme fixes are kept for your next import. This can't be undone.`,
+    ) && clear.mutate(kind);
   if (stocks.length === 0 && funds.length === 0)
     return <EmptyState title="Nothing imported yet">Choose a source above. Broker files are the quickest: download your holdings from Groww or Kite and drop the file here.</EmptyState>;
   const th = "px-2 py-1 font-medium";
   const td = "px-2 py-1";
   return (
-    <Card title="Latest imported holdings (raw)">
+    <Card
+      title="Latest imported holdings (raw)"
+      actions={
+        <div className="flex flex-wrap gap-2">
+          {stocks.length > 0 && (
+            <Button variant="danger" size="sm" disabled={clear.isPending} onClick={() => confirmClear("stocks")}>
+              Clear stocks
+            </Button>
+          )}
+          {funds.length > 0 && (
+            <Button variant="danger" size="sm" disabled={clear.isPending} onClick={() => confirmClear("mf")}>
+              Clear mutual funds
+            </Button>
+          )}
+        </div>
+      }
+    >
+      {clear.isError && (
+        <div className="mb-3">
+          <Alert tone="error" title="Couldn't clear the holdings">
+            {clear.error.message}
+          </Alert>
+        </div>
+      )}
       <p className="mb-3 text-sm text-fg-subtle">
         Exactly as imported, before prices are refreshed. Signals and Score Shapes are on Holdings and Mutual Funds.
       </p>
