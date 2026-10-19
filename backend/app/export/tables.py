@@ -37,6 +37,7 @@ class Table:
     inr_rows: list[int] = field(default_factory=list)  # 0-based data rows whose column 1 is ₹
     empty_note: str | None = None  # shown instead of rows when there are none
     heading: list[int] = field(default_factory=lambda: [0])  # columns that title a PDF card
+    signals: list[str] = field(default_factory=list)  # per row: signal key, for PDF colours
 
 
 def _pct(w: float | None) -> float | None:
@@ -98,6 +99,7 @@ def stocks_table(d: HoldingSignalsOut) -> Table:
         inr_columns=_cols(STOCK_HEADER, inr),
         empty_note="No stock holdings imported yet.",
         heading=[0, 1],
+        signals=[h.signal for h in d.holdings],
     )
 
 
@@ -106,7 +108,8 @@ def stocks_table(d: HoldingSignalsOut) -> Table:
 FUND_HEADER = [
     "AMFI code", "Scheme", "Category", "Plan", "Units", "Invested", "Value", "P&L",
     "XIRR %", "XIRR basis", "1y %", "3y %", "5y %", "Benchmark", "Benchmark 3y %",
-    "Expense ratio %", "Direct plan gap (pp/yr)", "Signal", "Rule", "Reasons",
+    "Expense ratio %", "Direct plan gap (pp/yr)", "Signal", "Rule", "Positives", "Concerns",
+    "Notes",
 ]  # fmt: skip
 
 
@@ -135,7 +138,10 @@ def funds_table(d: MFHoldingsAnalysisOut) -> Table:
                 f.direct_gap_pp,
                 f.signal_label,
                 f.rule,
-                "; ".join(r.text for r in f.reasons),
+                *(
+                    "; ".join(r.text for r in f.reasons if r.direction == d) or None
+                    for d in ("bullish", "bearish", "neutral")
+                ),
             ]
         )
     return Table(
@@ -147,6 +153,7 @@ def funds_table(d: MFHoldingsAnalysisOut) -> Table:
         inr_columns=_cols(FUND_HEADER, ["Invested", "Value", "P&L"]),
         empty_note="No mutual fund holdings imported yet.",
         heading=[1],
+        signals=[f.signal for f in d.funds],
     )
 
 
@@ -155,13 +162,14 @@ def funds_table(d: MFHoldingsAnalysisOut) -> Table:
 SCREENER_HEADER = [
     "Rank", "Ticker", "Name", "Sector", "Signal", "Composite", "Technical", "Fundamental",
     "Confidence", "Last close", "Entry low", "Entry high", "Stop", "Stop %", "Target 1",
-    "Target 2", "Target 3", "Levels timeframe", "Sector effect", "Filters met", "Rule",
-    "Red flags", "Top bullish", "Top bearish", "Price as of", "Held",
+    "Target 2", "Target 3", "Levels timeframe", "Filters met", "Rule", "Red flags",
+    "Top bullish", "Top bearish", "Price as of",
 ]  # fmt: skip
 
 
 def screener_table(d: ScreenResultOut) -> Table:
-    """The candidates of one screen on a stored scan."""
+    """The candidates of one screen on a stored scan. Shared with others, so nothing about
+    your portfolio (whether you hold it, what it would do to your sectors) goes in."""
     rows: list[list[Value]] = []
     for c in d.candidates:
         lv = c.levels
@@ -173,9 +181,9 @@ def screener_table(d: ScreenResultOut) -> Table:
                 lv.close if lv else None, lv.entry_low if lv else None,
                 lv.entry_high if lv else None, lv.stop if lv else None,
                 lv.stop_pct if lv else None, *(tg + [None, None, None])[:3],
-                lv.interval if lv else None, c.impact.text, "; ".join(c.passed), c.rule,
+                lv.interval if lv else None, "; ".join(c.passed), c.rule,
                 "; ".join(f.text for f in c.flags), "; ".join(c.bullish), "; ".join(c.bearish),
-                c.price_as_of, "yes" if c.held else "no",
+                c.price_as_of,
             ]
         )  # fmt: skip
     ctx = (
@@ -191,6 +199,7 @@ def screener_table(d: ScreenResultOut) -> Table:
         inr_columns=_cols(SCREENER_HEADER, ["Last close", "Entry low", "Entry high", "Stop"]),
         empty_note="No stock passed this screen." + (f" {d.stale_note}" if d.stale_note else ""),
         heading=[0, 1, 2],
+        signals=[c.signal for c in d.candidates],
     )
 
 

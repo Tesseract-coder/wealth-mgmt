@@ -307,6 +307,9 @@ def test_scan_job_scores_universe_and_screens_instantly(
     out = list(csv.reader(io.StringIO(text)))
     assert out[0][:3] == ["Rank", "Ticker", "Name"] and out[1][0] == "1"
     assert out[-1][0] == "Disclaimer" and "Custom list" in out[-2][1]
+    # Shared with others, so nothing about your portfolio goes in.
+    assert "Held" not in out[0] and "Sector effect" not in out[0]
+    assert "Import your holdings" not in text
     pdf = client.get("/export/screener.pdf", params={"preset": "top_scores"})
     assert pdf.status_code == 200 and pdf.content.startswith(b"%PDF")
 
