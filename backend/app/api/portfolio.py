@@ -1,3 +1,5 @@
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, col, select
 
@@ -6,9 +8,10 @@ from app.core.db import get_session
 from app.importers import manual
 from app.importers.reference import scheme_resolver, ticker_resolver
 from app.importers.scheme_resolver import scheme_override_key
-from app.importers.snapshots import latest_snapshot
+from app.importers.snapshots import clear_snapshots, latest_snapshot
 from app.importers.ticker_resolver import override_keys
 from app.models.schemas import (
+    ClearedOut,
     HoldingsOut,
     ImportedOut,
     MFHoldingOut,
@@ -120,3 +123,14 @@ def delete_manual_mf(holding_id: int, session: Session = Depends(get_session)) -
             409, "Only manually added funds can be removed; re-import to change others"
         )
     return imported_out(session, manual.remove_mf(session, h))
+
+
+@router.delete("/{kind}", response_model=ClearedOut)
+def clear_holdings(
+    kind: Literal["stocks", "mf"], session: Session = Depends(get_session)
+) -> ClearedOut:
+    """Remove all imported stocks or mutual funds, with their snapshot history.
+
+    Ticker/scheme fixes and remembered column mappings are kept."""
+    snapshots, removed = clear_snapshots(session, kind)
+    return ClearedOut(kind=kind, snapshots=snapshots, holdings=removed)

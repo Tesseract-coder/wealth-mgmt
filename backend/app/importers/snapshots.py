@@ -113,3 +113,33 @@ def copy_mf_rows(
         ]
         out.append((h_copy, t_copies))
     return out
+
+
+def clear_snapshots(session: Session, kind: str) -> tuple[int, int]:
+    """Delete every snapshot of a kind with its holdings (and MF transactions).
+
+    Ticker/scheme fixes and remembered column mappings are kept for the next import.
+    Returns (snapshots, holdings) removed."""
+    snaps = session.exec(select(Snapshot).where(Snapshot.kind == kind)).all()
+    snap_ids = [s.id for s in snaps]
+    holdings: Sequence[StockHolding | MFHolding]
+    if kind == "stocks":
+        holdings = session.exec(
+            select(StockHolding).where(col(StockHolding.snapshot_id).in_(snap_ids))
+        ).all()
+    else:
+        funds = session.exec(
+            select(MFHolding).where(col(MFHolding.snapshot_id).in_(snap_ids))
+        ).all()
+        ids = [h.id for h in funds]
+        for t in session.exec(select(MFTransaction).where(col(MFTransaction.holding_id).in_(ids))):
+            session.delete(t)
+        session.flush()
+        holdings = funds
+    for h in holdings:
+        session.delete(h)
+    session.flush()
+    for s in snaps:
+        session.delete(s)
+    session.commit()
+    return len(snaps), len(holdings)
