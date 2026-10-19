@@ -43,7 +43,7 @@ export function Layout() {
       </a>
       <BackendStatus />
       <header className="sticky top-0 z-30 border-b border-border bg-surface/90 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-2.5">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5">
           <Link to="/" className="flex items-center gap-2 rounded-control font-semibold text-fg">
             <Logo className="size-7" />
             Portfolio Analyzer
@@ -78,16 +78,19 @@ export function Layout() {
               </NavLink>
             ))}
           </nav>
-          <StyleSwitcher className={`${open ? "flex" : "hidden"} md:ml-auto md:flex`} />
-          <button
-            type="button"
-            onClick={toggle}
-            aria-label={themeLabel}
-            title={themeLabel}
-            className={`${open ? "inline-flex" : "hidden"} size-9 items-center justify-center rounded-control border border-border-strong text-fg-muted hover:bg-surface-2 hover:text-fg md:inline-flex`}
-          >
-            <ThemeIcon aria-hidden className="size-4" />
-          </button>
+          {/* Style and theme stay together on the right, so the toggle never wraps on its own. */}
+          <div className={`${open ? "flex" : "hidden"} items-center gap-2 md:ml-auto md:flex`}>
+            <StyleSwitcher className="flex" />
+            <button
+              type="button"
+              onClick={toggle}
+              aria-label={themeLabel}
+              title={themeLabel}
+              className="inline-flex size-9 shrink-0 items-center justify-center rounded-control border border-border-strong text-fg-muted hover:bg-surface-2 hover:text-fg"
+            >
+              <ThemeIcon aria-hidden className="size-4" />
+            </button>
+          </div>
         </div>
         <div className="mx-auto max-w-7xl px-4 pb-2">
           <FreshnessBar />
