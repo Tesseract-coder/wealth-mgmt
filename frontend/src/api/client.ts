@@ -1036,9 +1036,10 @@ export const dashboardApi = {
 };
 
 /** Plain links: the browser downloads the file. */
+/** Export URLs without the extension: add `.csv` or `.pdf` (see DownloadMenu). */
 export const EXPORTS = [
-  { href: `${BASE}/export/stocks.csv`, label: "Stock signals (CSV)" },
-  { href: `${BASE}/export/funds.csv`, label: "Fund signals (CSV)" },
+  { href: `${BASE}/export/stocks`, label: "Stock signals" },
+  { href: `${BASE}/export/funds`, label: "Fund signals" },
 ] as const;
 
 // ---------------------------------------------------------------- screener & watchlist
@@ -1247,12 +1248,13 @@ export const screenerApi = {
     const res = await call(`${BASE}/screener/screens/${id}`, { method: "DELETE" });
     if (!res.ok) throw new ApiError(res.status, await errorMessage(res));
   },
-  csvHref: (sel: { preset?: string; screen_id?: number; include_held?: boolean }) => {
+  /** The screen's export URL without the extension (DownloadMenu adds `.csv` or `.pdf`). */
+  exportHref: (sel: { preset?: string; screen_id?: number; include_held?: boolean }) => {
     const p = new URLSearchParams();
     if (sel.preset) p.set("preset", sel.preset);
     if (sel.screen_id) p.set("screen_id", String(sel.screen_id));
     if (sel.include_held) p.set("include_held", "true");
-    return `${BASE}/export/screener.csv?${p.toString()}`;
+    return `${BASE}/export/screener?${p.toString()}`;
   },
 };
 

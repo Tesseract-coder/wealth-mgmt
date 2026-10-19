@@ -1,5 +1,6 @@
-"""CSV exports of your signals. Numbers stay plain (no ₹ or grouping) so spreadsheets can
-use them; every file ends with the generation time and the disclaimer."""
+"""CSV and PDF exports of your signals. CSV numbers stay plain (no ₹ or grouping) so
+spreadsheets can use them; the PDF is laid out to read on a phone. Every file ends with the
+generation time and the disclaimer."""
 
 import csv
 import io
@@ -14,6 +15,7 @@ from app.api.signals import holdings_signals
 from app.core.db import get_session
 from app.core.formatting import format_freshness, now_ist
 from app.core.profiles import get_profiles
+from app.export.pdf import table_pdf
 from app.export.report import build_report
 from app.export.tables import Table, funds_table, screener_table, stocks_table
 from app.models.schemas import ScreenIn
@@ -40,16 +42,51 @@ def csv_response(t: Table) -> Response:
     )
 
 
+def pdf_response(t: Table) -> Response:
+    stamp = now_ist().strftime("%Y-%m-%d")
+    return Response(
+        content=table_pdf(t),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{t.slug}-{stamp}.pdf"'},
+    )
+
+
+def _screener(
+    preset: str | None,
+    screen_id: int | None,
+    include_held: bool,
+    scan_id: int | None,
+    session: Session,
+) -> Table:
+    d = screen_scan(
+        ScreenIn(scan_id=scan_id, preset=preset, screen_id=screen_id, include_held=include_held),
+        session,
+    )
+    return screener_table(d)
+
+
 @router.get("/stocks.csv")
 def stocks_csv(session: Session = Depends(get_session)) -> Response:
     """Your stock holdings with signal, scores, confidence, stop and suggested action."""
     return csv_response(stocks_table(holdings_signals(None, None, session)))
 
 
+@router.get("/stocks.pdf")
+def stocks_pdf(session: Session = Depends(get_session)) -> Response:
+    """Your stock holdings as a phone-readable PDF, one card per stock."""
+    return pdf_response(stocks_table(holdings_signals(None, None, session)))
+
+
 @router.get("/funds.csv")
 def funds_csv(session: Session = Depends(get_session)) -> Response:
     """Your mutual funds with signal, returns vs benchmark, cost and reasons."""
     return csv_response(funds_table(mf_holdings(session)))
+
+
+@router.get("/funds.pdf")
+def funds_pdf(session: Session = Depends(get_session)) -> Response:
+    """Your mutual funds as a phone-readable PDF, one card per fund."""
+    return pdf_response(funds_table(mf_holdings(session)))
 
 
 @router.get("/screener.csv")
@@ -61,11 +98,19 @@ def screener_csv(
     session: Session = Depends(get_session),
 ) -> Response:
     """The candidates of a preset or saved screen on the latest (or given) scan."""
-    d = screen_scan(
-        ScreenIn(scan_id=scan_id, preset=preset, screen_id=screen_id, include_held=include_held),
-        session,
-    )
-    return csv_response(screener_table(d))
+    return csv_response(_screener(preset, screen_id, include_held, scan_id, session))
+
+
+@router.get("/screener.pdf")
+def screener_pdf(
+    preset: str | None = Query(None, description="Preset key (default: the first preset)"),
+    screen_id: int | None = Query(None, description="A saved screen instead of a preset"),
+    include_held: bool = False,
+    scan_id: int | None = None,
+    session: Session = Depends(get_session),
+) -> Response:
+    """The screen's candidates as a phone-readable PDF, one card per stock."""
+    return pdf_response(_screener(preset, screen_id, include_held, scan_id, session))
 
 
 @router.get("/report", response_class=HTMLResponse)

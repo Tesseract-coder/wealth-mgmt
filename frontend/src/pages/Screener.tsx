@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { screenerApi, type ScreenerConfig, type ScreenFilter, type ScreenRequest } from "../api/client";
+import { DownloadMenu } from "../components/DownloadMenu";
 import { FilterBuilder, fromDrafts, SaveScreen, toDraft, type Draft } from "../components/FilterBuilder";
 import { ScanPanel } from "../components/ScanPanel";
 import { ScreenResults } from "../components/ScreenResults";
@@ -205,12 +206,7 @@ function ScreenerBody({ config }: { config: ScreenerConfig }) {
           title={`${result.data.title}: ${result.data.candidates.length ? `top ${result.data.candidates.length}` : "no ideas"}`}
           actions={
             sel.kind !== "custom" && (
-              <a
-                className="text-sm text-accent-text underline"
-                href={screenerApi.csvHref({ preset: preset?.key, screen_id: saved?.id, include_held: includeHeld })}
-              >
-                Download CSV
-              </a>
+              <DownloadMenu size="sm" href={screenerApi.exportHref({ preset: preset?.key, screen_id: saved?.id, include_held: includeHeld })} />
             )
           }
         >

@@ -151,3 +151,6 @@ def test_csv_exports_end_with_the_disclaimer(
         assert len(body) == n
         assert rows[-1][0] == "Disclaimer" and "not investment advice" in rows[-1][1]
         assert all(len(row) == len(rows[0]) for row in body)
+        pdf = client.get(path.replace(".csv", ".pdf"))
+        assert pdf.status_code == 200 and pdf.headers["content-type"] == "application/pdf"
+        assert pdf.content.startswith(b"%PDF") and ".pdf" in pdf.headers["content-disposition"]

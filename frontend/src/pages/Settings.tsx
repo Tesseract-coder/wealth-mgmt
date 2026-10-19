@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { api, dashboardApi, EXPORTS, REPORT_URL, sheetsApi, type Threshold, type Thresholds } from "../api/client";
+import { DownloadMenu } from "../components/DownloadMenu";
 import { GoogleSheetsSettings, SheetsExportButton } from "../components/GoogleSheets";
 import { MarketData } from "../components/MarketData";
 import { Download, FileText, MessageSquare } from "lucide-react";
@@ -92,15 +93,13 @@ function ExportCard() {
       </Card>
       <Card title="Download">
         <p className="mb-3 text-sm text-fg-subtle">
-          Signals with their scores and reasons, under your saved profile. Each file ends with the date and the disclaimer. Screener
-          ideas download from the Screener page (Download CSV on any screen).
+          Signals with their scores and reasons, under your saved profile, as a PDF (easy to read on a phone) or a CSV (for a
+          spreadsheet). Each file ends with the date and the disclaimer. Screener ideas download from the Screener page (Download on
+          any screen).
         </p>
         <div className="flex flex-wrap gap-2">
           {EXPORTS.map((e) => (
-            <a key={e.href} href={e.href} download className={LINK_BTN}>
-              <Download aria-hidden className="size-4" />
-              {e.label}
-            </a>
+            <DownloadMenu key={e.href} href={e.href} label={e.label} />
           ))}
         </div>
       </Card>

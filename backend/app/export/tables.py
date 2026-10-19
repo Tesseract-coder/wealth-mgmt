@@ -36,6 +36,7 @@ class Table:
     inr_columns: list[int] = field(default_factory=list)  # 0-based, whole column
     inr_rows: list[int] = field(default_factory=list)  # 0-based data rows whose column 1 is ₹
     empty_note: str | None = None  # shown instead of rows when there are none
+    heading: list[int] = field(default_factory=lambda: [0])  # columns that title a PDF card
 
 
 def _pct(w: float | None) -> float | None:
@@ -96,6 +97,7 @@ def stocks_table(d: HoldingSignalsOut) -> Table:
         rows,
         inr_columns=_cols(STOCK_HEADER, inr),
         empty_note="No stock holdings imported yet.",
+        heading=[0, 1],
     )
 
 
@@ -144,6 +146,7 @@ def funds_table(d: MFHoldingsAnalysisOut) -> Table:
         rows,
         inr_columns=_cols(FUND_HEADER, ["Invested", "Value", "P&L"]),
         empty_note="No mutual fund holdings imported yet.",
+        heading=[1],
     )
 
 
@@ -187,6 +190,7 @@ def screener_table(d: ScreenResultOut) -> Table:
         rows,
         inr_columns=_cols(SCREENER_HEADER, ["Last close", "Entry low", "Entry high", "Stop"]),
         empty_note="No stock passed this screen." + (f" {d.stale_note}" if d.stale_note else ""),
+        heading=[0, 1, 2],
     )
 
 
