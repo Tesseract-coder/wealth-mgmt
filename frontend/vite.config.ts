@@ -15,11 +15,12 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        // Chart libraries in their own cached chunks.
+        // Chart libraries in their own cached chunks, with everything only recharts uses, so
+        // pages without charts don't download it.
         manualChunks: (id) =>
           id.includes("node_modules/lightweight-charts") || id.includes("node_modules/fancy-canvas")
             ? "candles"
-            : /node_modules\/(recharts|d3-|victory-vendor|@reduxjs|immer|reselect|es-toolkit)/.test(id)
+            : /node_modules\/(recharts|d3-[\w-]+|internmap|victory-vendor|@reduxjs|redux|react-redux|redux-thunk|immer|reselect|es-toolkit|decimal\.js-light|eventemitter3|tiny-invariant|use-sync-external-store|@standard-schema|clsx)\//.test(id)
               ? "recharts"
               : id.includes("node_modules")
                 ? "vendor"

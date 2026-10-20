@@ -10,7 +10,7 @@ from sqlmodel import Session
 from app.core.formatting import now_ist
 from app.core.profiles import get_profiles
 from app.data import store, yahoo
-from app.data.freshness import Freshness, assess_age
+from app.data.freshness import Freshness, assess_age, failed_lately
 from app.data.http import FetchError
 from app.data.store import RefreshResult
 from app.models.tables import FundamentalsRaw, SeriesStatus
@@ -44,6 +44,7 @@ def refresh_fundamentals(
     label: str | None = None,
     *,
     force: bool = False,
+    retry_failed_after: timedelta | None = None,
     now: datetime | None = None,
 ) -> RefreshResult:
     now = now or now_ist()
@@ -55,6 +56,8 @@ def refresh_fundamentals(
     has_estimates = row is not None and "eps_estimates" in json.loads(row.info_json)
     if not force and has_estimates and fundamentals_freshness(st, now).status == "fresh":
         return RefreshResult(key, label, "skipped", "Already up to date")
+    if failed_lately(st, now, retry_failed_after):
+        return RefreshResult(key, label, "failed", st.last_error or "Last download failed")
     st.last_attempt_at = store.to_utc(now)
     try:
         info, statements = yahoo.fetch_fundamentals(ticker)

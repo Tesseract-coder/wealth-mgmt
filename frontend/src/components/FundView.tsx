@@ -9,6 +9,7 @@ import { axesFromSections, CheckList, RewardsRisks, ScoreShape, SectionHeader } 
 import { FundSignalPill } from "./analysis/SignalPill";
 import { FreshnessBadge } from "./MarketData";
 import { Alert, Badge, Button, Card, Delta, EmptyState, ErrorState, inputClass, Loading, Segmented, Skeleton, SkeletonText, Stat } from "./ui";
+import { invalidateData } from "../lib/queries";
 
 /** Kept here for existing imports; the pill now lives in components/analysis. */
 export { FundSignalPill };
@@ -612,8 +613,7 @@ function ExpenseRatio({ f }: { f: FundReport }) {
     mutationFn: (pctValue: number | null) => fundApi.setExpenseRatio(f.code, pctValue),
     onSuccess: (r) => {
       qc.setQueryData(["mf", f.code], r);
-      void qc.invalidateQueries({ queryKey: ["mf-holdings"] });
-      void qc.invalidateQueries({ queryKey: ["mf-checks"] });
+      void invalidateData(qc);
     },
   });
   const num = v.trim() === "" ? null : Number(v);

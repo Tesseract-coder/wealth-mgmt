@@ -6,13 +6,14 @@ be swapped (a paid API, a broker's read-only API) by writing another implementat
 is missing or stale.
 """
 
-from datetime import date
+from datetime import date, timedelta
 from typing import Protocol
 
 import pandas as pd
 from sqlmodel import Session
 
 from app.core.formatting import now_ist
+from app.core.profiles import get_profiles
 from app.data import delivery, fundamentals, navs, prices, store
 from app.data.freshness import Freshness
 from app.data.fundamentals import RawFundamentals
@@ -55,6 +56,12 @@ class DataProvider(Protocol):
     ) -> RefreshResult: ...
 
 
+def _retry_after() -> timedelta:
+    """Pages, scans and the watchlist don't retry a download that just failed (a wrong or
+    delisted symbol would otherwise wait on Yahoo on every visit); refresh jobs always retry."""
+    return timedelta(minutes=get_profiles().data.failed_retry_after_minutes)
+
+
 class CachedProvider:
     """SQLite cache backed by Yahoo Finance, mfapi.in, AMFI and NSE archives."""
 
@@ -85,12 +92,16 @@ class CachedProvider:
     ) -> RefreshResult:
         """Fetch only when nothing is cached or the cache is stale (or force)."""
         self._forget_daily(ticker)
-        return prices.refresh_daily(self.session, ticker, label, force=force)
+        return prices.refresh_daily(
+            self.session, ticker, label, force=force, retry_failed_after=_retry_after()
+        )
 
     def ensure_intraday(
         self, ticker: str, interval: IntradayInterval, force: bool = False
     ) -> RefreshResult:
-        return prices.refresh_intraday(self.session, ticker, interval, force=force)
+        return prices.refresh_intraday(
+            self.session, ticker, interval, force=force, retry_failed_after=_retry_after()
+        )
 
     def nav_history(self, code: str, start: date | None = None) -> pd.Series:
         pts = store.read_navs(self.session, code, start)
@@ -117,4 +128,6 @@ class CachedProvider:
     def ensure_fundamentals(
         self, ticker: str, label: str | None = None, force: bool = False
     ) -> RefreshResult:
-        return fundamentals.refresh_fundamentals(self.session, ticker, label, force=force)
+        return fundamentals.refresh_fundamentals(
+            self.session, ticker, label, force=force, retry_failed_after=_retry_after()
+        )

@@ -1,5 +1,8 @@
 """Scores and Buy / Hold / Sell signals, with the readings, flags and rules behind them."""
 
+from dataclasses import replace
+from datetime import timedelta
+
 from fastapi import APIRouter, Depends, Path, Query
 from sqlmodel import Session
 
@@ -17,6 +20,7 @@ from app.analysis.signals import (
 )
 from app.api.market import TICKER, fr_out
 from app.core.db import get_session
+from app.core.memo import Memo
 from app.core.profiles import RiskKey, StyleKey, get_profiles
 from app.data.freshness import Freshness
 from app.data.provider import CachedProvider
@@ -296,6 +300,15 @@ def backtest(
     move, and a rule-following strategy vs buy-and-hold. It does not predict the future."""
     st, rk, _ = active_profile(session, style, risk)
     style_key, notes = resolve_style(st)
-    res = run_backtest(CachedProvider(session), ticker, style=style_key, risk_key=rk, fetch=fetch)
-    res.notes = notes + res.notes
-    return res
+    res = _backtests.get(
+        session,
+        (ticker.upper(), style_key, rk, fetch),
+        lambda s: run_backtest(
+            CachedProvider(s), ticker, style=style_key, risk_key=rk, fetch=fetch
+        ),
+    )
+    return replace(res, notes=notes + res.notes)  # the cached result stays as is
+
+
+# A replay takes a few seconds; opening the same stock's backtest again reuses it.
+_backtests: Memo[BacktestResult] = Memo("backtest", timedelta(minutes=30), size=32)

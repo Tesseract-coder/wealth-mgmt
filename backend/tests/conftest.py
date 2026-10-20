@@ -10,6 +10,7 @@ from sqlmodel import Session
 
 from app.core import db, profiles
 from app.core.formatting import IST
+from app.core.memo import clear_memos
 from app.core.settings import get_settings
 from app.data import http, rate_limit
 from app.data.reference_refresh import clear_reference_caches
@@ -52,6 +53,7 @@ def _isolate(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     db._engine = None
     profiles._profiles = None
     clear_reference_caches()
+    clear_memos()
 
 
 def _teardown() -> None:
@@ -59,6 +61,7 @@ def _teardown() -> None:
     db._engine = None
     get_settings.cache_clear()
     clear_reference_caches()
+    clear_memos()
 
 
 @pytest.fixture

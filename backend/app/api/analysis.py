@@ -1,7 +1,7 @@
 """Technical analysis endpoints. Signals and scores come in Phase 6; these show the readings."""
 
 import math
-from datetime import date
+from datetime import date, timedelta
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Path, Query
@@ -17,6 +17,7 @@ from app.analysis.technical import (
 )
 from app.api.market import TICKER, fr_out
 from app.core.db import get_session
+from app.core.memo import Memo
 from app.core.profiles import RiskLevel, StyleKey, get_profiles
 from app.data.prices import get_daily, get_intraday
 from app.data.provider import CachedProvider
@@ -111,9 +112,18 @@ def fundamental_out(r: FundamentalReport) -> FundamentalReportOut:
     )
 
 
+_fundamental_holdings: Memo[list[FundamentalSummaryOut]] = Memo(
+    "holdings fundamentals", timedelta(minutes=5), size=2
+)
+
+
 @router.get("/fundamental/holdings", response_model=list[FundamentalSummaryOut])
 def holdings_fundamental(session: Session = Depends(get_session)) -> list[FundamentalSummaryOut]:
     """Fundamentals for every current stock holding, from cached data only (no network)."""
+    return _fundamental_holdings.get(session, "fundamentals", _holdings_fundamental)
+
+
+def _holdings_fundamental(session: Session) -> list[FundamentalSummaryOut]:
     risk, risk_label = _active_risk(session)
     provider = CachedProvider(session)
     out = []

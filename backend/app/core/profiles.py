@@ -268,6 +268,7 @@ class DataConfig(BaseModel):
     incremental_overlap_days: int = Field(ge=1)
     split_check_tolerance: float = Field(gt=0, lt=1)
     fundamentals_stale_after_days: float = Field(gt=0)
+    failed_retry_after_minutes: float = Field(gt=0)
     http_timeout_seconds: float = Field(gt=0)
     http_retries: int = Field(ge=0)
     http_backoff_seconds: float = Field(ge=0)

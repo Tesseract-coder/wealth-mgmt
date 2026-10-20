@@ -304,6 +304,7 @@ data:
   incremental_overlap_days: 7      # re-download this many recent days on each refresh
   split_check_tolerance: 0.02      # overlapping closes differing more than this ⇒ split/bonus ⇒ full re-download
   fundamentals_stale_after_days: 7
+  failed_retry_after_minutes: 60  # opening a page doesn't retry a download that failed this recently (refresh jobs always do)
   http_timeout_seconds: 30
   http_retries: 3
   http_backoff_seconds: 2          # doubles on each retry

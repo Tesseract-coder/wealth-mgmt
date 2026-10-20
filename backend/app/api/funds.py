@@ -1,6 +1,6 @@
 """Mutual fund analysis and portfolio-level analytics."""
 
-from datetime import date
+from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, UploadFile
 from sqlmodel import Session
@@ -17,12 +17,13 @@ from app.analysis.mf import (
     overlap,
     set_expense_ratio,
 )
-from app.analysis.portfolio import summarise
+from app.analysis.portfolio import PortfolioSummary, summarise
 from app.analysis.returns import RiskStats
 from app.api.imports import _read, _user_mapping, needs_mapping_out
 from app.api.market import fr_out
 from app.core.db import get_session
 from app.core.formatting import now_ist
+from app.core.memo import Memo
 from app.core.profiles import get_profiles
 from app.data.provider import CachedProvider
 from app.importers.fund_portfolio import import_fund_portfolio
@@ -241,11 +242,14 @@ async def import_fund_portfolio_file(
     return FundPortfolioImportedOut(**res.__dict__)
 
 
+_summaries: Memo[PortfolioSummary] = Memo("portfolio summary", timedelta(minutes=5), size=2)
+
+
 @router.get("/portfolio/summary", response_model=PortfolioSummaryOut)
 def portfolio_summary(session: Session = Depends(get_session)) -> PortfolioSummaryOut:
     """Value, P&L, day change, XIRR, allocation, concentration, beta, correlation and
     performance vs Nifty 50, from cached data."""
-    s = summarise(session, CachedProvider(session))
+    s = _summaries.get(session, "summary", lambda ses: summarise(ses, CachedProvider(ses)))
     d = {
         k: v
         for k, v in s.__dict__.items()

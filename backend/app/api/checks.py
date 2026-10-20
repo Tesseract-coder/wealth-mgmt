@@ -24,7 +24,7 @@ from app.analysis.signals import (
     SIGNAL_LABEL,
     active_profile,
     analyse_stock,
-    evaluate_holdings,
+    holdings_analysis,
     resolve_style,
 )
 from app.analysis.valuation import FairValue, fair_value, pe_history
@@ -204,11 +204,11 @@ def holdings_checks(
     p = get_profiles()
     style_key, notes = resolve_style(st)
     provider = CachedProvider(session)
-    pf, sigs = evaluate_holdings(session, provider, style_key, rk, ctw, save=False)
+    a = holdings_analysis(session, provider, style_key, rk, ctw)
+    pf = a.portfolio
     facts: list[HoldingFacts] = []
     out: list[HoldingShapeOut] = []
-    for s in sigs:
-        r = evaluate_stock(s, provider.daily(s.ticker).frame)
+    for s, r in zip(a.signals, a.shapes(provider), strict=True):
         value = s.position.value if s.position and s.position.value is not None else 0.0
         facts.append(
             HoldingFacts(s.label, value, r, s.signal, s.signal_label, s.weight, s.max_weight)

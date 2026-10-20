@@ -165,3 +165,29 @@ def test_latest_nav_prefers_newer_amfi_list(session: Session) -> None:
 def test_latest_nav_unknown_scheme(session: Session) -> None:
     n = latest_nav(session, "999999999", now=FRI_EVENING)
     assert n.nav is None and n.freshness.status == "unavailable"
+
+
+def test_failed_download_is_not_retried_on_page_loads(
+    session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls: list[str] = []
+
+    def empty(ticker: str, **_: object) -> pd.DataFrame:
+        calls.append(ticker)
+        return pd.DataFrame()
+
+    monkeypatch.setattr(yahoo, "_download", empty)
+    hour = timedelta(hours=1)
+    assert refresh_daily(session, "NOPE.NS", now=FRI_EVENING, retry_failed_after=hour).outcome == (
+        "failed"
+    )
+    n = len(calls)
+    later = FRI_EVENING + timedelta(minutes=30)
+    r = refresh_daily(session, "NOPE.NS", now=later, retry_failed_after=hour)
+    assert r.outcome == "failed" and "no 1d data" in r.message
+    assert len(calls) == n  # remembered: no second download
+    refresh_daily(session, "NOPE.NS", now=later)  # refresh jobs always retry
+    assert len(calls) > n
+    n = len(calls)
+    refresh_daily(session, "NOPE.NS", now=later + 2 * hour, retry_failed_after=hour)
+    assert len(calls) > n  # tried again once the hour has passed

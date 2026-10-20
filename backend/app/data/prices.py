@@ -11,7 +11,13 @@ from sqlmodel import Session
 from app.core.formatting import IST, now_ist
 from app.core.profiles import get_profiles
 from app.data import store, yahoo
-from app.data.freshness import Freshness, assess_age, assess_series, expected_session
+from app.data.freshness import (
+    Freshness,
+    assess_age,
+    assess_series,
+    expected_session,
+    failed_lately,
+)
 from app.data.http import FetchError
 from app.data.store import RefreshResult
 from app.models.tables import SeriesStatus
@@ -71,6 +77,7 @@ def refresh_daily(
     label: str | None = None,
     *,
     force: bool = False,
+    retry_failed_after: timedelta | None = None,
     now: datetime | None = None,
 ) -> RefreshResult:
     now = now or now_ist()
@@ -79,6 +86,8 @@ def refresh_daily(
     label = st.label or ticker
     if not force and daily_freshness(st, now).status == "fresh":
         return RefreshResult(key, label, "skipped", "Already up to date")
+    if failed_lately(st, now, retry_failed_after):
+        return RefreshResult(key, label, "failed", st.last_error or "Last download failed")
 
     want_from = history_start(now)
     full = st.last_date is None or st.history_from is None or st.history_from > want_from
@@ -172,6 +181,7 @@ def refresh_intraday(
     label: str | None = None,
     *,
     force: bool = False,
+    retry_failed_after: timedelta | None = None,
     now: datetime | None = None,
 ) -> RefreshResult:
     now = now or now_ist()
@@ -180,6 +190,8 @@ def refresh_intraday(
     label = st.label or ticker
     if not force and intraday_freshness(st, now).status == "fresh":
         return RefreshResult(key, label, "skipped", "Already up to date")
+    if failed_lately(st, now, retry_failed_after):
+        return RefreshResult(key, label, "failed", st.last_error or "Last download failed")
     st.last_attempt_at = store.to_utc(now)
     try:
         df = yahoo.fetch_intraday(ticker, interval, get_profiles().data.intraday_max_days[interval])

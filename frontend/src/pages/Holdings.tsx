@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { api, checksApi, signalApi, type RiskKey, type StyleKey } from "../api/client";
 import { HoldingsView, type HoldingsLayout } from "../components/portfolio/HoldingsView";
 import { ErrorState, inputClass, Loading, PageHeader, Skeleton } from "../components/ui";
-import { analysisQuery } from "./Technical";
+import { analysisQuery } from "../lib/links";
 
 const LAYOUT_KEY = "holdings-layout";
 

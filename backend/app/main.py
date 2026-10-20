@@ -1,4 +1,5 @@
 import logging
+import threading
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -7,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.analysis.checks import get_checks
+from app.analysis.signals import warm_holdings_analysis
 from app.api import (
     analysis,
     checks,
@@ -25,7 +27,7 @@ from app.api import (
     watchlist,
 )
 from app.api import settings as settings_api
-from app.core.db import init_db
+from app.core.db import get_engine, init_db
 from app.core.profiles import get_profiles
 from app.core.settings import get_settings
 from app.jobs.runner import get_runner, mark_interrupted, reset_runner
@@ -49,6 +51,9 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
             get_runner().submit(
                 JOB_KIND, market_refresh("all"), params={"scope": "all"}, trigger="startup"
             )
+        threading.Thread(
+            target=warm_holdings_analysis, args=(get_engine(),), name="warm-holdings", daemon=True
+        ).start()
     yield
     stop_scheduler()
     reset_runner()

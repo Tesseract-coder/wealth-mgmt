@@ -4,6 +4,7 @@ import { importApi, type ColumnMappingIn, type NeedsMapping, type ScreenerImport
 import { ColumnMapper } from "./ColumnMapper";
 import { FileDrop } from "./FileDrop";
 import { Alert, Button, inputClass } from "./ui";
+import { invalidateData } from "../lib/queries";
 
 /** Upload a file exported from Screener.in by the user (the app never visits Screener.in). */
 export function ScreenerImport() {
@@ -22,8 +23,7 @@ export function ScreenerImport() {
       setNeed(null);
       setFile(null);
       setResult(r);
-      void qc.invalidateQueries({ queryKey: ["fundamental"] });
-      void qc.invalidateQueries({ queryKey: ["fund-holdings"] });
+      void invalidateData(qc);
     },
   });
   return (

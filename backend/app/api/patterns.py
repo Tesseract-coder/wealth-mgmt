@@ -1,6 +1,7 @@
 """Chart-pattern endpoints: the pattern guide, one stock's patterns, and a scan of your holdings."""
 
 from dataclasses import asdict
+from datetime import timedelta
 from typing import Literal
 
 import pandas as pd
@@ -12,6 +13,7 @@ from app.analysis.technical import INTRADAY, UNIT, Interval, _iso, timeframes_fo
 from app.api.market import TICKER
 from app.core.db import get_session
 from app.core.formatting import format_inr
+from app.core.memo import Memo
 from app.core.profiles import StyleKey, get_profiles
 from app.data.provider import CachedProvider, DataProvider
 from app.data.quotes import stock_targets
@@ -163,6 +165,15 @@ def holdings_patterns(
     # Intraday styles still scan the daily chart by default: patterns there are more reliable.
     main: Interval = next((t for t in timeframes_for(style) if t not in INTRADAY), "1d")
     iv = interval or main
+    return _holdings_patterns.get(session, iv, lambda s: _patterns_for_holdings(s, iv))
+
+
+_holdings_patterns: Memo[list[PatternHoldingOut]] = Memo(
+    "holdings patterns", timedelta(minutes=5), size=4
+)
+
+
+def _patterns_for_holdings(session: Session, iv: Interval) -> list[PatternHoldingOut]:
     provider = CachedProvider(session)
     out = []
     for t in stock_targets(session):

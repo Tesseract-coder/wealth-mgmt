@@ -1,9 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { TriangleAlert } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { marketApi, type MarketStatus } from "../api/client";
 import { formatDate, formatFreshness } from "../lib/format";
+import { invalidateData } from "../lib/queries";
 
 /** NSE closes at 3:30 PM IST; an end-of-day bar is "as of" that time. */
 export function closeTime(day: string): Date {
@@ -35,9 +36,23 @@ function lastLine(): Line | null {
   }
 }
 
+/** When a refresh that ran in the background (the daily schedule, or one started elsewhere)
+ *  finishes, the pages kept in the cache are out of date: fetch them again. */
+function useRefetchAfterRefresh(s: MarketStatus | undefined) {
+  const qc = useQueryClient();
+  const stamp = s ? `${s.last_job?.finished_at}|${s.last_fundamentals_job?.finished_at}` : null;
+  const seen = useRef<string | null>(null);
+  useEffect(() => {
+    if (stamp === null) return;
+    if (seen.current !== null && seen.current !== stamp) void invalidateData(qc);
+    seen.current = stamp;
+  }, [stamp, qc]);
+}
+
 /** Shown under the header on every page. */
 export function FreshnessBar() {
   const q = useQuery({ queryKey: ["market-status"], queryFn: marketApi.status, refetchInterval: 5 * 60_000 });
+  useRefetchAfterRefresh(q.data);
   const [last] = useState(lastLine);
   const fresh = q.data ? freshnessText(q.data) : null;
   const saved = fresh && JSON.stringify(fresh);

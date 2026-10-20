@@ -10,9 +10,12 @@ No exchange-holiday calendar is bundled (NSE publishes it yearly and it changes)
 
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, time, timedelta
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from app.core.formatting import IST, format_freshness
+
+if TYPE_CHECKING:
+    from app.models.tables import SeriesStatus
 
 Status = Literal["fresh", "stale", "unavailable"]
 
@@ -26,6 +29,12 @@ class Freshness:
 def as_utc(ts: datetime) -> datetime:
     """SQLite hands back naive datetimes; they are UTC."""
     return ts.replace(tzinfo=UTC) if ts.tzinfo is None else ts.astimezone(UTC)
+
+
+def failed_lately(st: "SeriesStatus", now: datetime, within: timedelta | None) -> bool:
+    """The last download attempt failed less than `within` ago (never, when `within` is None)."""
+    at = st.last_attempt_at
+    return bool(within and st.last_error and at and now - as_utc(at) < within)
 
 
 def fmt_date(d: date) -> str:

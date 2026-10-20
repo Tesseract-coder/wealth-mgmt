@@ -21,6 +21,7 @@ import { PriceChart } from "../charts/lazy";
 import { Alert, Card, ErrorState, inputClass, SkeletonCard } from "../components/ui";
 import { useDebounced } from "../hooks/useDebounced";
 import { formatDate, formatINR } from "../lib/format";
+import { analysisQuery, type AnalysisView } from "../lib/links";
 
 const DIR: Record<Direction, { label: string; icon: string; cls: string }> = {
   bullish: { label: "Bullish", icon: "▲", cls: "text-good" },
@@ -46,7 +47,7 @@ export function DirectionTag({ d }: { d: Direction }) {
 }
 
 /** Signal (with chart), technical and fundamental views of a holding or any NSE stock. */
-type View = "signal" | "technical" | "patterns" | "fundamental" | "backtest";
+type View = AnalysisView;
 const VIEWS: { key: View; label: string }[] = [
   { key: "signal", label: "Signal" },
   { key: "technical", label: "Technical" },
@@ -54,15 +55,6 @@ const VIEWS: { key: View; label: string }[] = [
   { key: "fundamental", label: "Fundamental" },
   { key: "backtest", label: "Backtest" },
 ];
-
-/** Query string for links within the page, keeping the chosen style and view. */
-export function analysisQuery(style: StyleKey | null, view: View = "signal"): string {
-  const p = new URLSearchParams();
-  if (style) p.set("style", style);
-  if (view !== "signal") p.set("view", view);
-  const s = p.toString();
-  return s ? `?${s}` : "";
-}
 
 export function Technical() {
   const { ticker } = useParams();

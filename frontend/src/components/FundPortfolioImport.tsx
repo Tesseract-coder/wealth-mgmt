@@ -4,6 +4,7 @@ import { importApi, portfolioApi, type ColumnMappingIn, type FundPortfolioImport
 import { ColumnMapper } from "./ColumnMapper";
 import { FileDrop } from "./FileDrop";
 import { Alert, Button, inputClass } from "./ui";
+import { invalidateData } from "../lib/queries";
 
 /** Upload a fund's holdings from the AMC's monthly portfolio file, for fund overlap. */
 export function FundPortfolioImport() {
@@ -27,8 +28,7 @@ export function FundPortfolioImport() {
       setNeed(null);
       setFile(null);
       setResult(r);
-      void qc.invalidateQueries({ queryKey: ["mf-holdings"] });
-      void qc.invalidateQueries({ queryKey: ["mf"] });
+      void invalidateData(qc);
     },
   });
   return (

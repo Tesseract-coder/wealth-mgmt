@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { isActive, marketApi, type Freshness, type FreshnessStatus, type Job, type Quote, type Schedule } from "../api/client";
 import { formatDate, formatFreshness, formatINR, formatNumber, formatPct } from "../lib/format";
 import { Alert, Button, Card, ErrorState, SkeletonCard } from "./ui";
+import { invalidateData } from "../lib/queries";
 
 const BADGE: Record<FreshnessStatus, string> = {
   fresh: "border border-good-border bg-good-soft text-good",
@@ -45,7 +46,7 @@ export function MarketData() {
   const finished = job.data && !isActive(job.data);
   useEffect(() => {
     if (finished) {
-      void qc.invalidateQueries({ queryKey: ["market-status"] });
+      void invalidateData(qc);
       setJobId(null);
     }
   }, [finished, qc]);

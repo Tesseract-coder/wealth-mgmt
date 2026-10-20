@@ -3,6 +3,7 @@ import { useState } from "react";
 import { portfolioApi, type MFHolding, type StockHolding, type Suggestion } from "../api/client";
 import { useDebounced } from "../hooks/useDebounced";
 import { Alert, Button, Card, inputClass } from "./ui";
+import { invalidateData } from "../lib/queries";
 
 /** Lists holdings that couldn't be matched to an NSE symbol / AMFI scheme and lets the user pick one. */
 export function UnresolvedFixer({ stocks, funds }: { stocks: StockHolding[]; funds: MFHolding[] }) {
@@ -52,7 +53,7 @@ function FixRow(props: {
       kind === "stock"
         ? portfolioApi.fixTicker(id, args.code, args.exchange ?? "NSE")
         : portfolioApi.fixScheme(id, args.code),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["holdings"] }),
+    onSuccess: () => invalidateData(qc),
   });
 
   const options = q.length >= 2 ? (search.data ?? []) : initial;

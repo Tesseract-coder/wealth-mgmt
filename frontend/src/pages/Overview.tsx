@@ -8,7 +8,7 @@ import { RewardsRisks } from "../components/analysis";
 import { HoldingCard } from "../components/portfolio/HoldingCard";
 import { NoHoldings, PortfolioCharts, PortfolioHero, SummarySkeleton } from "../components/PortfolioSummary";
 import { buttonClass, Card, ErrorState, Loading, PageHeader, Skeleton, SkeletonText } from "../components/ui";
-import { analysisQuery } from "./Technical";
+import { analysisQuery } from "../lib/links";
 
 /** Risks for the whole portfolio: the checks' risks plus the summary's limit warnings, without repeats. */
 export function portfolioRisks(shape?: HoldingsChecks, summary?: PortfolioSummary): string[] {

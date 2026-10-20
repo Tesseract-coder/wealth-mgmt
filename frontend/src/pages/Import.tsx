@@ -18,6 +18,7 @@ import { FileDrop, ImportSteps, type ImportStage } from "../components/FileDrop"
 import { Alert, Button, Card, EmptyState, ErrorState, inputClass, PageHeader, SkeletonCard } from "../components/ui";
 import { UnresolvedFixer } from "../components/UnresolvedFixer";
 import { formatINR } from "../lib/format";
+import { invalidateData } from "../lib/queries";
 
 type Tab = "stocks" | "mf" | "cas" | "manual" | "sheets" | "screener" | "fund_portfolio";
 const TABS: { key: Tab; label: string }[] = [
@@ -37,8 +38,7 @@ export function Import() {
   const qc = useQueryClient();
   const done = (r: Imported) => {
     setResult(r);
-    void qc.invalidateQueries({ queryKey: ["holdings"] });
-    void qc.invalidateQueries({ queryKey: ["snapshots"] });
+    void invalidateData(qc);
   };
 
   return (
@@ -320,14 +320,14 @@ function LatestHoldings({ stocks, funds, onCleared }: { stocks: StockHolding[]; 
   const qc = useQueryClient();
   const remove = useMutation({
     mutationFn: (id: number) => portfolioApi.deleteMf(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["holdings"] }),
+    onSuccess: () => invalidateData(qc),
   });
   const clear = useMutation({
     mutationFn: (kind: HoldingKind) => portfolioApi.clear(kind),
     onSuccess: () => {
       onCleared();
       // Every analysis page reads the holdings, so refetch everything.
-      void qc.invalidateQueries();
+      void invalidateData(qc);
     },
   });
   const confirmClear = (kind: HoldingKind) =>
