@@ -15,6 +15,7 @@ import {
 import { FreshnessBadge } from "../components/MarketData";
 import { FundamentalHoldings } from "../components/FundamentalView";
 import { HoldingSignalsView } from "../components/SignalView";
+import { HoldingsPatterns } from "../components/patterns";
 import { StockStory } from "../components/stock/StockStory";
 import { PriceChart } from "../charts/lazy";
 import { Alert, Card, ErrorState, inputClass, SkeletonCard } from "../components/ui";
@@ -45,10 +46,11 @@ export function DirectionTag({ d }: { d: Direction }) {
 }
 
 /** Signal (with chart), technical and fundamental views of a holding or any NSE stock. */
-type View = "signal" | "technical" | "fundamental" | "backtest";
+type View = "signal" | "technical" | "patterns" | "fundamental" | "backtest";
 const VIEWS: { key: View; label: string }[] = [
   { key: "signal", label: "Signal" },
   { key: "technical", label: "Technical" },
+  { key: "patterns", label: "Chart patterns" },
   { key: "fundamental", label: "Fundamental" },
   { key: "backtest", label: "Backtest" },
 ];
@@ -68,7 +70,7 @@ export function Technical() {
   const profile = useQuery({ queryKey: ["profile"], queryFn: api.profile });
   const style = (params.get("style") as StyleKey | null) ?? profile.data?.style ?? null;
   const raw = params.get("view");
-  const view: View = raw === "fundamental" || raw === "technical" || raw === "backtest" ? raw : "signal";
+  const view: View = raw === "fundamental" || raw === "technical" || raw === "backtest" || raw === "patterns" ? raw : "signal";
   const styleKnown = params.has("style") || profile.isSuccess || profile.isError;
   const update = (next: { view?: View }) => {
     const p = new URLSearchParams(params);
@@ -131,6 +133,8 @@ export function Technical() {
         <SkeletonCard label="your holdings" />
       ) : view === "signal" ? (
         <HoldingSignalsView style={style} linkQuery={analysisQuery(style)} />
+      ) : view === "patterns" ? (
+        <HoldingsPatterns style={style} linkQuery={(t) => `/analysis/${encodeURIComponent(t)}${analysisQuery(style, "patterns")}`} />
       ) : view === "backtest" ? (
         <Card>Choose a stock with the search box above (or open one from your holdings) to replay the signal rules on its history.</Card>
       ) : (

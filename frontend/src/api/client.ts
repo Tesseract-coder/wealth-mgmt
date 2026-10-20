@@ -508,6 +508,97 @@ export const analysisApi = {
     request<TechnicalSummary[]>(`/analysis/technical/holdings${style ? `?style=${style}` : ""}`),
 };
 
+// --------------------------------------------------------------------------- chart patterns
+
+export type PatternInterval = "15m" | "1h" | "1d" | "1wk" | "1mo";
+export type Suitability = "good" | "ok" | "poor";
+
+/** One entry of the pattern guide: what the pattern means and how it's traded. */
+export interface PatternInfo {
+  key: string;
+  family: string;
+  family_label: string;
+  name: string;
+  kind: "reversal" | "continuation" | "either";
+  bias: Direction;
+  action: "buy" | "sell" | "wait";
+  verdict: string;
+  meaning: string;
+  trade: string;
+  confirm: string;
+  fails: string;
+  target_rule: string;
+  reliability: "high" | "medium" | "low";
+  duration: string;
+  intraday: Suitability;
+  swing: Suitability;
+  positional: Suitability;
+}
+
+export interface PatternPoint {
+  t: string;
+  price: number;
+  label: string;
+}
+
+export interface PatternLine {
+  label: string;
+  kind: "neckline" | "trend" | "rim" | "curve";
+  points: PatternPoint[];
+}
+
+export interface PatternMatch {
+  key: string;
+  name: string;
+  family: string;
+  direction: Direction;
+  status: "forming" | "confirmed";
+  confidence: number;
+  strength: "strong" | "moderate" | "weak";
+  start: string;
+  end: string;
+  bars: number;
+  breakout: number | null;
+  target: number | null;
+  invalidation: number | null;
+  target_pct: number | null;
+  invalidation_pct: number | null;
+  bars_since_breakout: number | null;
+  volume_confirmed: boolean | null;
+  text: string;
+  points: PatternPoint[];
+  lines: PatternLine[];
+}
+
+export interface PatternReport {
+  ticker: string;
+  interval: PatternInterval;
+  unit: string;
+  bars: number;
+  as_of: string | null;
+  last_close: number | null;
+  patterns: PatternMatch[];
+  window: { t: string[]; open: number[]; high: number[]; low: number[]; close: number[] };
+  notes: string[];
+}
+
+export interface PatternHolding {
+  ticker: string;
+  label: string;
+  interval: PatternInterval;
+  as_of: string | null;
+  bars: number;
+  patterns: PatternMatch[];
+}
+
+export const patternApi = {
+  library: () => request<PatternInfo[]>("/analysis/patterns/library"),
+  stock: (ticker: string, interval: PatternInterval = "1d") =>
+    request<PatternReport>(`/analysis/technical/${encodeURIComponent(ticker)}/patterns?interval=${interval}`),
+  holdings: (style?: StyleKey | null) =>
+    request<PatternHolding[]>(`/analysis/patterns/holdings${style ? `?style=${style}` : ""}`),
+};
+
 // --------------------------------------------------------------------------- fundamentals
 
 export interface Metric {

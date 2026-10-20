@@ -26,10 +26,10 @@ export function Disclosure({
       id={id}
       open={defaultOpen}
       onToggle={(e) => (e.currentTarget as HTMLDetailsElement).open && setOpened(true)}
-      className="group rounded-control border border-border bg-surface"
+      className="rounded-control border border-border bg-surface [&[open]>summary>svg:first-child]:rotate-90"
     >
       <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-sm font-medium text-fg hover:bg-surface-2 [&::-webkit-details-marker]:hidden">
-        <ChevronRight aria-hidden className="size-4 shrink-0 text-fg-subtle transition-transform group-open:rotate-90" />
+        <ChevronRight aria-hidden className="size-4 shrink-0 text-fg-subtle transition-transform" />
         <span className="min-w-0 flex-1">{summary}</span>
         {hint && <span className="text-xs font-normal text-fg-subtle">{hint}</span>}
       </summary>

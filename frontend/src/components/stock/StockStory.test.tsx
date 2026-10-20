@@ -92,8 +92,26 @@ describe("StockStory (desktop)", () => {
     const links = within(nav).getAllByRole("link").map((a) => a.textContent);
     expect(links[0]).toBe("Summary");
     expect(await within(nav).findByText("2/6")).toBeInTheDocument();
-    expect(within(nav).getAllByRole("link")).toHaveLength(11);
+    expect(within(nav).getAllByRole("link")).toHaveLength(12);
+    // The Chart patterns entry counts what's on the chart instead of a score.
+    expect(await within(nav).findByRole("link", { name: "Chart patterns 2 found" })).toBeInTheDocument();
     expect(within(nav).getByRole("link", { name: "Summary" })).toHaveAttribute("aria-current", "location");
+  });
+
+  it("shows the chart patterns with their verdict and levels", async () => {
+    mockFetch();
+    renderStory();
+    const section = await screen.findByRole("region", { name: "Chart patterns" });
+    expect(await within(section).findByText(/2 patterns on the daily chart: 2 bearish\. All are confirmed\./)).toBeInTheDocument();
+    const card = within(section).getByRole("article", { name: "Double top" });
+    expect(within(card).getByText("Bearish")).toBeInTheDocument();
+    expect(within(card).getByText("Confirmed 1 day ago")).toBeInTheDocument();
+    expect(within(card).getByText(/price failed twice at the same high/)).toBeInTheDocument();
+    expect(within(card).getByText("Good for selling")).toBeInTheDocument();
+    expect(within(card).getByText("Broke down below")).toBeInTheDocument();
+    expect(within(card).getByText("₹5,110.00")).toBeInTheDocument();
+    expect(within(card).getByRole("img", { name: /Double top on the chart/ })).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Show on the price chart" })).toBeInTheDocument();
   });
 
   it("tells each section's story with a chart caption and its checks", async () => {

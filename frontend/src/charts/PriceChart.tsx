@@ -3,17 +3,20 @@ import {
   CandlestickSeries,
   ColorType,
   createChart,
+  createSeriesMarkers,
   HistogramSeries,
   LineSeries,
   LineStyle,
   type IChartApi,
   type ISeriesApi,
+  type SeriesMarker,
   type SeriesType,
+  type Time,
 } from "lightweight-charts";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { api, chartApi, type ChartInterval, type PriceLevels } from "../api/client";
+import { api, chartApi, patternApi, type ChartInterval, type Direction, type PatternMatch, type PriceLevels } from "../api/client";
 import { FreshnessBadge } from "../components/MarketData";
-import { Alert, Card, ErrorState, Loading, Skeleton } from "../components/ui";
+import { Alert, Button, Card, ErrorState, Loading, Skeleton } from "../components/ui";
 import { useIsDark } from "../hooks/useIsDark";
 import { formatDate, formatNumber } from "../lib/format";
 import { palette, seriesColor } from "./palette";
@@ -25,7 +28,15 @@ export interface SRLevel {
   touches: number;
 }
 
-type Overlay = "ma" | "bollinger" | "supertrend" | "sr" | "stops" | "volume" | "rsi" | "macd";
+type Overlay = "ma" | "bollinger" | "supertrend" | "sr" | "stops" | "patterns" | "volume" | "rsi" | "macd";
+
+/** A pattern to draw on its own, from a card's "Show on the price chart"; `n` makes each click new. */
+export interface PatternFocus {
+  key: string;
+  name: string;
+  interval: ChartInterval;
+  n: number;
+}
 
 const OVERLAYS: { key: Overlay; label: string }[] = [
   { key: "ma", label: "Moving averages" },
@@ -33,6 +44,7 @@ const OVERLAYS: { key: Overlay; label: string }[] = [
   { key: "supertrend", label: "Supertrend" },
   { key: "sr", label: "Support / resistance" },
   { key: "stops", label: "Stop-loss & targets" },
+  { key: "patterns", label: "Chart patterns" },
   { key: "volume", label: "Volume" },
   { key: "rsi", label: "RSI pane" },
   { key: "macd", label: "MACD pane" },
@@ -59,6 +71,7 @@ export function PriceChart({
   sr = [],
   panes = true,
   embedded = false,
+  focus = null,
 }: {
   ticker: string;
   levels?: PriceLevels | null;
@@ -67,6 +80,8 @@ export function PriceChart({
   panes?: boolean;
   /** Inside a page section that already has the heading and the card around it. */
   embedded?: boolean;
+  /** Draw this one pattern (switching to its timeframe). */
+  focus?: PatternFocus | null;
 }) {
   const [interval, setIv] = useState<ChartInterval>("1d");
   // Open on the style's timeframe (where the stop and targets live) once the signal arrives,
@@ -81,6 +96,14 @@ export function PriceChart({
   }, [levels?.interval]);
   const [months, setMonths] = useState(12);
   const [on, setOn] = useState<Set<Overlay>>(() => new Set<Overlay>(["ma", "sr", "stops", "volume", ...(panes ? (["rsi", "macd"] as const) : [])]));
+  const [only, setOnly] = useState<PatternFocus | null>(null);
+  useEffect(() => {
+    if (!focus) return;
+    picked.current = true;
+    setIv(focus.interval);
+    setOn((s) => new Set([...s, "patterns" as const]));
+    setOnly(focus);
+  }, [focus?.n]); // eslint-disable-line react-hooks/exhaustive-deps
   const start = useMemo(() => startFor(months), [months]);
   const config = useQuery({ queryKey: ["config"], queryFn: api.config });
   const prices = useQuery({
@@ -92,6 +115,13 @@ export function PriceChart({
     queryFn: () => chartApi.indicators(ticker, interval, start),
     enabled: prices.isSuccess, // the prices call downloads the history if it isn't cached
   });
+  const pats = useQuery({
+    queryKey: ["patterns", ticker, interval],
+    queryFn: () => patternApi.stock(ticker, interval),
+    enabled: on.has("patterns") && prices.isSuccess,
+  });
+  const showOnly = only && only.interval === interval ? only : null;
+  const drawn = on.has("patterns") ? (pats.data?.patterns ?? []).filter((m) => !showOnly || m.key === showOnly.key) : [];
   const data = useMemo(() => (prices.data ? buildChartData(prices.data.bars, ind.data) : null), [prices.data, ind.data]);
   const mas = movingAverages(ind.data);
   const rsiKey = rsiColumn(ind.data);
@@ -140,8 +170,30 @@ export function PriceChart({
         <Alert tone="info">No price history for {ticker} yet. Run Refresh now in Settings, or check the ticker.</Alert>
       ) : (
         <>
-          <ChartCanvas data={data} on={on} mas={mas} rsiKey={rsiKey} levels={showStops ? levels : null} sr={on.has("sr") && last ? nearestLevels(sr, last.close) : []} bands={th ? [th.rsi_oversold, th.rsi_overbought] : null} />
-          <Legend on={on} mas={mas} showStops={showStops} hasSr={sr.length > 0 && on.has("sr")} />
+          <ChartCanvas data={data} on={on} mas={mas} rsiKey={rsiKey} levels={showStops ? levels : null} sr={on.has("sr") && last ? nearestLevels(sr, last.close) : []} bands={th ? [th.rsi_oversold, th.rsi_overbought] : null} patterns={drawn} focused={!!showOnly} />
+          <Legend on={on} mas={mas} showStops={showStops} hasSr={sr.length > 0 && on.has("sr")} patterns={drawn} focused={!!showOnly} />
+          {on.has("patterns") && (
+            <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-fg-muted">
+              {showOnly ? (
+                <>
+                  <span>
+                    Showing the <b className="text-fg">{showOnly.name}</b> with its breakout and target.
+                  </span>
+                  <Button variant="ghost" size="sm" onClick={() => setOnly(null)}>
+                    Show all patterns
+                  </Button>
+                </>
+              ) : pats.data ? (
+                <span>
+                  {drawn.length ? `Patterns drawn: ${drawn.map((m) => m.name).join(", ")}.` : "No chart pattern on this timeframe right now."} See the Chart patterns section for what each means.
+                </span>
+              ) : pats.isError ? (
+                <span>Couldn't scan for patterns.</span>
+              ) : (
+                <span>Looking for patterns…</span>
+              )}
+            </p>
+          )}
           <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-fg-subtle">
             {last && (
               <span>
@@ -178,7 +230,7 @@ function Segmented({ options, value, onChange, label }: { options: { key: string
   );
 }
 
-function Legend({ on, mas, showStops, hasSr }: { on: Set<Overlay>; mas: string[]; showStops: boolean; hasSr: boolean }) {
+function Legend({ on, mas, showStops, hasSr, patterns, focused }: { on: Set<Overlay>; mas: string[]; showStops: boolean; hasSr: boolean; patterns: PatternMatch[]; focused: boolean }) {
   const p = palette(useIsDark());
   const items: { label: string; color: string; dashed?: boolean }[] = [];
   if (on.has("ma")) mas.forEach((m, i) => items.push({ label: MA_LABEL(m), color: seriesColor(p, i) }));
@@ -186,6 +238,9 @@ function Legend({ on, mas, showStops, hasSr }: { on: Set<Overlay>; mas: string[]
   if (on.has("supertrend")) items.push({ label: "Supertrend: up", color: p.up }, { label: "Supertrend: down", color: p.down });
   if (hasSr) items.push({ label: "Support", color: p.support, dashed: true }, { label: "Resistance", color: p.resistance, dashed: true });
   if (showStops) items.push({ label: "Trailing stop", color: p.stop, dashed: true }, { label: "Targets", color: p.target, dashed: true });
+  for (const d of ["bullish", "bearish", "neutral"] as const)
+    if (patterns.some((m) => m.direction === d)) items.push({ label: `${d[0]!.toUpperCase()}${d.slice(1)} pattern lines`, color: patternColour(p, d), dashed: true });
+  if (focused && patterns.length) items.push({ label: "Pattern breakout & target", color: p.neutral, dashed: true });
   if (!items.length) return null;
   return (
     <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs" aria-label="Chart legend">
@@ -207,6 +262,8 @@ function ChartCanvas({
   levels,
   sr,
   bands,
+  patterns,
+  focused,
 }: {
   data: ChartData;
   on: Set<Overlay>;
@@ -215,6 +272,8 @@ function ChartCanvas({
   levels: PriceLevels | null | undefined;
   sr: SRLevel[];
   bands: [number, number] | null;
+  patterns: PatternMatch[];
+  focused: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const isDark = useIsDark();
@@ -282,6 +341,30 @@ function ChartCanvas({
       }
     }
 
+    // Chart patterns: their lines, labelled points, and (for one pattern) breakout and target.
+    const first = data.candles[0]?.time;
+    const markers: SeriesMarker<Time>[] = [];
+    const candleAt = new Map(data.candles.map((c) => [c.time, c]));
+    for (const m of patterns) {
+      const colour = patternColour(p, m.direction);
+      for (const ln of m.lines) {
+        const pts = first ? clipLine(ln.points.map((pt) => ({ time: pt.t.slice(0, 10), value: pt.price })), first) : [];
+        if (pts.length >= 2) line(0, colour, pts, { dashed: ln.kind !== "curve", width: 2 });
+      }
+      for (const pt of m.points) {
+        const time = pt.t.slice(0, 10);
+        const c = candleAt.get(time);
+        if (!pt.label || !c) continue;
+        const above = pt.price >= (c.high + c.low) / 2;
+        markers.push({ time, position: above ? "aboveBar" : "belowBar", color: colour, shape: "circle", text: pt.label });
+      }
+      if (focused) {
+        if (m.breakout != null) candles.createPriceLine({ price: m.breakout, color: p.neutral, lineStyle: LineStyle.Solid, lineWidth: 1, axisLabelVisible: true, title: m.direction === "neutral" ? "Breaks up above" : "Pattern breakout" });
+        if (m.target != null) candles.createPriceLine({ price: m.target, color: colour, lineStyle: LineStyle.Dotted, lineWidth: 2, axisLabelVisible: true, title: "Pattern target" });
+      }
+    }
+    if (markers.length) createSeriesMarkers(candles, markers.sort((a, b) => (String(a.time) < String(b.time) ? -1 : 1)));
+
     let pane = 1;
     if (on.has("rsi") && rsiKey) {
       const s = line(pane, seriesColor(p, 2), data.lines[rsiKey], { width: 2 });
@@ -305,7 +388,7 @@ function ChartCanvas({
     return () => chart.remove();
     // The props are rebuilt on every render; redraw only when their contents change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, isDark, JSON.stringify([[...on], mas, rsiKey, levels, sr, bands])]);
+  }, [data, isDark, JSON.stringify([[...on], mas, rsiKey, levels, sr, bands, patterns.map((m) => [m.key, m.end]), focused])]);
 
   const panes = 1 + (on.has("rsi") && rsiKey ? 1 : 0) + (on.has("macd") && data.lines.macd ? 1 : 0);
   return (
@@ -318,4 +401,18 @@ function ChartCanvas({
       )}
     </div>
   );
+}
+
+const patternColour = (p: ReturnType<typeof palette>, d: Direction) => (d === "bullish" ? p.up : d === "bearish" ? p.down : seriesColor(p, 0));
+
+/** A pattern line cut to start at the chart's first bar (the chart may show less history). */
+function clipLine(points: { time: string; value: number }[], first: string): { time: string; value: number }[] {
+  const pts = points.filter((pt, i) => i === 0 || pt.time > points[i - 1]!.time);
+  const k = pts.findIndex((pt) => pt.time >= first);
+  if (k <= 0) return k === 0 ? pts : [];
+  const a = pts[k - 1]!;
+  const b = pts[k]!;
+  if (b.time === first) return pts.slice(k);
+  const f = (Date.parse(first) - Date.parse(a.time)) / (Date.parse(b.time) - Date.parse(a.time));
+  return [{ time: first, value: a.value + (b.value - a.value) * f }, ...pts.slice(k)];
 }

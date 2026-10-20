@@ -7,6 +7,7 @@ import {
   chartApi,
   checksApi,
   fundamentalApi,
+  patternApi,
   signalApi,
   type CheckResult,
   type FinancialHistory,
@@ -17,6 +18,7 @@ import {
   type StyleKey,
 } from "../../api/client";
 import { PriceChart } from "../../charts/lazy";
+import type { PatternFocus } from "../../charts/PriceChart";
 import { startFor } from "../../charts/priceData";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { formatDate, formatINR } from "../../lib/format";
@@ -24,6 +26,7 @@ import { TechnicalReportView } from "../../pages/Technical";
 import { axesFromSections, ChartCaption, ChartFigure, CheckBar, CheckList, RewardsRisks, ScoreShape, SectionHeader, stepFor } from "../analysis";
 import { BacktestView } from "../Backtest";
 import { FundamentalBody } from "../FundamentalView";
+import { defaultPatternInterval, PatternsSection } from "../patterns";
 import { GrowthGuidanceEditor } from "./GrowthGuidance";
 import { Alert, Badge, Delta, Disclosure, EmptyState, ErrorState, Loading, Skeleton, SkeletonText, Stat } from "../ui";
 import {
@@ -51,11 +54,12 @@ const BalanceChart = lazy(() => charts().then((m) => ({ default: m.BalanceChart 
 const DividendChart = lazy(() => charts().then((m) => ({ default: m.DividendChart })));
 
 /** The old tabs (?view=…) now open the section that holds their content. */
-export type LegacyView = "signal" | "technical" | "fundamental" | "backtest";
+export type LegacyView = "signal" | "technical" | "fundamental" | "backtest" | "patterns";
 
 export type SectionKey =
   | "summary"
   | "price"
+  | "patterns"
   | "valuation"
   | "growth"
   | "past"
@@ -69,6 +73,7 @@ export type SectionKey =
 const NAV: { key: SectionKey; label: string }[] = [
   { key: "summary", label: "Summary" },
   { key: "price", label: "Price chart" },
+  { key: "patterns", label: "Chart patterns" },
   { key: "valuation", label: "Valuation" },
   { key: "growth", label: "Future Growth" },
   { key: "past", label: "Past Performance" },
@@ -82,7 +87,7 @@ const NAV: { key: SectionKey; label: string }[] = [
 
 const FUNDAMENTAL_SECTIONS: SectionKey[] = ["valuation", "growth", "past", "health", "dividends", "ownership"];
 
-const START: Record<LegacyView, SectionKey> = { signal: "summary", technical: "momentum", fundamental: "past", backtest: "test" };
+const START: Record<LegacyView, SectionKey> = { signal: "summary", technical: "momentum", fundamental: "past", backtest: "test", patterns: "patterns" };
 
 const sectionId = (k: SectionKey) => `section-${k}`;
 
@@ -106,6 +111,9 @@ export function StockStory({ ticker, style, view = "signal" }: { ticker: string;
   // Same key as the price chart's default view, so this is one request.
   const prices = useQuery({ queryKey: ["chart-prices", ticker, "1d", start], queryFn: () => chartApi.prices(ticker, "1d", start) });
   const config = useQuery({ queryKey: ["config"], queryFn: api.config });
+  // Same key as the Chart patterns section's first view: one request, and its count in the nav.
+  const pats = useQuery({ queryKey: ["patterns", ticker, defaultPatternInterval(style)], queryFn: () => patternApi.stock(ticker, defaultPatternInterval(style)), enabled: settled });
+  const [focus, setFocus] = useState<PatternFocus | null>(null);
 
   const daily = tech.data?.timeframes.find((t) => t.interval === "1d");
   const sr = (daily?.analysis.levels.length ? daily.analysis.levels : tech.data?.context.levels) ?? [];
@@ -147,13 +155,25 @@ export function StockStory({ ticker, style, view = "signal" }: { ticker: string;
       case "price":
         return (
           <Plain title="Price chart" subtitle="Candles with moving averages, support and resistance, and your stop-loss and targets.">
-            <PriceChart ticker={ticker} levels={sig.data?.levels ?? null} sr={sr} panes={false} embedded />
+            <PriceChart ticker={ticker} levels={sig.data?.levels ?? null} sr={sr} panes={false} embedded focus={focus} />
             <ChartCaption>
               {sig.data?.levels
                 ? `${sig.data.levels.stop_breached ? "The price closed below" : "The price is above"} its trailing stop of ${formatINR(sig.data.levels.trailing_stop)}. Tick RSI or MACD above the chart to open their panes.`
                 : "Tick RSI or MACD above the chart to open their panes."}
             </ChartCaption>
           </Plain>
+        );
+      case "patterns":
+        return (
+          <PatternsSection
+            ticker={ticker}
+            style={style}
+            onShow={(m, interval) => {
+              setFocus({ key: m.key, name: m.name, interval, n: Date.now() });
+              setActive("price");
+              document.getElementById(sectionId("price"))?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+            }}
+          />
         );
       case "action":
         return (
@@ -218,7 +238,7 @@ export function StockStory({ ticker, style, view = "signal" }: { ticker: string;
                     }`}
                   >
                     {n.label}
-                    <NavScore s={sections.get(n.key)} />
+                    {n.key === "patterns" ? <NavCount n={pats.data?.patterns.length} /> : <NavScore s={sections.get(n.key)} />}
                   </a>
                 </li>
               ))}
@@ -247,7 +267,7 @@ export function StockStory({ ticker, style, view = "signal" }: { ticker: string;
                 className="-mb-px flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 border-transparent px-3 py-2 text-sm font-medium text-fg-muted aria-selected:border-accent aria-selected:text-fg"
               >
                 {n.label}
-                <NavScore s={sections.get(n.key)} />
+                {n.key === "patterns" ? <NavCount n={pats.data?.patterns.length} /> : <NavScore s={sections.get(n.key)} />}
               </button>
             ))}
           </div>
@@ -263,6 +283,16 @@ export function StockStory({ ticker, style, view = "signal" }: { ticker: string;
 function NavScore({ s }: { s?: SectionResult }) {
   if (!s) return null;
   return <span className="text-xs tabular-nums text-fg-subtle">{s.score === null ? "—" : `${s.score}/6`}</span>;
+}
+
+function NavCount({ n }: { n?: number }) {
+  if (!n) return null;
+  return (
+    <span className="rounded-full bg-accent-soft px-1.5 text-xs tabular-nums text-accent-text">
+      {n}
+      <span className="sr-only"> found</span>
+    </span>
+  );
 }
 
 function Plain({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {

@@ -392,10 +392,38 @@ class SupportResistance(BaseModel):
     breakout_window_bars: int = Field(ge=1)
 
 
+class PatternSettings(BaseModel):
+    lookback_bars: int = Field(gt=30)
+    pivot_windows: list[int] = Field(min_length=1)
+    peak_tolerance_pct: float = Field(gt=0)
+    min_depth_pct: float = Field(gt=0)
+    head_min_pct: float = Field(gt=0)
+    flat_slope_pct: float = Field(gt=0)
+    breakout_buffer_pct: float = Field(ge=0)
+    recent_breakout_bars: int = Field(ge=1)
+    pole_atr: float = Field(gt=0)
+    pole_max_bars: int = Field(ge=3)
+    flag_bars: tuple[int, int]
+    cup_depth_pct: tuple[float, float]
+    rounding_min_depth_pct: float = Field(gt=0)
+    min_confidence: int = Field(ge=0, le=95)
+
+    @model_validator(mode="after")
+    def ordered(self) -> "PatternSettings":
+        if any(k < 1 for k in self.pivot_windows):
+            raise ValueError("technical.patterns.pivot_windows must be at least 1")
+        if not 2 <= self.flag_bars[0] < self.flag_bars[1]:
+            raise ValueError("technical.patterns.flag_bars must be [min, max] with 2 <= min < max")
+        if not 0 < self.cup_depth_pct[0] < self.cup_depth_pct[1]:
+            raise ValueError("technical.patterns.cup_depth_pct must be [min, max]")
+        return self
+
+
 class TechnicalConfig(BaseModel):
     periods: TechnicalPeriods
     thresholds: TechnicalThresholds
     support_resistance: SupportResistance
+    patterns: PatternSettings
     delivery_lookback_sessions: int = Field(gt=0)
 
     @model_validator(mode="after")

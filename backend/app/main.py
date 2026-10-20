@@ -15,6 +15,7 @@ from app.api import (
     imports,
     jobs,
     market,
+    patterns,
     portfolio,
     reference,
     screener,
@@ -99,6 +100,7 @@ def create_app() -> FastAPI:
     app.include_router(market.router)
     app.include_router(jobs.router)
     app.include_router(analysis.router)
+    app.include_router(patterns.router)
     app.include_router(checks.router)
     app.include_router(signals.router)
     app.include_router(funds.router)

@@ -370,6 +370,93 @@ class TechnicalSummaryOut(BaseModel):
     top_bearish: list[str]
 
 
+class PatternInfoOut(BaseModel):
+    key: str
+    family: str
+    family_label: str
+    name: str
+    kind: Literal["reversal", "continuation", "either"]
+    bias: Literal["bullish", "bearish", "neutral"]
+    action: Literal["buy", "sell", "wait"]
+    verdict: str
+    meaning: str
+    trade: str
+    confirm: str
+    fails: str
+    target_rule: str
+    reliability: Literal["high", "medium", "low"]
+    duration: str
+    intraday: Literal["good", "ok", "poor"]
+    swing: Literal["good", "ok", "poor"]
+    positional: Literal["good", "ok", "poor"]
+
+
+class PatternPointOut(BaseModel):
+    t: str
+    price: float
+    label: str = ""
+
+
+class PatternLineOut(BaseModel):
+    label: str
+    kind: Literal["neckline", "trend", "rim", "curve"]
+    points: list[PatternPointOut]
+
+
+class PatternOut(BaseModel):
+    key: str
+    name: str
+    family: str
+    direction: Literal["bullish", "bearish", "neutral"]
+    status: Literal["forming", "confirmed"]
+    confidence: int
+    strength: Literal["strong", "moderate", "weak"]
+    start: str
+    end: str
+    bars: int
+    breakout: float | None
+    target: float | None
+    invalidation: float | None
+    target_pct: float | None = Field(None, description="Target vs the last close, in percent")
+    invalidation_pct: float | None = Field(None, description="Cancel level vs the last close, %")
+    bars_since_breakout: int | None
+    volume_confirmed: bool | None
+    text: str
+    points: list[PatternPointOut]
+    lines: list[PatternLineOut]
+
+
+class PatternWindowOut(BaseModel):
+    """The bars the patterns span (plus a lead-in), for drawing them."""
+
+    t: list[str]
+    open: list[float]
+    high: list[float]
+    low: list[float]
+    close: list[float]
+
+
+class PatternReportOut(BaseModel):
+    ticker: str
+    interval: str
+    unit: str
+    bars: int
+    as_of: str | None
+    last_close: float | None
+    patterns: list[PatternOut]
+    window: PatternWindowOut
+    notes: list[str]
+
+
+class PatternHoldingOut(BaseModel):
+    ticker: str
+    label: str
+    interval: str
+    as_of: str | None
+    bars: int
+    patterns: list[PatternOut]
+
+
 class IndicatorSeriesOut(BaseModel):
     ticker: str
     interval: str

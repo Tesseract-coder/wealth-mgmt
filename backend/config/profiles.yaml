@@ -370,6 +370,21 @@ technical:
     min_touches: 2
     breakout_buffer_pct: 1.0        # close must clear the level by this much
     breakout_window_bars: 3         # breakouts in the last N bars are reported
+  patterns:                         # classic chart patterns (informational: not in the score)
+    lookback_bars: 250
+    pivot_windows: [3, 6]           # swing scales tried: small and large patterns
+    peak_tolerance_pct: 3.0         # two tops/bottoms count as equal within this %
+    min_depth_pct: 4.0              # the dip between two tops (or rise between bottoms)
+    head_min_pct: 2.0               # how far the head must stand beyond the shoulders
+    flat_slope_pct: 0.06            # a trendline moving less than this % per bar is flat
+    breakout_buffer_pct: 0.5        # a close must clear the line by this much
+    recent_breakout_bars: 10        # confirmed patterns are shown for this many bars
+    pole_atr: 4.0                   # flag/pennant pole: a move of at least this many ATRs
+    pole_max_bars: 15
+    flag_bars: [4, 20]              # length of the flag or pennant after the pole
+    cup_depth_pct: [10.0, 50.0]
+    rounding_min_depth_pct: 10.0
+    min_confidence: 50              # weaker matches are not shown
   delivery_lookback_sessions: 21    # NSE bhavcopy files fetched: the latest + periods.delivery_avg before it
 
 # ---------------------------------------------------------------------------
