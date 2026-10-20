@@ -81,7 +81,15 @@ export function PortfolioHero({ s, shape, shapeLoading = false }: { s: Portfolio
             <Stat
               label="XIRR"
               value={s.xirr == null ? "—" : formatPct(s.xirr)}
-              hint={s.xirr == null ? "needs purchase dates" : `covers ${Math.round(s.xirr_coverage * 100)}% of the value`}
+              hint={
+                s.xirr == null ? (
+                  <Link to="/import" className="underline hover:text-fg">
+                    Add purchase dates
+                  </Link>
+                ) : (
+                  `covers ${Math.round(s.xirr_coverage * 100)}% of the value`
+                )
+              }
               help="Your yearly return, allowing for when each rupee went in."
             />
           </dl>

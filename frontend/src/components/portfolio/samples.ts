@@ -18,7 +18,7 @@ export const SAMPLE_SUMMARY: PortfolioSummary = {
     day_change_note: null,
     xirr: null,
     xirr_coverage: 0.0,
-    xirr_basis: "Not available: needs purchase dates for stocks (manual entry) or a detailed CAS for funds.",
+    xirr_basis: "Not available: add a Purchase date column to your stocks file and import it again, or import a detailed CAS PDF for your funds.",
     by_holding: [
       { key: "mf:122639", label: "Parag Parikh Flexi Cap Fund - Direct Plan - Growth", value: 72238.43, weight: 0.118, limited: true },
       { key: "SBIN.NS", label: "State Bank of India", value: 57546.0, weight: 0.094, limited: true },

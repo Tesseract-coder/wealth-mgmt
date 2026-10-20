@@ -652,7 +652,7 @@ def portfolio_notes(
         risks.append(
             f"{len(sells)} holding{'s' if len(sells) != 1 else ''} with a Sell or Reduce signal: "
             + ", ".join(sells[:3])
-            + (" …" if len(sells) > 3 else "")
+            + (f" and {len(sells) - 3} more" if len(sells) > 3 else "")
             + "."
         )
     value = sum(h.value for h in holdings if h.value > 0)

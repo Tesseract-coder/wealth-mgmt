@@ -10,10 +10,20 @@ import { NoHoldings, PortfolioCharts, PortfolioHero, SummarySkeleton } from "../
 import { buttonClass, Card, ErrorState, Loading, PageHeader, Skeleton, SkeletonText } from "../components/ui";
 import { analysisQuery } from "../lib/links";
 
-/** Risks for the whole portfolio: the checks' risks plus the summary's limit warnings, without repeats. */
+/** The stock or sector a limit risk is about: "Over-exposed to Banks: …" or "BSE is 30.5% of the portfolio, …". */
+function limitSubject(risk: string): string | null {
+  return /^Over-exposed to (.+?):/.exec(risk)?.[1] ?? /^(.+?) is [\d.]+% of the portfolio, above your/.exec(risk)?.[1] ?? null;
+}
+
+/** Risks for the whole portfolio: the summary's limit warnings, then the checks' risks except
+ *  those saying the same thing in other words. */
 export function portfolioRisks(shape?: HoldingsChecks, summary?: PortfolioSummary): string[] {
-  const out = [...(summary?.warnings ?? []), ...(shape?.risks ?? [])];
-  return [...new Set(out)];
+  const warnings = summary?.warnings ?? [];
+  const covered = (r: string) => {
+    const subject = limitSubject(r);
+    return subject !== null && warnings.some((w) => w.startsWith(`${subject} is `));
+  };
+  return [...new Set([...warnings, ...(shape?.risks ?? []).filter((r) => !covered(r))])];
 }
 
 /**

@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Bar, FundChart, IndicatorSeries, PriceLevels } from "../api/client";
 import { FundChartsBody } from "./FundCharts";
-import { topSlices } from "./PortfolioCharts";
+import { dateTick, topSlices } from "./PortfolioCharts";
 import { buildChartData, movingAverages, nearestLevels, rsiColumn, startFor } from "./priceData";
 import { thinIndices } from "./thin";
 
@@ -211,5 +211,12 @@ describe("thinIndices", () => {
     expect(idx).toContain(617);
     expect(idx).toContain(1001);
     expect([...idx].sort((x, y) => x - y)).toEqual(idx);
+  });
+});
+
+describe("dateTick", () => {
+  it("shows day and month over a short span, month and year over a long one", () => {
+    expect(dateTick(["2026-09-24", "2026-10-20"])("2026-10-05")).toBe("05 Oct");
+    expect(dateTick(["2024-10-20", "2026-10-20"])("2026-10-05")).toBe("Oct 2026");
   });
 });

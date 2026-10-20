@@ -16,6 +16,7 @@ from app.analysis.mf import (
     load_fund_portfolio,
     overlap,
     set_expense_ratio,
+    short_scheme_name,
 )
 from app.analysis.portfolio import PortfolioSummary, summarise
 from app.analysis.returns import RiskStats
@@ -140,7 +141,7 @@ def mf_holdings(session: Session = Depends(get_session)) -> MFHoldingsAnalysisOu
             seen.add(r.benchmark.label)
             warnings.append(
                 f"{len(r.segment_peers) + 1} funds in the same segment ({r.benchmark.label}): "
-                + ", ".join([r.name, *r.segment_peers])
+                + ", ".join(short_scheme_name(n) for n in [r.name, *r.segment_peers])
             )
         if r.plan == "regular":
             warnings.append(f"{r.name} is a Regular plan: a Direct plan costs less.")

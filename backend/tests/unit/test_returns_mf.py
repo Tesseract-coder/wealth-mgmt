@@ -203,3 +203,19 @@ def test_overlap_formula() -> None:
     old = mf.FundPortfolio("2", date(2025, 1, 1), b.weights, 60)
     _, _, approx, note = mf.overlap(a, old, cfg, today)
     assert approx and "cover only 60%" in note and "Jan 2025" in note
+
+
+def test_short_scheme_name_drops_plan_and_option() -> None:
+    from app.analysis.mf import short_scheme_name
+
+    assert short_scheme_name("Axis ELSS- Tax Saver Fund - Direct Plan - Growth Option") == (
+        "Axis ELSS- Tax Saver Fund"
+    )
+    assert short_scheme_name("Quant ELSS Tax Saver Fund - Growth Option - Direct Plan") == (
+        "Quant ELSS Tax Saver Fund"
+    )
+    assert (
+        short_scheme_name("HDFC Index Fund-NIFTY 50 Plan-Direct Plan")
+        == "HDFC Index Fund-NIFTY 50 Plan"
+    )
+    assert short_scheme_name("Plain Fund") == "Plain Fund"

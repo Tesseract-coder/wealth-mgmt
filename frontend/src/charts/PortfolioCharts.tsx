@@ -97,6 +97,13 @@ export function SectorBars({ items, limit }: { items: Slice[]; limit: number | n
   );
 }
 
+/** Date ticks: "24 Sep" over a few months (month names alone would repeat), else "Sep 2026". */
+export function dateTick(dates: string[]): (d: string) => string {
+  const first = dates[0], last = dates.at(-1);
+  const days = first && last ? (Date.parse(last) - Date.parse(first)) / 86_400_000 : 0;
+  return days < 180 ? (d) => formatDate(d).slice(0, 6) : (d) => formatDate(d).slice(3);
+}
+
 /** Two or more series on one date axis, e.g. portfolio vs Nifty 50 (growth of 100). */
 export function ComparisonLine({
   dates,
@@ -124,7 +131,7 @@ export function ComparisonLine({
       <ResponsiveContainer width="100%" height="100%">
         <LineChart accessibilityLayer={false} data={data} margin={{ left: 0, right: 12, top: 8 }}>
           <CartesianGrid stroke={p.grid} vertical={false} />
-          <XAxis dataKey="d" tickFormatter={(d: string) => formatDate(d).slice(3)} minTickGap={40} tick={{ fill: p.text, fontSize: 12 }} />
+          <XAxis dataKey="d" tickFormatter={dateTick(dates)} minTickGap={40} tick={{ fill: p.text, fontSize: 12 }} />
           <YAxis domain={["auto", "auto"]} unit={unit} width={52} tick={{ fill: p.text, fontSize: 12 }} />
           <Tooltip
             labelFormatter={(d) => formatDate(String(d))}

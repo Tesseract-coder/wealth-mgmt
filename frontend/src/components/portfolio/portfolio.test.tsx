@@ -61,6 +61,21 @@ describe("Holdings view", () => {
     expect(cardNames()).toHaveLength(4);
   });
 
+  it("shows the most-held sectors first and folds the rest away", () => {
+    const base = SAMPLE_SIGNALS.holdings[0]!;
+    const holdings = Array.from({ length: 11 }, (_, i) => ({ ...base, ticker: `S${i}.NS`, label: `Stock ${i}`, sector: i < 2 ? "Banks" : `Sector ${String.fromCharCode(65 + i)}` }));
+    wrap(<HoldingsView d={{ ...SAMPLE_SIGNALS, holdings }} shapes={[]} layout="cards" onLayout={() => undefined} />);
+    const group = screen.getByRole("group", { name: "Sector" });
+    const names = () => within(group).getAllByRole("button", { pressed: false }).map((b) => b.textContent);
+    expect(names()[0]).toBe("Banks2");
+    expect(within(group).getAllByRole("button", { pressed: false })).toHaveLength(8);
+    fireEvent.click(within(group).getByRole("button", { name: "2 more" }));
+    expect(within(group).getAllByRole("button", { pressed: false })).toHaveLength(10);
+    fireEvent.click(within(group).getByRole("button", { name: /Sector K/ }));
+    fireEvent.click(within(group).getByRole("button", { name: "Fewer" }));
+    expect(within(group).getByRole("button", { name: /Sector K/ })).toHaveAttribute("aria-pressed", "true"); // a chosen sector stays
+  });
+
   it("sorts by total score or any axis, missing shapes last", () => {
     expect(sortHoldings(SAMPLE_SIGNALS.holdings, "shape", -1, shapes).map((h) => h.ticker)).toEqual(["TCS.NS", "HDFCBANK.NS", "INFY.NS", "RELIANCE.NS"]);
     expect(sortHoldings(SAMPLE_SIGNALS.holdings, "axis:valuation", -1, shapes)[0]!.ticker).toBe("HDFCBANK.NS");
@@ -151,6 +166,12 @@ describe("Overview", () => {
   it("merges limit warnings into the risks without repeating them", () => {
     const w = "Financial Services is 34% of your portfolio, above your 30% sector limit";
     expect(portfolioRisks({ ...SAMPLE_HOLDINGS, risks: [w, "x"] }, { ...SAMPLE_SUMMARY, warnings: [w] })).toEqual([w, "x"]);
+  });
+
+  it("drops a checks risk that a limit warning already states in other words", () => {
+    const warnings = ["BSE is 30.5% of your portfolio, above your 20% limit per stock (High risk)", "Financial Services is 54.3% of your portfolio, above your 40% sector limit"];
+    const risks = ["Over-exposed to Financial Services: 54% vs your 40% limit.", "BSE is 30.5% of the portfolio, above your 20% limit per stock.", "Over-exposed to IT: 45% vs your 40% limit.", "2 holdings with a Sell or Reduce signal: A, B."];
+    expect(portfolioRisks({ ...SAMPLE_HOLDINGS, risks }, { ...SAMPLE_SUMMARY, warnings })).toEqual([...warnings, risks[2], risks[3]]);
   });
 });
 

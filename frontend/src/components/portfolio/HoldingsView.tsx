@@ -16,6 +16,9 @@ const SIGNAL_CHIPS: { key: string; label: string; signals: SignalKey[] }[] = [
   { key: "sell", label: "Sell", signals: ["sell"] },
   { key: "none", label: "No signal", signals: ["no_signal"] },
 ];
+/** Sector chips shown before the rest fold away. */
+const SECTORS_SHOWN = 8;
+
 const CONFIDENCE: { key: ConfidenceLevel; label: string }[] = [
   { key: "high", label: "High" },
   { key: "medium", label: "Medium" },
@@ -79,7 +82,15 @@ export function HoldingsView({
 
   const count = (pred: (h: HoldingSignal) => boolean) => d.holdings.filter(pred).length;
   const signalChips = SIGNAL_CHIPS.map((c) => ({ ...c, n: count((h) => c.signals.includes(h.signal)) })).filter((c) => c.n > 0);
-  const sectorList = useMemo(() => [...new Set(d.holdings.map((h) => h.sector).filter((s): s is string => !!s))].sort(), [d]);
+  // Most-held sectors first; past the first few they fold away behind "more".
+  const sectorList = useMemo(() => {
+    const n = new Map<string, number>();
+    for (const h of d.holdings) if (h.sector) n.set(h.sector, (n.get(h.sector) ?? 0) + 1);
+    return [...n].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([name, k]) => ({ name, n: k }));
+  }, [d]);
+  const [allSectors, setAllSectors] = useState(false);
+  const hidden = allSectors ? 0 : Math.max(0, sectorList.length - SECTORS_SHOWN);
+  const shownSectors = sectorList.filter((x, i) => i < sectorList.length - hidden || sectors.has(x.name));
 
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -162,11 +173,16 @@ export function HoldingsView({
         </ChipGroup>
         {sectorList.length > 1 && (
           <ChipGroup label="Sector">
-            {sectorList.map((s) => (
-              <Chip key={s} pressed={sectors.has(s)} onClick={() => setSectors((x) => toggle(x, s))} count={count((h) => h.sector === s)}>
-                {s}
+            {shownSectors.map(({ name, n }) => (
+              <Chip key={name} pressed={sectors.has(name)} onClick={() => setSectors((x) => toggle(x, name))} count={n}>
+                {name}
               </Chip>
             ))}
+            {sectorList.length > SECTORS_SHOWN && (
+              <button type="button" className="h-7 rounded-full px-2 text-xs font-medium text-accent-text hover:underline" aria-expanded={allSectors} onClick={() => setAllSectors((v) => !v)}>
+                {allSectors ? "Fewer" : `${hidden} more`}
+              </button>
+            )}
           </ChipGroup>
         )}
         <ChipGroup label="Confidence">

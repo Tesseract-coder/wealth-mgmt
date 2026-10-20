@@ -84,7 +84,8 @@ describe("Technical page", () => {
   it("groups readings by direction with text labels, shows gaps and fetch errors", async () => {
     mockFetch();
     renderAt("/analysis/RELIANCE.NS?view=technical");
-    expect(await screen.findByText(/13\.6% below its 200-day SMA/)).toBeInTheDocument();
+    // A heavy page: under a full parallel run it can take over the default second to draw.
+    expect(await screen.findByText(/13\.6% below its 200-day SMA/, undefined, { timeout: 5000 })).toBeInTheDocument();
     expect(screen.getAllByText(/▼ Bearish/).length).toBeGreaterThan(0); // never colour alone
     expect(screen.getByText("Stochastic %K 15.0: oversold")).toBeInTheDocument();
     expect(screen.getByText("(minor)")).toBeInTheDocument();

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import {
   signalApi,
   type ConfidenceLevel,
+  type HoldingSignal,
   type HoldingSignals,
   type Reading,
   type RiskKey,
@@ -387,6 +388,35 @@ export function HoldingSignalsView({ style, risk, linkQuery = "" }: { style: Sty
   return <HoldingSignalsTable d={q.data} linkQuery={linkQuery} />;
 }
 
+/** The rule behind the signal, then flags and the top reason each way folded behind "more". */
+function WhyCell({ h }: { h: HoldingSignal }) {
+  // A severe flag that set the signal is already quoted by the rule.
+  const flags = h.flags.filter((f) => !h.rule.includes(f.text));
+  const extra = [
+    ...flags.map((f) => (
+      <div key={f.key} className={f.severe ? "text-bad" : "text-caution"}>
+        {f.severe ? "⛔" : "⚠"} {f.text}
+      </div>
+    )),
+    ...h.top_bullish.slice(0, 1).map((t) => <div key={`b${t}`}>▲ {t}</div>),
+    ...h.top_bearish.slice(0, 1).map((t) => <div key={`r${t}`}>▼ {t}</div>),
+  ];
+  return (
+    <>
+      <div>{h.rule}</div>
+      {extra.length > 0 && (
+        <details className="group">
+          <summary className="cursor-pointer list-none text-fg-subtle hover:text-fg">
+            <span className="group-open:hidden">+ {extra.length} more</span>
+            <span className="hidden group-open:inline">− less</span>
+          </summary>
+          {extra}
+        </details>
+      )}
+    </>
+  );
+}
+
 export function HoldingSignalsTable({ d, linkQuery = "" }: { d: HoldingSignals; linkQuery?: string }) {
   if (d.holdings.length === 0)
     return (
@@ -407,9 +437,10 @@ export function HoldingSignalsTable({ d, linkQuery = "" }: { d: HoldingSignals; 
           Portfolio {formatINR(d.total_value, 0)} ({d.weight_base === "portfolio" ? `stocks ${formatINR(d.stock_value, 0)} + funds ${formatINR(d.fund_value, 0)}` : "stocks only"}). Uses cached data
           only: run <b>Refresh now</b> in Settings → Data refresh first. Sorted by what needs attention.
         </p>
-        <div className="overflow-x-auto">
+        {/* Its own scroll area, so the column headings stay in view down a long list. */}
+        <div className="max-h-[75vh] overflow-auto">
           <table className="w-full text-sm">
-            <thead className="text-left text-xs uppercase text-fg-subtle">
+            <thead className="sticky top-0 z-10 bg-surface text-left text-xs uppercase text-fg-subtle shadow-[0_1px_0_var(--color-border)]">
               <tr>
                 <th className="py-1 pr-2">Stock</th>
                 <th className="pr-2">Signal</th>
@@ -444,19 +475,8 @@ export function HoldingSignalsTable({ d, linkQuery = "" }: { d: HoldingSignals; 
                   <td className={`pr-2 text-right tabular-nums ${h.weight !== null && h.weight > h.max_weight ? "font-semibold text-caution" : ""}`}>
                     {pct(h.weight)}
                   </td>
-                  <td className="pr-2 text-xs">
-                    <div>{h.rule}</div>
-                    {h.flags.map((f) => (
-                      <div key={f.key} className={f.severe ? "text-bad" : "text-caution"}>
-                        {f.severe ? "⛔" : "⚠"} {f.text}
-                      </div>
-                    ))}
-                    {h.top_bullish.slice(0, 1).map((t) => (
-                      <div key={t}>▲ {t}</div>
-                    ))}
-                    {h.top_bearish.slice(0, 1).map((t) => (
-                      <div key={t}>▼ {t}</div>
-                    ))}
+                  <td className="min-w-64 pr-2 text-xs">
+                    <WhyCell h={h} />
                   </td>
                   <td className="pr-2 text-xs">{h.rebalance.action === "none" ? "—" : h.rebalance.text}</td>
                   <td>

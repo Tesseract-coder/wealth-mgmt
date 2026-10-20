@@ -13,7 +13,13 @@ from datetime import date, datetime, timedelta
 import pandas as pd
 from sqlmodel import Session, col, select
 
-from app.analysis.mf import asset_class_of, benchmark_for, held_funds, holding_cash_flows
+from app.analysis.mf import (
+    asset_class_of,
+    benchmark_for,
+    held_funds,
+    holding_cash_flows,
+    short_scheme_name,
+)
 from app.analysis.positions import Portfolio, load_portfolio
 from app.analysis.returns import beta, xirr
 from app.analysis.signals import active_profile
@@ -308,8 +314,8 @@ def summarise(
     x = xirr(flows) if flows else None
     if x is None:
         xbasis = (
-            "Not available: needs purchase dates for stocks (manual entry) or a detailed CAS "
-            "for funds."
+            "Not available: add a Purchase date column to your stocks file and import it again, "
+            "or import a detailed CAS PDF for your funds."
         )
     else:
         xbasis = f"Covers {cov * 100:.0f}% of your portfolio (holdings with dated purchases)"
@@ -364,7 +370,8 @@ def summarise(
             segs[b.label].append(nm)
     for lab, names in segs.items():
         if len(names) > p.mf.duplicate_category_max:
-            warnings.append(f"{len(names)} funds in the same segment ({lab}): {', '.join(names)}")
+            short = ", ".join(short_scheme_name(n) for n in names)
+            warnings.append(f"{len(names)} funds in the same segment ({lab}): {short}")
 
     # Beta (value-weighted) vs Nifty 50
     nifty_t = p.data.benchmarks["nifty50"]

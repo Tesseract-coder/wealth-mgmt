@@ -112,6 +112,17 @@ describe("ScoreShape", () => {
     expect(label.indexOf("Momentum 0 of 6")).toBeLessThan(label.indexOf("Valuation 2 of 6"));
   });
 
+  it("says why a total is out of less than 36", () => {
+    render(<ScoreShape axes={axesFromRecord({ value: 2, future: 4, past: null, health: 5, dividends: null, momentum: 3 })} total={14} maxTotal={24} size="md" />);
+    expect(screen.getByText("· 2 not scored")).toBeInTheDocument();
+    expect(screen.getByText(/2 axes have too little data to score, so this total is out of 24 instead of 36/)).toBeInTheDocument();
+  });
+
+  it("adds no note when every axis is scored", () => {
+    render(<ScoreShape axes={axesFromRecord({ a: 6, b: 6, c: 6, d: 5 })} size="md" />);
+    expect(screen.queryByText(/not scored/)).not.toBeInTheDocument();
+  });
+
   it("is a static, untabbable thumbnail at sm size", () => {
     render(<ScoreShape axes={stockAxes} size="sm" />);
     expect(screen.queryByRole("group")).not.toBeInTheDocument();

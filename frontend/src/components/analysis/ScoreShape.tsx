@@ -170,6 +170,12 @@ export function ScoreShape({
 
   const describe = (a: ShapeAxis) => `${AXIS_LABEL[a.key] ?? a.label} ${a.score === null ? "not enough data" : `${formatScore(a.score)} of ${max}`}`;
   const totalText = `total ${formatScore(sum)} of ${formatScore(outOf)}`;
+  // Axes without enough data drop out of the total, so totals can be out of 30 or 24, not 36.
+  const unscored = ordered.filter((a) => a.score === null).length;
+  const unscoredNote =
+    unscored > 0 && outOf < max * n
+      ? `${unscored} ${unscored === 1 ? "axis has" : "axes have"} too little data to score, so this total is out of ${formatScore(outOf)} instead of ${formatScore(max * n)}.`
+      : null;
   const title = `Score Shape${name ? ` for ${name}` : ""}: ${ordered.map(describe).join(", ")}; ${totalText}.`;
 
   if (n < 3) {
@@ -316,6 +322,12 @@ export function ScoreShape({
             {formatScore(sum)}
             <span className="font-normal text-fg-subtle">/{formatScore(outOf)}</span>
           </span>
+          {unscoredNote && (
+            <span className="text-fg-subtle" title={unscoredNote}>
+              <span aria-hidden>· {unscored} not scored</span>
+              <span className="sr-only">{unscoredNote}</span>
+            </span>
+          )}
           {shortTerm && style && <Badge tone="accent">Style: {STYLE_NAME[style]}</Badge>}
         </p>
       )}

@@ -110,6 +110,11 @@ function TabularImport({ kind, onDone }: { kind: HoldingKind; onDone: (r: Import
           : "Groww web → Mutual Funds → Dashboard → Download holdings, or Kite Console → Portfolio → Holdings → Download (XLSX or CSV)."}{" "}
         See docs/GROWW_EXPORT_GUIDE.md.
       </p>
+      {kind === "stocks" && (
+        <p className="text-sm text-fg-muted">
+          Tip: add a <b>Purchase date</b> column to the file (one date per stock) to see your XIRR and whether a sale would be short or long term. For funds, a CAS PDF carries the dates.
+        </p>
+      )}
       {need ? (
         <ColumnMapper
           key={`${need.header_row}-${need.headers.join("|")}`}

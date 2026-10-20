@@ -6,6 +6,7 @@ Benchmarks are Yahoo price indices: they leave out dividends, which the official
 indices include, so a fund looks roughly 1–1.5% a year better here than in its factsheet.
 """
 
+import re
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import date, datetime
@@ -122,6 +123,15 @@ class FundReport:
 
 
 # ---------------------------------------------------------------------------- classification
+
+
+_PLAN_SUFFIX = re.compile(r"\s*-\s*(?:Direct|Regular)\b.*$", re.I)
+_GROWTH_SUFFIX = re.compile(r"\s*-\s*Growth(?:\s+Option)?\s*$", re.I)
+
+
+def short_scheme_name(name: str) -> str:
+    """'Axis Small Cap Fund - Direct Plan - Growth' → 'Axis Small Cap Fund', for lists of funds."""
+    return _GROWTH_SUFFIX.sub("", _PLAN_SUFFIX.sub("", name)) or name
 
 
 def asset_class_of(category: str | None, cfg: MFConfig) -> AssetClass:
@@ -558,7 +568,7 @@ def fund_signal(
     if len(peers) + 1 > cfg.duplicate_category_max and bench is not None:
         review.append(
             f"You hold {len(peers) + 1} funds in the same segment ({bench.label}): "
-            + ", ".join(peers)
+            + ", ".join(short_scheme_name(n) for n in peers)
             + " and this one"
         )
     reasons = [Reason("bearish", t) for t in switch + review] + reasons

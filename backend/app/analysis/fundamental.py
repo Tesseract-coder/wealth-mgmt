@@ -24,6 +24,7 @@ from app.core.profiles import FundamentalConfig, FundCategory, RiskLevel, get_pr
 from app.data.freshness import Freshness, as_utc
 from app.data.indices import nifty500_by_symbol
 from app.data.provider import DataProvider
+from app.data.sectors import nse_sector
 from app.importers.reference import ticker_resolver
 from app.models.tables import FundamentalMetrics, GrowthGuidance, ScreenerData, utcnow
 
@@ -166,13 +167,14 @@ def is_financial_sector(sector: str | None, cfg: FundamentalConfig) -> bool:
 
 
 def sector_of(symbol: str | None, info: dict[str, Any]) -> tuple[str | None, str | None]:
-    """(display sector, grouping key). NSE's industry for Nifty 500 stocks, else Yahoo's."""
+    """(display sector, grouping key). NSE's industry for Nifty 500 stocks, else Yahoo's
+    industry shown under NSE's sector names (peers are still grouped by Yahoo's sector)."""
     if symbol:
         c = nifty500_by_symbol().get(symbol)
         if c and c.industry:
             return c.industry, f"nse:{c.industry}"
     ys = info.get("sector")
-    return (ys, f"yahoo:{ys}") if ys else (None, None)
+    return (nse_sector(ys, info.get("industry")), f"yahoo:{ys}") if ys else (None, None)
 
 
 # ---------------------------------------------------------------------------- metrics

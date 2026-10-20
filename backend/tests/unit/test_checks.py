@@ -410,3 +410,13 @@ def test_portfolio_notes() -> None:
     assert any(
         "80% of your stock value is in companies with strong Financial Health" in r for r in rewards
     )
+
+
+def test_portfolio_notes_name_three_sells_then_count_the_rest() -> None:
+    keys = list(get_checks().stock)
+    sells = [
+        HoldingFacts(n, 100, _shape(dict.fromkeys(keys, 3)), "sell", "Sell", 0.01, 0.12)
+        for n in "ABCDE"
+    ]
+    _, risks = portfolio_notes(sells, [])
+    assert "5 holdings with a Sell or Reduce signal: A, B, C and 2 more." in risks
