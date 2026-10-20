@@ -6,6 +6,7 @@ export { Badge, Delta, Stat, StatusIcon, type CheckStatus, type Semantic } from 
 export { InfoTip, Segmented, Tabs, Tooltip } from "./Overlay";
 export { Chip, ChipGroup } from "./Chip";
 export { Disclosure } from "./Disclosure";
+export { Drawer } from "./Drawer";
 export { Loading, Skeleton, SkeletonCard, SkeletonText } from "./Skeleton";
 
 export const inputClass =

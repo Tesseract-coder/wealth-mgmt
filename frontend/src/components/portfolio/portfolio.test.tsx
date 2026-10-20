@@ -145,7 +145,7 @@ describe("Overview", () => {
     expect(await screen.findByText(/^7 high, 0 medium, 0 low\./)).toBeInTheDocument();
     expect(screen.getAllByText("High").length).toBe(7);
     const actions = screen.getByRole("heading", { name: "Action needed" }).closest("section")!;
-    expect(within(actions).getByRole("link", { name: "Reliance Industries Ltd" })).toHaveAttribute("href", "/analysis/RELIANCE.NS");
+    expect(within(actions).getByRole("button", { name: "Reliance Industries Ltd" })).toHaveAttribute("aria-haspopup", "dialog"); // opens a quick look
 
     expect(screen.getByRole("heading", { name: "Rewards (2)" })).toBeInTheDocument();
     expect(screen.getByText(/Mutual funds \(₹2,24,053\) have their own shapes/)).toBeInTheDocument();

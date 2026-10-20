@@ -9,6 +9,8 @@ import { ProfileForm } from "../pages/Onboarding";
 import { ActionListBody } from "./ActionList";
 import { sortHoldings } from "./HoldingsTable";
 import { HoldingsView } from "./portfolio/HoldingsView";
+import { SAMPLE_HOLDINGS } from "./analysis/samples";
+import { SAMPLE_SIGNALS } from "./portfolio/samples";
 
 function wrap(node: ReactNode, path = "/") {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
@@ -96,6 +98,40 @@ describe("Action list", () => {
     expect(screen.getByText("1 high, 0 medium, 1 low.")).toBeInTheDocument();
     expect(screen.getByText("High")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Beta Bank" })).toHaveAttribute("href", "/analysis/B.NS");
+  });
+
+  it("opens a quick look for a held stock, with a way to its full page", () => {
+    const sig = SAMPLE_SIGNALS.holdings.find((h) => h.ticker === "RELIANCE.NS")!;
+    const shape = SAMPLE_HOLDINGS.holdings.find((h) => h.ticker === "RELIANCE.NS");
+    wrap(
+      <>
+        <button type="button">before</button>
+        <ActionListBody
+          d={{
+            style_label: "Long-term",
+            risk_label: "Medium",
+            disclaimer: "x",
+            actions: [
+              { severity: "high", kind: "stock", subject: sig.label, title: "Sell", detail: sig.rule, link: "/analysis/RELIANCE.NS" },
+              { severity: "low", kind: "fund", subject: "Axis ELSS", title: "Review", detail: "Lags", link: "/mutual-funds/1" },
+            ],
+          }}
+          lookup={(t) => (t === "RELIANCE.NS" ? { signal: sig, shape } : {})}
+        />
+      </>,
+    );
+    expect(screen.getByRole("link", { name: "Axis ELSS" })).toHaveAttribute("href", "/mutual-funds/1"); // funds still link
+    const opener = screen.getByRole("button", { name: sig.label });
+    opener.focus();
+    fireEvent.click(opener);
+    const panel = screen.getByRole("dialog", { name: /RELIANCE\.NS/ });
+    expect(within(panel).getByRole("button", { name: "Close" })).toHaveFocus();
+    expect(within(panel).getByText("Why")).toBeInTheDocument();
+    expect(within(panel).getAllByText(sig.rule).length).toBeGreaterThan(0);
+    expect(within(panel).getByRole("link", { name: /Open the full story/ })).toHaveAttribute("href", "/analysis/RELIANCE.NS");
+    fireEvent.keyDown(panel, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(opener).toHaveFocus(); // back where it was
   });
 
   it("says when nothing needs attention", () => {

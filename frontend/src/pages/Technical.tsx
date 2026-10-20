@@ -1,11 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
-import { useState } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
 import {
   analysisApi,
   api,
-  portfolioApi,
   type Direction,
   type FrameAnalysis,
   type Observation,
@@ -13,15 +11,11 @@ import {
   type TimeframeReport,
 } from "../api/client";
 import { FreshnessBadge } from "../components/MarketData";
-import { FundamentalHoldings } from "../components/FundamentalView";
-import { HoldingSignalsView } from "../components/SignalView";
-import { HoldingsPatterns } from "../components/patterns";
 import { StockStory } from "../components/stock/StockStory";
 import { PriceChart } from "../charts/lazy";
-import { Alert, Card, ErrorState, inputClass, SkeletonCard } from "../components/ui";
-import { useDebounced } from "../hooks/useDebounced";
+import { Alert, Card, ErrorState, SkeletonCard } from "../components/ui";
 import { formatDate, formatINR } from "../lib/format";
-import { analysisQuery, type AnalysisView } from "../lib/links";
+import type { AnalysisView } from "../lib/links";
 
 const DIR: Record<Direction, { label: string; icon: string; cls: string }> = {
   bullish: { label: "Bullish", icon: "▲", cls: "text-good" },
@@ -46,202 +40,38 @@ export function DirectionTag({ d }: { d: Direction }) {
   );
 }
 
-/** Signal (with chart), technical and fundamental views of a holding or any NSE stock. */
+/** One stock's story page (any NSE stock, held or not). */
 type View = AnalysisView;
-const VIEWS: { key: View; label: string }[] = [
-  { key: "signal", label: "Signal" },
-  { key: "technical", label: "Technical" },
-  { key: "patterns", label: "Chart patterns" },
-  { key: "fundamental", label: "Fundamental" },
-  { key: "backtest", label: "Backtest" },
-];
 
 export function Technical() {
   const { ticker } = useParams();
-  const [params, setParams] = useSearchParams();
+  const [params] = useSearchParams();
   const profile = useQuery({ queryKey: ["profile"], queryFn: api.profile });
   const style = (params.get("style") as StyleKey | null) ?? profile.data?.style ?? null;
   const raw = params.get("view");
   const view: View = raw === "fundamental" || raw === "technical" || raw === "backtest" || raw === "patterns" ? raw : "signal";
   const styleKnown = params.has("style") || profile.isSuccess || profile.isError;
-  const update = (next: { view?: View }) => {
-    const p = new URLSearchParams(params);
-    if (next.view !== undefined) {
-      if (next.view === "signal") p.delete("view");
-      else p.set("view", next.view);
-    }
-    setParams(p);
-  };
 
   // One stock: the whole story on one page. The old tabs' content lives in its sections.
   if (ticker)
     return (
       <div className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <Link to={`/analysis${analysisQuery(style)}`} className="inline-flex min-h-6 items-center gap-1 py-1 text-sm text-fg-muted hover:text-fg">
+          <Link to={`/holdings${style ? `?style=${style}` : ""}`} className="inline-flex min-h-6 items-center gap-1 py-1 text-sm text-fg-muted hover:text-fg">
             <ArrowLeft aria-hidden className="size-4" /> All holdings
           </Link>
-          <div className="flex flex-wrap items-end gap-3">
-            <TickerSearch style={style} view="signal" />
-          </div>
         </div>
         {styleKnown ? <StockStory ticker={ticker} style={style} view={view} /> : <SkeletonCard label={ticker} />}
       </div>
     );
 
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Analysis</h1>
-          <p className="text-sm text-fg-subtle">
-            Buy / Hold / Sell signals with the scores and readings behind them, under your investing style (change it at the top of the page). Open a stock for its full story.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-end gap-3">
-          <TickerSearch style={style} view={view} />
-        </div>
-      </div>
-      <div role="tablist" className="flex gap-1 overflow-x-auto border-b border-border">
-        {VIEWS.map(({ key: v, label }) => (
-          <button
-            key={v}
-            type="button"
-            role="tab"
-            aria-selected={view === v}
-            onClick={() => update({ view: v })}
-            className={`-mb-px border-b-2 px-3 py-2 text-sm ${
-              view === v ? "border-accent font-medium text-fg" : "border-transparent text-fg-muted hover:text-fg"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      {/* Wait for the saved profile so we don't analyse twice (once without, once with the style). */}
-      {view === "fundamental" ? (
-        <FundamentalHoldings />
-      ) : !styleKnown ? (
-        <SkeletonCard label="your holdings" />
-      ) : view === "signal" ? (
-        <HoldingSignalsView style={style} linkQuery={analysisQuery(style)} />
-      ) : view === "patterns" ? (
-        <HoldingsPatterns style={style} linkQuery={(t) => `/analysis/${encodeURIComponent(t)}${analysisQuery(style, "patterns")}`} />
-      ) : view === "backtest" ? (
-        <Card>Choose a stock with the search box above (or open one from your holdings) to replay the signal rules on its history.</Card>
-      ) : (
-        <HoldingsSummary style={style} />
-      )}
-    </div>
-  );
-}
-
-function TickerSearch({ style, view }: { style: StyleKey | null; view: View }) {
-  const [q, setQ] = useState("");
-  const navigate = useNavigate();
-  const dq = useDebounced(q.trim());
-  const results = useQuery({
-    queryKey: ["ref", "stock", dq],
-    queryFn: () => portfolioApi.searchSecurities(dq),
-    enabled: dq.length >= 2,
-  });
-  const go = (t: string) => {
-    setQ("");
-    navigate(`/analysis/${encodeURIComponent(t)}${analysisQuery(style, view)}`);
-  };
-  return (
-    <div className="relative w-72 text-sm">
-      <label>
-        <span className="mb-1 block text-fg-subtle">Stock</span>
-        <input
-          className={inputClass}
-          placeholder="Search NSE symbol or company…"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && q.trim()) {
-              const t = q.trim().toUpperCase();
-              go(t.includes(".") || t.startsWith("^") ? t : `${t}.NS`);
-            }
-          }}
-        />
-      </label>
-      {dq.length >= 2 && results.data && results.data.length > 0 && (
-        <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-control border border-border bg-surface shadow-pop">
-          {results.data.map((s) => (
-            <li key={s.symbol}>
-              <button
-                type="button"
-                className="w-full px-2 py-1 text-left hover:bg-surface-2"
-                onClick={() => go(`${s.symbol}.NS`)}
-              >
-                <span className="font-mono">{s.symbol}</span> · {s.name}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-function HoldingsSummary({ style }: { style: StyleKey | null }) {
-  const q = useQuery({ queryKey: ["tech-holdings", style], queryFn: () => analysisApi.holdings(style) });
-  if (q.isError) return <ErrorState title="Couldn't summarise your holdings" detail={q.error.message} onRetry={() => void q.refetch()} />;
-  if (!q.data) return <SkeletonCard label="your holdings" lines={6} />;
-  if (q.data.length === 0)
-    return (
-      <Alert tone="info">
-        No stock holdings yet. <Link className="underline" to="/import">Import your Groww file</Link>, or search for any stock above.
-      </Alert>
-    );
-  return (
-    <Card title="Your holdings">
-      <p className="mb-3 text-sm text-fg-subtle">
-        Uses cached prices only. If a row says Unavailable, run <b>Refresh now</b> in Settings → Data refresh.
-      </p>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="text-left text-xs uppercase text-fg-subtle">
-            <tr>
-              <th className="py-1 pr-2">Stock</th>
-              <th className="pr-2">As of</th>
-              <th className="pr-2 text-right">▲ Bullish</th>
-              <th className="pr-2 text-right">▼ Bearish</th>
-              <th className="pr-2">Main readings</th>
-              <th>Data</th>
-            </tr>
-          </thead>
-          <tbody>
-            {q.data.map((r) => (
-              <tr key={r.ticker} className="border-t border-border align-top">
-                <td className="py-1 pr-2">
-                  <Link className="underline" to={`/analysis/${encodeURIComponent(r.ticker)}${analysisQuery(style, "technical")}`}>
-                    {r.label}
-                  </Link>
-                  <div className="font-mono text-xs text-fg-subtle">{r.ticker}</div>
-                </td>
-                <td className="pr-2 whitespace-nowrap">{formatDate(r.as_of)}</td>
-                <td className="pr-2 text-right tabular-nums">{r.bullish}</td>
-                <td className="pr-2 text-right tabular-nums">{r.bearish}</td>
-                <td className="pr-2 text-xs">
-                  {r.top_bullish.slice(0, 1).map((t) => (
-                    <div key={t}>▲ {t}</div>
-                  ))}
-                  {r.top_bearish.slice(0, 1).map((t) => (
-                    <div key={t}>▼ {t}</div>
-                  ))}
-                </td>
-                <td>
-                  <FreshnessBadge f={r.freshness} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </Card>
-  );
+  // The holdings lists moved to the Holdings page; old links land on the matching view there.
+  const target = view === "signal" ? "signals" : view === "backtest" ? null : view;
+  const p = new URLSearchParams(params);
+  p.delete("view");
+  if (target) p.set("view", target);
+  const qs = p.toString();
+  return <Navigate replace to={`/holdings${qs ? `?${qs}` : ""}`} />;
 }
 
 /** Every timeframe's readings. `chart` false when the page already shows the price chart. */

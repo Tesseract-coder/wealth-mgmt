@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { TechnicalReport, TechnicalSummary } from "../api/client";
 import { stockRoute } from "../test/stockRoutes";
 import { Technical } from "./Technical";
+import { Holdings } from "./Holdings";
 
 const report: TechnicalReport = {
   ticker: "RELIANCE.NS",
@@ -72,6 +73,7 @@ function renderAt(path: string) {
         <Routes>
           <Route path="/analysis" element={<Technical />} />
           <Route path="/analysis/:ticker" element={<Technical />} />
+          <Route path="/holdings" element={<Holdings />} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -94,12 +96,13 @@ describe("Technical page", () => {
     expect(screen.getAllByText("₹1,251.50").length).toBeGreaterThan(0); // resistance
   });
 
-  it("lists holdings with their data status", async () => {
+  it("old Analysis list links open the matching Holdings view", async () => {
     mockFetch();
     renderAt("/analysis?view=technical");
 
     expect(await screen.findByText("Tata Consultancy")).toBeInTheDocument();
     expect(screen.getByText("Unavailable")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Technical" })).toHaveAttribute("aria-selected", "true");
   });
 });
 

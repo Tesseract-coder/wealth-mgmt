@@ -48,7 +48,7 @@ const CATEGORY: Record<string, string> = {
 
 const TF: Record<string, string> = { "15m": "15-min", "1h": "Hourly", "1d": "Daily", "1wk": "Weekly", "1mo": "Monthly" };
 
-function fmtScore(v: number | null): string {
+export function fmtScore(v: number | null): string {
   return v === null ? "—" : v.toFixed(0);
 }
 

@@ -94,7 +94,7 @@ export function Overview() {
         <>
           <StaleNotice />
           <PortfolioHero s={s} shape={shapes.data} shapeLoading={hasStocks && !shapes.data && !shapes.isError} />
-          <ActionList />
+          <ActionList lookup={(t) => ({ signal: signals.data?.holdings.find((h) => h.ticker === t), shape: shapes.data?.holdings.find((h) => h.ticker === t) })} />
           <Card title="Rewards and risks" description="Across your stocks, from the same checks as each stock's page.">
             {shapes.data ? (
               <RewardsRisks rewards={shapes.data.rewards} risks={portfolioRisks(shapes.data, s)} notes={shapes.data.notes} />

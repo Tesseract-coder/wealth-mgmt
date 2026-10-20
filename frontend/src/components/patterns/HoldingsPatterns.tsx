@@ -30,7 +30,7 @@ function PatternChip({ m, to }: { m: PatternMatch; to: string }) {
 
 type Filter = "all" | Direction;
 
-/** The Analysis page's Chart patterns tab: patterns on every holding, then the pattern guide. */
+/** The Holdings page's Chart patterns view: patterns on every holding, then the pattern guide. */
 export function HoldingsPatterns({ style, linkQuery }: { style: StyleKey | null; linkQuery: (ticker: string) => string }) {
   const q = useQuery({ queryKey: ["patterns-holdings", style], queryFn: () => patternApi.holdings(style) });
   const [dir, setDir] = useState<Filter>("all");

@@ -1,11 +1,27 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { api, checksApi, signalApi, type RiskKey, type StyleKey } from "../api/client";
+import { FundamentalHoldings } from "../components/FundamentalView";
+import { HoldingsPatterns } from "../components/patterns";
 import { HoldingsView, type HoldingsLayout } from "../components/portfolio/HoldingsView";
+import { HoldingSignalsView } from "../components/SignalView";
+import { TechnicalHoldings } from "../components/TechnicalHoldings";
 import { ErrorState, inputClass, Loading, PageHeader, Skeleton } from "../components/ui";
 import { analysisQuery } from "../lib/links";
 
 const LAYOUT_KEY = "holdings-layout";
+
+/** Every way to look across your stocks. The first shows cards or a table; the others are the
+ *  detailed lists (once a separate Analysis page, whose links land here). */
+export type HoldingsTab = "holdings" | "signals" | "technical" | "patterns" | "fundamental";
+const TABS: { key: HoldingsTab; label: string }[] = [
+  { key: "holdings", label: "Summary" },
+  { key: "signals", label: "Signals" },
+  { key: "technical", label: "Technical" },
+  { key: "patterns", label: "Chart patterns" },
+  { key: "fundamental", label: "Fundamental" },
+];
+const isTab = (v: string | null): v is HoldingsTab => TABS.some((t) => t.key === v);
 
 function savedLayout(): HoldingsLayout {
   try {
@@ -41,8 +57,10 @@ export function Holdings() {
   const style = (params.get("style") as StyleKey | null) ?? profile.data?.style ?? null;
   const risk = (params.get("risk") as RiskKey | null) ?? profile.data?.risk ?? null;
   const layout: HoldingsLayout = params.get("layout") === "table" ? "table" : params.get("layout") === "cards" ? "cards" : savedLayout();
+  const raw = params.get("view");
+  const tab: HoldingsTab = isTab(raw) ? raw : "holdings";
   const ready = (params.has("style") && params.has("risk")) || profile.isSuccess || profile.isError;
-  const set = (k: "risk" | "layout", v: string) => {
+  const set = (k: "risk" | "layout" | "view", v: string) => {
     const p = new URLSearchParams(params);
     if (v) p.set(k, v);
     else p.delete(k);
@@ -60,7 +78,7 @@ export function Holdings() {
     <div className="space-y-4">
       <PageHeader
         title="Holdings"
-        description="A signal and a Score Shape for each stock. Change the style at the top of any page; view them under any risk level here."
+        description="A signal and a Score Shape for each stock, and the readings behind them. Change the style at the top of any page; view them under any risk level here. Open a stock for its full story."
         actions={
           <div className="flex flex-wrap gap-3">
             <label className="text-sm">
@@ -77,12 +95,36 @@ export function Holdings() {
           </div>
         }
       />
-      {ready ? (
-        <HoldingsData style={style} risk={risk} layout={layout} onLayout={onLayout} />
-      ) : (
+      <div role="tablist" aria-label="Holdings views" className="flex gap-1 overflow-x-auto border-b border-border">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.key}
+            onClick={() => set("view", t.key === "holdings" ? "" : t.key)}
+            className={`-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm ${
+              tab === t.key ? "border-accent font-medium text-fg" : "border-transparent text-fg-muted hover:text-fg"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      {tab === "fundamental" ? (
+        <FundamentalHoldings />
+      ) : !ready ? (
         <Loading label="your profile">
           <Skeleton className="h-40 w-full" />
         </Loading>
+      ) : tab === "signals" ? (
+        <HoldingSignalsView style={style} risk={risk} linkQuery={analysisQuery(style)} />
+      ) : tab === "technical" ? (
+        <TechnicalHoldings style={style} />
+      ) : tab === "patterns" ? (
+        <HoldingsPatterns style={style} linkQuery={(t) => `/analysis/${encodeURIComponent(t)}${analysisQuery(style, "patterns")}`} />
+      ) : (
+        <HoldingsData style={style} risk={risk} layout={layout} onLayout={onLayout} />
       )}
     </div>
   );

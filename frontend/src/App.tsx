@@ -20,7 +20,7 @@ function page<K extends string>(load: () => Promise<Record<K, ComponentType>>, n
 const Onboarding = page(() => import("./pages/Onboarding"), "Onboarding", "setup");
 const Import = page(() => import("./pages/Import"), "Import", "the import page");
 const Holdings = page(() => import("./pages/Holdings"), "Holdings", "your holdings");
-const Technical = page(() => import("./pages/Technical"), "Technical", "the analysis page");
+const Technical = page(() => import("./pages/Technical"), "Technical", "the stock page");
 const MutualFunds = page(() => import("./pages/MutualFunds"), "MutualFunds", "the mutual funds page");
 const Screener = page(() => import("./pages/Screener"), "Screener", "the screener");
 const Watchlist = page(() => import("./pages/Watchlist"), "Watchlist", "your watchlist");

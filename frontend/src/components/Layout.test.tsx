@@ -1,16 +1,16 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import type { MarketStatus } from "../api/client";
 import { closeTime, freshnessText } from "./FreshnessBar";
 import { Layout } from "./Layout";
 
-function renderLayout() {
+function renderLayout(path = "/") {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false, enabled: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[path]}>
         <Layout />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -23,6 +23,14 @@ describe("Layout", () => {
     expect(screen.getByRole("contentinfo")).toHaveTextContent(
       "This is not investment advice. Consult a SEBI-registered investment adviser before acting.",
     );
+  });
+
+  it("files a stock's page under Holdings and has no separate Analysis item", () => {
+    renderLayout("/analysis/TCS.NS");
+    const nav = screen.getByRole("navigation", { name: "Main" });
+    expect(within(nav).queryByRole("link", { name: "Analysis" })).not.toBeInTheDocument();
+    expect(within(nav).getByRole("link", { name: "Holdings" }).className).toContain("bg-accent-soft");
+    expect(screen.getByRole("button", { name: "Search stocks, funds and pages" })).toBeInTheDocument();
   });
 
   it("has a menu button for small screens", () => {

@@ -2,24 +2,21 @@ import { Menu, Moon, Sun, X } from "lucide-react";
 import { useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useTheme } from "../hooks/useTheme";
+import { NAV } from "../lib/nav";
 import { BackendStatus } from "./BackendStatus";
 import { Disclaimer } from "./Disclaimer";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { FreshnessBar } from "./FreshnessBar";
 import { Logo } from "./Logo";
+import { QuickSearch } from "./QuickSearch";
 import { StyleSwitcher } from "./StyleSwitcher";
 
-export const NAV = [
-  { to: "/", label: "Overview" },
-  { to: "/import", label: "Import" },
-  { to: "/holdings", label: "Holdings" },
-  { to: "/analysis", label: "Analysis" },
-  { to: "/mutual-funds", label: "Mutual Funds" },
-  { to: "/screener", label: "Screener" },
-  { to: "/watchlist", label: "Watchlist" },
-  { to: "/compare", label: "Compare" },
-  { to: "/settings", label: "Settings" },
-] as const;
+export { NAV } from "../lib/nav";
+
+/** A stock's page (/analysis/…) belongs under Holdings in the menu. */
+function inSection(to: string, pathname: string): boolean {
+  return to === "/holdings" && pathname.startsWith("/analysis");
+}
 
 export function Layout() {
   const { theme, toggle } = useTheme();
@@ -70,7 +67,7 @@ export function Layout() {
                 end={n.to === "/"}
                 className={({ isActive }) =>
                   `rounded-control px-2.5 py-1.5 font-medium transition-colors ${
-                    isActive ? "bg-accent-soft text-accent-text" : "text-fg-muted hover:bg-surface-2 hover:text-fg"
+                    isActive || inSection(n.to, pathname) ? "bg-accent-soft text-accent-text" : "text-fg-muted hover:bg-surface-2 hover:text-fg"
                   }`
                 }
               >
@@ -80,6 +77,7 @@ export function Layout() {
           </nav>
           {/* Style and theme stay together on the right, so the toggle never wraps on its own. */}
           <div className={`${open ? "flex" : "hidden"} items-center gap-2 md:ml-auto md:flex`}>
+            <QuickSearch />
             <StyleSwitcher className="flex" />
             <button
               type="button"
