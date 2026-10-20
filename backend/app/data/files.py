@@ -42,6 +42,14 @@ REFERENCE_FILES: dict[ReferenceKey, ReferenceFile] = {
             "eq_etfseclist.csv",
         ),
         ReferenceFile(
+            "bse_equity",
+            "BSE equity list",
+            "bse",
+            # Built from the latest daily bhavcopy (see bse.py); this is the page it comes from.
+            "https://www.bseindia.com/markets/marketinfo/BhavCopy.aspx",
+            "bse_equity.csv",
+        ),
+        ReferenceFile(
             "nifty50",
             "Nifty 50 constituents",
             "nse",

@@ -5,7 +5,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from app.core.formatting import ISTDatetime
-from app.core.profiles import RiskKey, StyleKey
+from app.core.profiles import RiskKey, StyleKey, UniverseKey
 
 
 class HealthOut(BaseModel):
@@ -85,6 +85,7 @@ class Suggestion(BaseModel):
     amfi_code: str | None = None
     name: str
     score: float
+    exchange: Literal["NSE", "BSE"] | None = None  # stocks: where the symbol trades
 
 
 class StockHoldingOut(BaseModel):
@@ -1061,9 +1062,11 @@ class ScreenerConfigOut(BaseModel):
 
 
 class ScanIn(BaseModel):
-    universe: Literal["nifty50", "nifty100", "nifty200", "nifty500", "custom"] | None = None
+    universe: UniverseKey | None = None
     symbols: str | None = Field(
-        None, description="Custom universe: NSE symbols, comma or newline separated"
+        None,
+        description="Custom universe: NSE symbols (or BSE ones ending .BO), comma or newline "
+        "separated",
     )
     fetch: Literal["missing", "cached"] = "missing"
     style: StyleKey | None = None

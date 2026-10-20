@@ -25,7 +25,11 @@ export function FairValueBar({ fv }: { fv: FairValue }) {
         </div>
       ))}
       <p className={`text-sm font-semibold ${below ? "text-good" : "text-bad"}`}>
-        {Math.abs(fv.gap_pct) < 1 ? "About at fair value" : `${Math.abs(fv.gap_pct).toFixed(1)}% ${below ? "below" : "above"} fair value`}
+        {fv.gap_pct === null
+          ? "Far above fair value: nothing left after debt at the sector's multiples"
+          : Math.abs(fv.gap_pct) < 1
+            ? "About at fair value"
+            : `${Math.abs(fv.gap_pct).toFixed(1)}% ${below ? "below" : "above"} fair value`}
       </p>
     </div>
   );

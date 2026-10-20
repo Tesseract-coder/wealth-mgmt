@@ -31,8 +31,11 @@ export function cagr(first: number, last: number, n: number): number | null {
 
 export function fairValueCaption(fv: FairValue | null, price: number | null): string {
   if (!fv) return "No fair-value estimate: it needs sector medians and a profit or book value for this company.";
-  const gap = Math.abs(fv.gap_pct).toFixed(1);
   const p = formatINR(price ?? fv.price);
+  // Nothing left at the sector's multiples once debt is paid: the gap is infinite (sent as null).
+  if (fv.value <= 0 || fv.gap_pct === null)
+    return `Price ${p} is far above the estimated fair value of ${formatINR(fv.value)}: at its sector's multiples the business is worth less than its debt.`;
+  const gap = Math.abs(fv.gap_pct).toFixed(1);
   if (Math.abs(fv.gap_pct) < 1) return `Price ${p} is in line with the estimated fair value of ${formatINR(fv.value)}.`;
   return fv.gap_pct < 0
     ? `Price ${p} is ${gap}% below the estimated fair value of ${formatINR(fv.value)}: cheaper than its sector's multiples suggest.`

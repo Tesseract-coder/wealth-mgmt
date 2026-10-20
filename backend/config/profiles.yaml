@@ -304,6 +304,8 @@ data:
   incremental_overlap_days: 7      # re-download this many recent days on each refresh
   split_check_tolerance: 0.02      # overlapping closes differing more than this ⇒ split/bonus ⇒ full re-download
   fundamentals_stale_after_days: 7
+  topup_per_night: 200             # stocks nobody has opened yet, downloaded each weeknight (0 = off; about 7 requests each)
+  topup_time_ist: "22:30"          # after the daily price refresh
   failed_retry_after_minutes: 60  # opening a page doesn't retry a download that failed this recently (refresh jobs always do)
   http_timeout_seconds: 30
   http_retries: 3
@@ -312,11 +314,13 @@ data:
     yahoo: 60
     mfapi: 60
     nse: 10
+    bse: 10
     amfi: 10
     google: 50                     # Sheets API allows 60 requests/min per user; stay under it
   reference_min_rows:              # a downloaded list smaller than this is rejected as broken
     nse_equity: 1000
     nse_etf: 50
+    bse_equity: 3000               # shares in BSE's bhavcopies (most also trade on NSE)
     nifty50: 45
     nifty100: 90
     nifty200: 180

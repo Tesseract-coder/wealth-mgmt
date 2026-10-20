@@ -34,14 +34,15 @@ class WatchError(ValueError):
 
 
 def normalise_ticker(raw: str) -> tuple[str, str]:
-    """'tcs' / 'TCS.NS' → ('TCS.NS', company name). NSE equities only."""
-    sym = raw.strip().upper().removesuffix(".NS")
-    sec = ticker_resolver().by_symbol.get(sym)
+    """'tcs' / 'TCS.NS' → ('TCS.NS', company name); a BSE-only share → ('ANDHRAPET.BO', …)."""
+    r = ticker_resolver()
+    sym = raw.strip().upper()
+    sec = r.lookup(sym) or r.bse_by_symbol.get(sym)
     if sec is None:
-        raise WatchError(f"'{raw}' is not on the NSE equity list")
+        raise WatchError(f"'{raw}' is not on the NSE or BSE equity lists")
     if sec.kind != "equity":
-        raise WatchError(f"{sym} is an ETF; the watchlist tracks stocks")
-    return f"{sym}.NS", sec.name
+        raise WatchError(f"{sec.symbol} is an ETF; the watchlist tracks stocks")
+    return sec.ticker, sec.name
 
 
 def items(session: Session) -> list[WatchItem]:

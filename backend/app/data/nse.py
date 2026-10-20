@@ -19,8 +19,15 @@ class Security:
     symbol: str
     name: str
     isin: str
-    series: str  # "EQ", "BE", … or "ETF"
+    series: str  # "EQ", "BE", … or "ETF" (for BSE-only shares: BSE's group, "A", "X", "M" …)
     kind: str  # "equity" | "etf"
+    exchange: str = "NSE"  # "BSE" for shares listed only on BSE (see bse.py)
+    bse_code: str | None = None
+
+    @property
+    def ticker(self) -> str:
+        """Yahoo's ticker: "RELIANCE.NS", or "ANDHRAPET.BO" for a BSE-only share."""
+        return f"{self.symbol}.BO" if self.exchange == "BSE" else f"{self.symbol}.NS"
 
 
 def _rows(text: str) -> list[dict[str, str]]:

@@ -6,6 +6,7 @@ from sqlmodel import Session, select
 
 from app.core.profiles import get_profiles
 from app.data.amfi import load_schemes
+from app.data.bse import bse_only, load_bse
 from app.data.nse import load_securities
 from app.importers.scheme_resolver import SchemeResolver
 from app.importers.ticker_resolver import TickerResolver
@@ -14,7 +15,8 @@ from app.models.tables import SchemeOverride, TickerOverride
 
 @lru_cache
 def ticker_resolver() -> TickerResolver:
-    return TickerResolver(load_securities(), get_profiles().importing)
+    codes = {s.code: s.isin for s in load_bse()} | {s.symbol: s.isin for s in load_bse()}
+    return TickerResolver(load_securities(), get_profiles().importing, bse_only(), codes)
 
 
 @lru_cache

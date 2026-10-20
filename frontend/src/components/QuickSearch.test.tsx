@@ -34,9 +34,14 @@ describe("searchItems", () => {
     expect(items.map((i) => `${i.group}|${i.href}`)).toEqual([
       "Your stocks|/analysis/TCS.NS",
       "Watchlist|/analysis/TATAMOTORS.NS",
-      "All NSE stocks|/analysis/TATAELXSI.NS",
+      "All stocks|/analysis/TATAELXSI.NS",
       "Open|/analysis/TATA.NS",
     ]);
+  });
+
+  it("opens BSE-only shares by their .BO ticker", () => {
+    const stocks = [{ symbol: "ANDHRAPET", amfi_code: null, name: "Andhra Petrochemicals", score: 95, exchange: "BSE" as const }];
+    expect(searchItems("andhra", HOLDINGS, [], stocks, []).find((i) => i.group === "All stocks")?.href).toBe("/analysis/ANDHRAPET.BO");
   });
 
   it("offers to open a symbol as typed", () => {

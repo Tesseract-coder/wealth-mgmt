@@ -8,6 +8,12 @@ import { Alert, Button, Card, inputClass } from "./ui";
 export const scanMinutes = (stocks: number, secondsPerStock: number): number =>
   stocks > 0 ? Math.max(1, Math.round((stocks * secondsPerStock) / 60)) : 0;
 
+/** "54 minutes", or "about 8 hours" for a whole-market scan. */
+export const durationText = (minutes: number): string =>
+  minutes < 90 ? `${minutes} minutes` : `about ${Math.round(minutes / 60)} hours`;
+
+const WHOLE_MARKET: UniverseKey[] = ["nse_all", "bse_only", "all_listed"];
+
 export function ScanSummary({ scan }: { scan: Scan }) {
   return (
     <div className="text-sm">
@@ -116,7 +122,7 @@ export function ScanPanel({ config }: { config: ScreenerConfig }) {
         {universe === "custom" && (
           <label className="block text-sm">
             <span className="mb-1 block text-fg-subtle">
-              NSE symbols, separated by commas or new lines ({customCount}/{config.custom_universe_max})
+              NSE symbols (BSE-only ones end in .BO), separated by commas or new lines ({customCount}/{config.custom_universe_max})
             </span>
             <textarea className={`${inputClass} h-20 font-mono`} value={symbols} disabled={running} onChange={(e) => setSymbols(e.target.value)} placeholder="TCS, INFY, HDFCBANK" />
           </label>
@@ -124,8 +130,14 @@ export function ScanPanel({ config }: { config: ScreenerConfig }) {
         {fetchMode === "missing" && !running && (
           <p className="text-xs text-fg-subtle">
             Downloads prices and fundamentals that aren't cached or are out of date, at the free sources' rate limits
-            {firstRunMinutes ? `: a first ${n}-stock scan takes about ${firstRunMinutes} minutes` : ""}. Later scans reuse the cache
+            {firstRunMinutes ? `: a first ${n.toLocaleString("en-IN")}-stock scan takes up to ${durationText(firstRunMinutes)}` : ""}. Later scans reuse the cache
             and are much quicker. It runs in the background, so you can leave this page and come back.
+          </p>
+        )}
+        {WHOLE_MARKET.includes(universe) && (
+          <p className="text-xs text-fg-subtle">
+            Thinly traded stocks are left out after their prices download (below the liquidity minimum), so they never need their fundamentals. Stocks you open, and a nightly top-up, also fill the
+            cache: <b>Cached data only</b> scores whatever is loaded so far in minutes.
           </p>
         )}
         {run.isError && <Alert tone="error">{run.error.message}</Alert>}

@@ -355,6 +355,17 @@ def test_fair_value_for_lenders_uses_book_value() -> None:
     assert fv.value == pytest.approx(200.0) and fv.gap_pct < 0
 
 
+def test_nil_fair_value_reads_far_above_not_inf() -> None:
+    from app.analysis.valuation import describe
+
+    m = {"market_cap": metric("market_cap", 1000), "ev_ebitda": metric("ev_ebitda", 250, 10)}
+    # Debt of 900 dwarfs EBITDA of 4 at 10x: nothing left for shareholders.
+    fv, _ = fair_value(m, annual(total_debt=[900], cash=[0]), 40.0, financial=False)
+    assert fv is not None and fv.value == 0 and fv.gap_pct == float("inf")
+    text = describe(fv)
+    assert "inf" not in text and "far above" in text and "worth less than its debt" in text
+
+
 def test_fair_value_needs_peers() -> None:
     fv, why = fair_value(
         {"market_cap": metric("market_cap", 1000), "pe": metric("pe", 20)}, None, 100.0, False

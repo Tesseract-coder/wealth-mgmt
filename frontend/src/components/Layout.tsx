@@ -66,7 +66,7 @@ export function Layout() {
                 to={n.to}
                 end={n.to === "/"}
                 className={({ isActive }) =>
-                  `rounded-control px-2.5 py-1.5 font-medium transition-colors ${
+                  `rounded-control px-2 py-1.5 font-medium transition-colors ${
                     isActive || inSection(n.to, pathname) ? "bg-accent-soft text-accent-text" : "text-fg-muted hover:bg-surface-2 hover:text-fg"
                   }`
                 }

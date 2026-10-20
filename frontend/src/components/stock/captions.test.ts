@@ -33,6 +33,9 @@ describe("chart captions", () => {
     expect(fairValueCaption(fv, 1170.3)).toBe("Price ₹1,170.30 is 33.0% above the estimated fair value of ₹879.77: dearer than its sector's multiples suggest.");
     expect(fairValueCaption({ ...fv, gap_pct: -12, price: 774.2 }, 774.2)).toContain("12.0% below");
     expect(fairValueCaption(null, 100)).toMatch(/^No fair-value estimate/);
+    expect(fairValueCaption({ ...fv, value: 0, gap_pct: null, price: 39.83 }, 39.83)).toBe(
+      "Price ₹39.83 is far above the estimated fair value of ₹0.00: at its sector's multiples the business is worth less than its debt.",
+    );
   });
 
   it("compares P/E with the sector and its own history", () => {

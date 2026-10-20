@@ -37,6 +37,7 @@ from app.core.profiles import (
     get_profiles,
 )
 from app.data.indices import INDEX_LABELS, IndexKey, load_index
+from app.data.market import MARKET_LABELS, market_listings
 from app.data.provider import CachedProvider, DataProvider
 from app.importers.reference import ticker_resolver
 from app.jobs.runner import JobFn, Progress
@@ -109,7 +110,9 @@ class ScanRow:
 def universe_label(key: UniverseKey, n: int | None = None) -> str:
     if key == "custom":
         return f"Custom list ({n} stocks)" if n is not None else "Custom list"
-    return INDEX_LABELS[key]
+    if key in MARKET_LABELS:
+        return MARKET_LABELS[key]
+    return INDEX_LABELS[key]  # type: ignore[index]
 
 
 def index_members(key: IndexKey) -> list[Member]:
@@ -117,7 +120,8 @@ def index_members(key: IndexKey) -> list[Member]:
 
 
 def parse_symbols(text: str | list[str]) -> list[str]:
-    """'TCS, infy.ns\nHDFCBANK' → ['TCS', 'INFY', 'HDFCBANK'] (order kept, duplicates dropped)."""
+    """'TCS, infy.ns\nHDFCBANK, andhrapet.bo' → ['TCS', 'INFY', 'HDFCBANK', 'ANDHRAPET.BO']
+    (order kept, duplicates dropped)."""
     parts = text if isinstance(text, list) else text.replace(",", "\n").replace(" ", "\n").split()
     out: list[str] = []
     for p in parts:
@@ -128,16 +132,18 @@ def parse_symbols(text: str | list[str]) -> list[str]:
 
 
 def custom_members(symbols: list[str]) -> tuple[list[Member], list[str]]:
-    """Members for NSE equity symbols; unknown symbols (and ETFs) are returned separately."""
-    by_sym = ticker_resolver().by_symbol
+    """Members for NSE symbols (or BSE ones ending .BO); unknown symbols (and ETFs) are
+    returned separately."""
+    r = ticker_resolver()
     industry = {c.symbol: c.industry for c in load_index("nifty500")}
     out, unknown = [], []
     for s in symbols:
-        sec = by_sym.get(s)
+        sec = r.lookup(s) or r.bse_by_symbol.get(s)
         if sec is None or sec.kind != "equity":
             unknown.append(s)
         else:
-            out.append(Member(f"{s}.NS", s, sec.name, industry.get(s)))
+            nse = sec.exchange == "NSE"
+            out.append(Member(sec.ticker, sec.symbol, sec.name, industry.get(s) if nse else None))
     return out, unknown
 
 
@@ -146,7 +152,10 @@ def members_for(
 ) -> tuple[list[Member], list[str]]:
     if key == "custom":
         return custom_members(symbols or [])
-    return index_members(key), []
+    if key in MARKET_LABELS:
+        listings = market_listings(key)
+        return [Member(x.ticker, x.symbol, x.name, x.industry) for x in listings], []
+    return index_members(key), []  # type: ignore[arg-type]
 
 
 # ---------------------------------------------------------------------------- facts
@@ -366,7 +375,7 @@ def run_scan(
     p = get_profiles()
     cfg = p.screener
     members, unknown = members_for(params.universe, params.symbols)
-    notes = [f"Not on the NSE equity list, skipped: {', '.join(unknown)}"] if unknown else []
+    notes = [f"Not on the NSE or BSE lists, skipped: {', '.join(unknown)}"] if unknown else []
     n = len(members)
     scan.total = n
     progress.update(0, 2 * n, "Starting")

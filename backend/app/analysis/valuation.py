@@ -151,6 +151,12 @@ def pe_history_median(points: list[YearPE]) -> float | None:
 
 
 def describe(fv: FairValue) -> str:
+    if fv.value <= 0:  # debt outweighs what peers' multiples put on the business
+        return (
+            f"Price {format_inr(fv.price)} is far above the estimated fair value of "
+            f"{format_inr(fv.value)}: at its sector's multiples the business is worth less than "
+            "its debt."
+        )
     side = "below" if fv.gap_pct < 0 else "above"
     return (
         f"Price {format_inr(fv.price)} is {abs(fv.gap_pct):.1f}% {side} the estimated fair value "

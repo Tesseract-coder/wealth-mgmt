@@ -2,7 +2,7 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import { LoaderCircle, Plus, X } from "lucide-react";
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { api, checksApi, portfolioApi, summaryApi, type StockChecks } from "../api/client";
+import { api, checksApi, portfolioApi, suggestionTicker, summaryApi, type StockChecks } from "../api/client";
 import { axesFromSections, ShapeOverlay, SignalPill } from "../components/analysis";
 import { Card, Chip, EmptyState, ErrorState, inputClass, Loading, PageHeader, Skeleton, StatusIcon } from "../components/ui";
 import { useDebounced } from "../hooks/useDebounced";
@@ -19,7 +19,7 @@ function Picker({ tickers, onAdd }: { tickers: string[]; onAdd: (t: string) => v
   const dq = useDebounced(q.trim());
   const results = useQuery({ queryKey: ["ref", "stock", dq], queryFn: () => portfolioApi.searchSecurities(dq), enabled: dq.length >= 2 });
   const summary = useQuery({ queryKey: ["portfolio-summary"], queryFn: summaryApi.get });
-  const held = (summary.data?.by_holding ?? []).filter((h) => h.key.endsWith(".NS") && !tickers.includes(h.key)).slice(0, 10);
+  const held = (summary.data?.by_holding ?? []).filter((h) => (h.key.endsWith(".NS") || h.key.endsWith(".BO")) && !tickers.includes(h.key)).slice(0, 10);
   const full = tickers.length >= MAX;
   const add = (t: string) => {
     setQ("");
@@ -50,8 +50,8 @@ function Picker({ tickers, onAdd }: { tickers: string[]; onAdd: (t: string) => v
               .filter((s) => s.symbol)
               .map((s) => (
                 <li key={s.symbol}>
-                  <button type="button" className="w-full px-3 py-1.5 text-left text-sm hover:bg-surface-2" onClick={() => add(`${s.symbol}.NS`)}>
-                    <span className="font-mono">{s.symbol}</span> · {s.name}
+                  <button type="button" className="w-full px-3 py-1.5 text-left text-sm hover:bg-surface-2" onClick={() => add(suggestionTicker(s))}>
+                    <span className="font-mono">{suggestionTicker(s)}</span> · {s.name}
                   </button>
                 </li>
               ))}

@@ -9,6 +9,7 @@ from app.api.jobs import job_out
 from app.core.db import get_session
 from app.core.profiles import ScreenFilter, get_profiles
 from app.data.indices import INDEX_KEYS, load_index
+from app.data.market import MARKET_LABELS, market_listings
 from app.data.provider import CachedProvider
 from app.data.yahoo import STATEMENTS
 from app.jobs.runner import get_runner
@@ -106,6 +107,10 @@ def screener_config(session: Session = Depends(get_session)) -> ScreenerConfigOu
         universes=[
             UniverseOut(key=k, label=universe_label(k), size=len(load_index(k))) for k in INDEX_KEYS
         ]
+        + [
+            UniverseOut(key=k, label=universe_label(k), size=len(market_listings(k)))
+            for k in MARKET_LABELS
+        ]
         + [UniverseOut(key="custom", label="Custom list", size=None)],
         default_universe=cfg.default_universe,
         custom_universe_max=cfg.custom_universe_max,
@@ -146,7 +151,7 @@ def run_screener(body: ScanIn, session: Session = Depends(get_session)) -> Scree
     if universe == "custom":
         symbols = parse_symbols(body.symbols or "")
         if not symbols:
-            raise HTTPException(422, "A custom universe needs at least one NSE symbol")
+            raise HTTPException(422, "A custom universe needs at least one NSE or BSE symbol")
         if len(symbols) > p.screener.custom_universe_max:
             raise HTTPException(
                 422, f"At most {p.screener.custom_universe_max} symbols in a custom list"

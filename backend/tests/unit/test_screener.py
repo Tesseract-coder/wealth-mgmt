@@ -243,6 +243,8 @@ def test_config_lists_universes_presets_and_fields(client: TestClient) -> None:
     b = client.get("/screener/config").json()
     sizes = {u["key"]: u["size"] for u in b["universes"]}
     assert sizes["nifty50"] == 50 and sizes["nifty500"] >= 450 and "custom" in sizes
+    assert sizes["nse_all"] > 2000 and sizes["bse_only"] > 1000
+    assert sizes["all_listed"] == sizes["nse_all"] + sizes["bse_only"]
     assert b["default_universe"] == "nifty500" and b["top_n"] == 20
     assert b["seconds_per_stock"] == 6.5  # 6 Yahoo requests at 60 a minute + 0.5 s pause
     assert [p["key"] for p in b["presets"]][0] == "top_scores"

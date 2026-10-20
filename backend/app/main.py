@@ -23,6 +23,7 @@ from app.api import (
     screener,
     sheets,
     signals,
+    stocks,
     system,
     watchlist,
 )
@@ -110,6 +111,7 @@ def create_app() -> FastAPI:
     app.include_router(signals.router)
     app.include_router(funds.router)
     app.include_router(screener.router)
+    app.include_router(stocks.router)
     app.include_router(watchlist.router)
     app.include_router(export.router)
     app.include_router(sheets.router)

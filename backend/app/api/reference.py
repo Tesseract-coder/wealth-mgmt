@@ -9,10 +9,10 @@ router = APIRouter(prefix="/reference", tags=["reference"])
 
 @router.get("/securities", response_model=list[Suggestion])
 def search_securities(q: str = Query(..., min_length=1)) -> list[Suggestion]:
-    """Search the NSE list by symbol or company name (for the ticker fixer)."""
+    """Search NSE and BSE-only shares by symbol or company name (search box, ticker fixer)."""
     limit = get_profiles().importing.max_suggestions * 2
     return [
-        Suggestion(symbol=s.symbol, name=s.name, score=s.score)
+        Suggestion(symbol=s.symbol, name=s.name, score=s.score, exchange=s.exchange)
         for s in ticker_resolver().search(q, limit)
     ]
 

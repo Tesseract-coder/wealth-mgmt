@@ -22,6 +22,7 @@ const Import = page(() => import("./pages/Import"), "Import", "the import page")
 const Holdings = page(() => import("./pages/Holdings"), "Holdings", "your holdings");
 const Technical = page(() => import("./pages/Technical"), "Technical", "the stock page");
 const MutualFunds = page(() => import("./pages/MutualFunds"), "MutualFunds", "the mutual funds page");
+const Stocks = page(() => import("./pages/Stocks"), "Stocks", "every listed stock");
 const Screener = page(() => import("./pages/Screener"), "Screener", "the screener");
 const Watchlist = page(() => import("./pages/Watchlist"), "Watchlist", "your watchlist");
 const Compare = page(() => import("./pages/Compare"), "Compare", "the compare page");
@@ -41,6 +42,7 @@ export function App() {
         <Route path="technical/*" element={<LegacyTechnical />} />
         <Route path="mutual-funds" element={<MutualFunds />} />
         <Route path="mutual-funds/:code" element={<MutualFunds />} />
+        <Route path="stocks" element={<Stocks />} />
         <Route path="screener" element={<Screener />} />
         <Route path="watchlist" element={<Watchlist />} />
         <Route path="compare" element={<Compare />} />

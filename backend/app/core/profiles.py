@@ -190,7 +190,9 @@ class PortfolioConfig(BaseModel):
         return self
 
 
-UniverseKey = Literal["nifty50", "nifty100", "nifty200", "nifty500", "custom"]
+UniverseKey = Literal[
+    "nifty50", "nifty100", "nifty200", "nifty500", "nse_all", "bse_only", "all_listed", "custom"
+]
 
 
 class ScreenFilter(BaseModel):
@@ -242,9 +244,16 @@ class ScreenerConfig(BaseModel):
 
 
 _HHMM = r"^([01]\d|2[0-3]):[0-5]\d$"
-SourceKey = Literal["yahoo", "mfapi", "nse", "amfi", "google"]
+SourceKey = Literal["yahoo", "mfapi", "nse", "bse", "amfi", "google"]
 ReferenceKey = Literal[
-    "nse_equity", "nse_etf", "nifty50", "nifty100", "nifty200", "nifty500", "amfi_navall"
+    "nse_equity",
+    "nse_etf",
+    "bse_equity",
+    "nifty50",
+    "nifty100",
+    "nifty200",
+    "nifty500",
+    "amfi_navall",
 ]
 
 
@@ -269,6 +278,8 @@ class DataConfig(BaseModel):
     split_check_tolerance: float = Field(gt=0, lt=1)
     fundamentals_stale_after_days: float = Field(gt=0)
     failed_retry_after_minutes: float = Field(gt=0)
+    topup_per_night: int = Field(ge=0)
+    topup_time_ist: str = Field(pattern=_HHMM)
     http_timeout_seconds: float = Field(gt=0)
     http_retries: int = Field(ge=0)
     http_backoff_seconds: float = Field(ge=0)

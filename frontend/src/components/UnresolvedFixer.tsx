@@ -65,7 +65,7 @@ function FixRow(props: {
         <span className="sr-only">Search</span>
         <input
           className={inputClass}
-          placeholder={kind === "stock" ? "Search NSE symbol or company…" : "Search scheme name or AMFI code…"}
+          placeholder={kind === "stock" ? "Search NSE or BSE symbol, or company…" : "Search scheme name or AMFI code…"}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -77,8 +77,9 @@ function FixRow(props: {
         {options.map((o) => {
           const code = (kind === "stock" ? o.symbol : o.amfi_code) ?? "";
           return (
-            <Button key={code} variant="secondary" disabled={fix.isPending} onClick={() => fix.mutate({ code })}>
-              <span className="font-mono">{code}</span> · {o.name}{" "}
+            <Button key={code} variant="secondary" disabled={fix.isPending} onClick={() => fix.mutate({ code, exchange: o.exchange ?? "NSE" })}>
+              <span className="font-mono">{code}</span>
+              {o.exchange === "BSE" && <span className="text-xs text-fg-subtle"> (BSE)</span>} · {o.name}{" "}
               <span className="text-xs text-fg-subtle">({Math.round(o.score)}% match)</span>
             </Button>
           );
@@ -86,7 +87,7 @@ function FixRow(props: {
       </div>
       {kind === "stock" && (
         <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-          <span className="text-fg-subtle">Only on BSE?</span>
+          <span className="text-fg-subtle">Not in the list (rarely traded on BSE)?</span>
           <input
             className={`${inputClass} w-40`}
             placeholder="BSE symbol, e.g. TCS"

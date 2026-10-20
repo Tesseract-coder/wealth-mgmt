@@ -9,7 +9,14 @@ from apscheduler.triggers.cron import CronTrigger
 
 from app.core.profiles import get_profiles, parse_hhmm
 from app.jobs.runner import JobRunner
-from app.jobs.tasks import FUND_JOB_KIND, JOB_KIND, fundamentals_refresh, market_refresh
+from app.jobs.tasks import (
+    FUND_JOB_KIND,
+    JOB_KIND,
+    TOPUP_JOB_KIND,
+    fundamentals_refresh,
+    market_refresh,
+    market_topup,
+)
 
 logger = logging.getLogger(__name__)
 TZ = "Asia/Kolkata"
@@ -81,6 +88,21 @@ def start_scheduler(runner: JobRunner) -> BackgroundScheduler:
         coalesce=True,
         misfire_grace_time=6 * 3600,
     )
+    if cfg.topup_per_night > 0:
+        top_t = parse_hhmm(cfg.topup_time_ist)
+        sched.add_job(
+            lambda: runner.submit(
+                TOPUP_JOB_KIND,
+                market_topup(),
+                params={"stocks": cfg.topup_per_night},
+                trigger="schedule",
+            ),
+            CronTrigger(day_of_week="mon-fri", hour=top_t.hour, minute=top_t.minute, timezone=TZ),
+            id="topup",
+            name="Nightly top-up of stocks not loaded yet",
+            coalesce=True,
+            misfire_grace_time=3600,
+        )
     sched.start()
     _scheduler = sched
     logger.info(

@@ -15,7 +15,7 @@ from sqlmodel import Session
 from app.core.formatting import IST, now_ist
 from app.core.profiles import ReferenceKey, get_profiles
 from app.core.settings import get_settings
-from app.data import amfi, indices, nse, store
+from app.data import amfi, bse, indices, market, nse, store
 from app.data.files import REFERENCE_FILES, bundled_as_of, locate
 from app.data.freshness import (
     Freshness,
@@ -34,6 +34,7 @@ logger = logging.getLogger(__name__)
 PARSERS: dict[ReferenceKey, Callable[[str], Sized]] = {
     "nse_equity": nse.parse_equity_list,
     "nse_etf": nse.parse_etf_list,
+    "bse_equity": bse.parse_list,
     "nifty50": indices.parse_index_list,
     "nifty100": indices.parse_index_list,
     "nifty200": indices.parse_index_list,
@@ -48,6 +49,9 @@ def ref_key(key: ReferenceKey) -> str:
 
 def clear_reference_caches() -> None:
     nse.load_securities.cache_clear()
+    bse.load_bse.cache_clear()
+    bse.bse_only.cache_clear()
+    market.all_listings.cache_clear()
     amfi.load_schemes.cache_clear()
     indices.load_index.cache_clear()
     indices.nifty500_by_symbol.cache_clear()
@@ -63,6 +67,8 @@ def is_due(session: Session, key: ReferenceKey, now: datetime) -> bool:
     ok_at = as_utc(st.last_success_at)
     if key == "amfi_navall":  # carries the latest NAVs, so it follows the NAV publishing cycle
         return ok_at < ready_at(expected_session(now, cfg.nav_ready), cfg.nav_ready)
+    if key == "bse_equity":  # each refresh adds one day's trading, so take every day's
+        return now - ok_at > timedelta(hours=20)
     return now - ok_at > timedelta(days=cfg.reference_refresh_days)
 
 
@@ -76,7 +82,8 @@ def refresh_reference(
         return RefreshResult(st.key, f.label, "skipped", "Already up to date")
     st.last_attempt_at = store.to_utc(now)
     try:
-        raw = get_bytes(f.source, f.url)
+        # BSE has no list to download: the latest bhavcopy is merged into the stored one.
+        raw = bse.download_list(now) if key == "bse_equity" else get_bytes(f.source, f.url)
         text = raw.decode("utf-8-sig", errors="replace")
         try:
             n = len(PARSERS[key](text))

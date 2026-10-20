@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { portfolioApi, watchlistApi, type Holdings, type Suggestion } from "../api/client";
+import { portfolioApi, suggestionTicker, watchlistApi, type Holdings, type Suggestion } from "../api/client";
 import { useDebounced } from "../hooks/useDebounced";
 import { NAV } from "../lib/nav";
 
@@ -32,7 +32,7 @@ export function tickerFromInput(q: string): string | null {
 const matches = (needle: string, ...hay: (string | null | undefined)[]) => hay.some((h) => h?.toLowerCase().includes(needle));
 
 /** Everything the search box can offer for `q`: pages, your holdings and watchlist first, then
- *  any NSE stock or mutual fund. Grouped, a few per group, duplicates dropped. */
+ *  any NSE or BSE stock or mutual fund. Grouped, a few per group, duplicates dropped. */
 export function searchItems(
   q: string,
   holdings: Holdings | undefined,
@@ -81,10 +81,10 @@ export function searchItems(
   );
   if (needle) {
     add(
-      "All NSE stocks",
+      "All stocks",
       (stocks ?? [])
         .filter((s) => s.symbol && s.score >= MIN_SCORE)
-        .map((s) => ({ key: `s:${s.symbol}`, group: "", label: s.name, detail: `${s.symbol}.NS`, href: stockHref(`${s.symbol}.NS`) })),
+        .map((s) => ({ key: `s:${suggestionTicker(s)}`, group: "", label: s.name, detail: suggestionTicker(s), href: stockHref(suggestionTicker(s)) })),
     );
     add(
       "All mutual funds",
@@ -244,7 +244,7 @@ function SearchDialog({ onClose }: { onClose: () => void }) {
           ))}
         </div>
         <p className="border-t border-border px-3 py-1.5 text-xs text-fg-subtle" aria-live="polite">
-          {searching ? "Searching all NSE stocks and funds…" : items.length ? "↑ ↓ to move · Enter to open" : "Nothing matches. Type an NSE symbol, a company or a fund name."}
+          {searching ? "Searching every NSE and BSE stock and fund…" : items.length ? "↑ ↓ to move · Enter to open" : "Nothing matches. Type a symbol, a company or a fund name."}
         </p>
       </div>
     </div>

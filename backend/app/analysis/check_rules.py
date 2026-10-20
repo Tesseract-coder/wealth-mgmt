@@ -167,7 +167,8 @@ def fair_value_check(ctx: StockContext, _: Limits) -> Outcome:
     fv = ctx.fair_value
     if fv is None:
         return no_data(ctx.why_missing("P/E", ctx.fair_value_reason))
-    return judge(fv.price < fv.value, fv.price, fv.value, gap=f"{abs(fv.gap_pct):.1f}%")
+    gap = "far" if fv.value <= 0 else f"{abs(fv.gap_pct):.1f}%"  # no value: the gap is infinite
+    return judge(fv.price < fv.value, fv.price, fv.value, gap=gap)
 
 
 def ev_ebitda_vs_sector(ctx: StockContext, _: Limits) -> Outcome:

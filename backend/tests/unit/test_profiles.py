@@ -76,7 +76,16 @@ def _data_variant(tmp_path: Path, **changes: object) -> Path:
     [
         ({"rate_limits_per_minute": {"yahoo": 60}}, "rate_limits_per_minute is missing"),
         (
-            {"rate_limits_per_minute": {"yahoo": 0, "mfapi": 1, "nse": 1, "amfi": 1, "google": 1}},
+            {
+                "rate_limits_per_minute": {
+                    "yahoo": 0,
+                    "mfapi": 1,
+                    "nse": 1,
+                    "bse": 1,
+                    "amfi": 1,
+                    "google": 1,
+                }
+            },
             "positive",
         ),
         ({"refresh_time_ist": "15:00"}, "after market_close_ist"),

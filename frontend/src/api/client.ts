@@ -136,7 +136,12 @@ export interface Suggestion {
   amfi_code: string | null;
   name: string;
   score: number;
+  /** Stocks: where the symbol trades ("BSE" for shares listed only on BSE). */
+  exchange?: "NSE" | "BSE" | null;
 }
+
+/** Yahoo's ticker for a stock suggestion: "TCS.NS", or "ANDHRAPET.BO" for a BSE-only share. */
+export const suggestionTicker = (s: Suggestion) => `${s.symbol}${s.exchange === "BSE" ? ".BO" : ".NS"}`;
 
 export interface StockHolding {
   id: number;
@@ -1136,7 +1141,7 @@ export const EXPORTS = [
 // ---------------------------------------------------------------- screener & watchlist
 
 export type FilterOp = "gt" | "gte" | "lt" | "lte" | "between";
-export type UniverseKey = "nifty50" | "nifty100" | "nifty200" | "nifty500" | "custom";
+export type UniverseKey = "nifty50" | "nifty100" | "nifty200" | "nifty500" | "nse_all" | "bse_only" | "all_listed" | "custom";
 
 export interface ScreenFilter {
   field: string;
@@ -1516,7 +1521,8 @@ export interface FairValue {
   value: number;
   price: number;
   /** Price vs fair value: negative = below (cheaper) */
-  gap_pct: number;
+  /** null when the fair value is nil (the gap is infinite). */
+  gap_pct: number | null;
   methods: { name: string; value: number; basis: string }[];
   caveat: string;
 }
@@ -1654,4 +1660,54 @@ export const checksApi = {
     request<FinancialHistory>(`/analysis/fundamental/${encodeURIComponent(ticker)}/history`),
   fund: (code: string) => request<FundChecks>(`/analysis/mf/${encodeURIComponent(code)}/checks`),
   funds: () => request<{ funds: FundChecks[]; disclaimer: string }>("/analysis/mf/holdings/checks"),
+};
+
+// ---------------------------------------------------------------------------- all stocks
+
+export type IndexFilter = "nifty50" | "nifty100" | "nifty200" | "nifty500" | "outside";
+
+export interface StockRow {
+  ticker: string;
+  symbol: string;
+  name: string;
+  /** "BSE" = listed only on BSE. */
+  exchange: "NSE" | "BSE";
+  /** The smallest Nifty index it belongs to. */
+  index: "nifty50" | "nifty100" | "nifty200" | "nifty500" | null;
+  sector: string | null;
+  mcap_cr: number | null;
+  close: number | null;
+  as_of: string | null;
+  /** Prices downloaded. */
+  loaded: boolean;
+  held: boolean;
+  watched: boolean;
+}
+
+export interface StocksPage {
+  total: number;
+  all: number;
+  loaded: number;
+  rows: StockRow[];
+  sectors: { name: string; count: number }[];
+}
+
+export interface StocksQuery {
+  q?: string;
+  exchange?: "all" | "NSE" | "BSE";
+  index?: IndexFilter | null;
+  sector?: string | null;
+  loaded?: boolean;
+  held?: boolean;
+  sort?: "name" | "mcap";
+  offset?: number;
+  limit?: number;
+}
+
+export const stocksApi = {
+  list: (f: StocksQuery) => {
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries(f)) if (v !== undefined && v !== null && v !== "" && v !== false) p.set(k, String(v));
+    return request<StocksPage>(`/stocks?${p.toString()}`);
+  },
 };

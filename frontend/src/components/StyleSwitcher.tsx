@@ -23,7 +23,8 @@ export function StyleSwitcher({ className = "" }: { className?: string }) {
   const value = (params.get("style") as StyleKey | null) ?? profile.data.style;
   return (
     <label className={`items-center gap-2 text-sm ${className}`}>
-      <span className="text-xs font-medium text-fg-muted">Style</span>
+      {/* Visually hidden below 2xl so the header fits on one line; still the field's label. */}
+      <span className="sr-only text-xs font-medium text-fg-muted 2xl:not-sr-only">Style</span>
       <select
         className={`${inputClass} h-9 py-1`}
         value={value}

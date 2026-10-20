@@ -37,6 +37,8 @@ export function StockHeader({
   const pos = signal?.position;
   const isIndex = ticker.startsWith("^");
   const confidence = signal?.scores.confidence;
+  // Small companies (often BSE-only) can be missing figures at Yahoo: say so up front.
+  const unscored = checks?.sections.filter((s) => s.score === null).length ?? 0;
   return (
     <header className="rounded-card border border-border bg-surface p-4 shadow-card sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -45,10 +47,16 @@ export function StockHeader({
           <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-fg-muted">
             <span className="font-mono">{ticker}</span>
             {sector && <Badge>{sector}</Badge>}
+            {ticker.endsWith(".BO") && <Badge>BSE only</Badge>}
             {checks?.is_financial && <Badge tone="accent">Lender: own health checks</Badge>}
+            {unscored >= 2 && (
+              <span title={`Yahoo Finance has too few figures to score ${unscored} of the ${checks!.sections.length} sections, so the total is out of ${checks!.max_total}.`}>
+                <Badge tone="caution">Limited data</Badge>
+              </span>
+            )}
           </p>
         </div>
-        {!isIndex && ticker.endsWith(".NS") && (
+        {!isIndex && (ticker.endsWith(".NS") || ticker.endsWith(".BO")) && (
           <div className="flex flex-wrap items-center gap-2">
             <Link to={`/compare?t=${encodeURIComponent(ticker)}`} className={buttonClass("secondary", "sm")}>
               <GitCompareArrows aria-hidden className="size-3.5" /> Compare

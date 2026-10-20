@@ -8,7 +8,7 @@ import type { Candidate, Job, ScreenerConfig, ScreenField, ScreenResult, Watchli
 import { parseSel } from "../pages/Screener";
 import { WatchlistTable } from "../pages/Watchlist";
 import { FilterBuilder, fromDrafts, toDraft, type Draft } from "./FilterBuilder";
-import { ScanProgress, scanMinutes } from "./ScanPanel";
+import { durationText, ScanProgress, scanMinutes } from "./ScanPanel";
 import { funnel, keyFacts, ScreenResults, shapeFromFacts } from "./ScreenResults";
 
 function wrap(node: ReactNode) {
@@ -143,6 +143,8 @@ describe("Scan progress", () => {
     expect(scanMinutes(500, 6.5)).toBe(54);
     expect(scanMinutes(3, 6.5)).toBe(1);
     expect(scanMinutes(0, 6.5)).toBe(0);
+    expect(durationText(54)).toBe("54 minutes");
+    expect(durationText(scanMinutes(4547, 6.5))).toBe("about 8 hours");
   });
 
   it("shows a progress bar and a Stop button", () => {

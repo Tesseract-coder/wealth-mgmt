@@ -64,6 +64,7 @@ def fix_ticker(
     if h is None:
         raise HTTPException(404, "Holding not found")
     symbol = body.symbol.strip().upper().removesuffix(".NS").removesuffix(".BO")
+    # BSE symbols aren't checked: the BSE list only has shares that traded in the last month.
     if body.exchange == "NSE" and symbol not in ticker_resolver().by_symbol:
         raise HTTPException(422, f"'{symbol}' is not in the NSE securities list")
     h.symbol, h.exchange, h.resolution, h.resolution_score = symbol, body.exchange, "manual", 100.0

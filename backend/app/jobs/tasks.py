@@ -2,22 +2,27 @@
 → today's signals (saved to the signal history). Watchlist stocks are refreshed and recorded
 alongside your holdings.
 Fundamentals (weekly): holdings plus Nifty 500 peers in the same NSE industry, for medians.
+Market top-up (nightly): a batch of listed stocks nobody has opened yet.
 
 Each step skips anything that is already fresh unless `force` is set, so the job is cheap to
 run often. A failure on one item is recorded and the job moves on; old data is kept.
 """
 
 from collections.abc import Callable
+from datetime import datetime, timedelta
 from functools import partial
 from typing import Literal, get_args
 
 from sqlmodel import Session, select
 
 from app.core.db import get_engine
+from app.core.formatting import now_ist
 from app.core.profiles import ReferenceKey
 from app.data.delivery import refresh_delivery
 from app.data.files import REFERENCE_FILES
 from app.data.fundamentals import refresh_fundamentals
+from app.data.indices import INDEX_KEYS
+from app.data.market import Listing
 from app.data.navs import refresh_nav
 from app.data.prices import refresh_daily
 from app.data.quotes import Target, benchmark_targets, fund_targets, stock_targets
@@ -194,6 +199,65 @@ def fundamentals_refresh(force: bool = False, peers: bool = True) -> JobFn:
                 max_peers = get_profiles().fundamental.sector_max_peers
                 for code in peer_targets(s, holdings, max_peers):
                     steps.append((f"peer {code}", partial(fundamentals_step, s, code, None, force)))
+            return _run_steps(s, steps, progress)
+
+    return run
+
+
+# ---------------------------------------------------------------------------- market top-up
+
+TOPUP_JOB_KIND = "market_topup"
+# A stock whose download failed is left alone this long (delisted or unknown to Yahoo).
+TOPUP_RETRY_AFTER = timedelta(days=7)
+
+
+def topup_targets(session: Session, n: int, now: datetime | None = None) -> list[Listing]:
+    """The next `n` listed stocks with no prices yet: Nifty 50 first, then the bigger Nifty
+    indices, other NSE stocks and BSE-only ones. Recent failures are skipped."""
+    from app.data.freshness import failed_lately
+    from app.data.market import all_listings
+    from app.data.prices import price_key
+    from app.models.tables import SeriesStatus
+
+    now = now or now_ist()
+    status = {
+        st.key: st for st in session.exec(select(SeriesStatus).where(SeriesStatus.kind == "price"))
+    }
+
+    def waiting(x: Listing) -> bool:
+        st = status.get(price_key(x.ticker))
+        return st is None or (
+            st.last_success_at is None and not failed_lately(st, now, TOPUP_RETRY_AFTER)
+        )
+
+    rank = {k: i for i, k in enumerate(INDEX_KEYS)}
+    todo = [x for x in all_listings() if waiting(x)]
+    last = len(rank)
+    todo.sort(key=lambda x: (rank[x.index] if x.index else last, x.exchange != "NSE", x.symbol))
+    return todo[:n]
+
+
+def topup_step(session: Session, x: Listing) -> RefreshResult:
+    """Prices, then fundamentals for one stock nobody has opened yet."""
+    res = refresh_daily(session, x.ticker, x.name, retry_failed_after=TOPUP_RETRY_AFTER)
+    if res.outcome == "failed":
+        return res
+    fundamentals_step(session, x.ticker, x.name)
+    return res
+
+
+def market_topup(n: int | None = None) -> JobFn:
+    """Download a batch of not-yet-loaded stocks (`data.topup_per_night`), so the All stocks
+    page and whole-market scans fill in over a few weeks without one long download."""
+
+    def run(progress: Progress) -> str:
+        from app.core.profiles import get_profiles
+
+        with Session(get_engine()) as s:
+            batch = topup_targets(s, n if n is not None else get_profiles().data.topup_per_night)
+            steps: list[tuple[str, Callable[[], RefreshResult]]] = [
+                (x.symbol, partial(topup_step, s, x)) for x in batch
+            ]
             return _run_steps(s, steps, progress)
 
     return run
