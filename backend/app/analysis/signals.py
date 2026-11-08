@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Literal
 import numpy as np
 import pandas as pd
 from sqlalchemy import Engine
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlmodel import Session, col, select
 
 from app.analysis import indicators as ind
@@ -478,18 +479,29 @@ def analyse_stock(
 
 
 def record(session: Session, s: StockSignal, day: datetime | None = None) -> None:
-    """Upsert today's signal into the history (one row per ticker, day, style and risk)."""
-    d = (day or now_ist()).date()
-    row = session.get(SignalRecord, (s.ticker, d, s.style, s.risk)) or SignalRecord(
-        ticker=s.ticker, day=d, style=s.style, risk=s.risk, signal=s.signal
+    """Upsert today's signal into the history (one row per ticker, day, style and risk).
+
+    A single INSERT … ON CONFLICT, so two requests recording the same day can't collide."""
+    values = {
+        "ticker": s.ticker,
+        "day": (day or now_ist()).date(),
+        "style": s.style,
+        "risk": s.risk,
+        "signal": s.signal,
+        "composite": s.score.score,
+        "technical": s.score.technical.score,
+        "fundamental": s.score.fundamental.score,
+        "confidence": s.score.confidence,
+        "recorded_at": utcnow(),
+    }
+    stmt = sqlite_insert(SignalRecord).values(**values)
+    keys = ("ticker", "day", "style", "risk")
+    session.execute(
+        stmt.on_conflict_do_update(
+            index_elements=list(keys),
+            set_={k: stmt.excluded[k] for k in values if k not in keys},
+        )
     )
-    row.signal = s.signal
-    row.composite = s.score.score
-    row.technical = s.score.technical.score
-    row.fundamental = s.score.fundamental.score
-    row.confidence = s.score.confidence
-    row.recorded_at = utcnow()
-    session.add(row)
 
 
 def history(
@@ -540,6 +552,7 @@ class HoldingsAnalysis:
     _shapes: "list[ShapeResult] | None" = None
     _recorded_on: date | None = None
     _lock: threading.Lock = field(default_factory=threading.Lock)
+    _record_lock: threading.Lock = field(default_factory=threading.Lock)
 
     def shapes(self, provider: DataProvider) -> "list[ShapeResult]":
         """Each signal's Score Shape, in the same order."""
@@ -554,11 +567,19 @@ class HoldingsAnalysis:
 
     def record(self, session: Session, provider: DataProvider) -> None:
         """Save today's signals and shapes to the history (once a day for a shared result)."""
-        from app.analysis.checks import record_axes, record_shape
 
         today = now_ist().date()
         if self._recorded_on == today:
             return
+        with self._record_lock:  # concurrent requests sharing this result record it once
+            if self._recorded_on == today:
+                return
+            self._record(session, provider)
+            self._recorded_on = today
+
+    def _record(self, session: Session, provider: DataProvider) -> None:
+        from app.analysis.checks import record_axes, record_shape
+
         try:
             shapes = self.shapes(provider)
         except Exception:  # one stock's checks failing never stops the signal history
@@ -570,7 +591,6 @@ class HoldingsAnalysis:
                 record(session, s)
                 record_axes(session, s.ticker, s.risk, shape)
         session.commit()
-        self._recorded_on = today
 
 
 def _analyse_holdings(

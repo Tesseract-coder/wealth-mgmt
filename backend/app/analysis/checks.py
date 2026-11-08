@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any, Literal
 import pandas as pd
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlmodel import Session, col, select
 
 from app.analysis.check_rules import (
@@ -694,14 +695,23 @@ def record_axes(
 ) -> None:
     """Upsert today's shape into the axis history (one row per ticker, day and risk level)."""
     d = day or now_ist().date()
-    row = session.get(AxisRecord, (ticker, d, risk)) or AxisRecord(
-        ticker=ticker, day=d, risk=risk, axes_json="{}", total=0, max_total=0
+    values = {
+        "ticker": ticker,
+        "day": d,
+        "risk": risk,
+        "axes_json": json.dumps(shape.axes),
+        "total": shape.total,
+        "max_total": shape.max_total,
+        "recorded_at": utcnow(),
+    }
+    stmt = sqlite_insert(AxisRecord).values(**values)
+    keys = ("ticker", "day", "risk")
+    session.execute(
+        stmt.on_conflict_do_update(
+            index_elements=list(keys),
+            set_={k: stmt.excluded[k] for k in values if k not in keys},
+        )
     )
-    row.axes_json = json.dumps(shape.axes)
-    row.total = shape.total
-    row.max_total = shape.max_total
-    row.recorded_at = utcnow()
-    session.add(row)
 
 
 def record_shape(session: Session, sig: "StockSignal", daily: pd.DataFrame) -> None:
