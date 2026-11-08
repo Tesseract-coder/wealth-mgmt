@@ -128,7 +128,7 @@ def table_pdf(t: Table) -> bytes:
     if not t.rows:
         doc.set_font("Helvetica", size=11)
         doc.set_text_color(*INK)
-        doc.multi_cell(doc.epw, 6, _text(t.empty_note or "Nothing to show."))
+        doc.multi_cell(doc.epw, 6, _text(t.empty_note or "Nothing to show."), align="L")
 
     for i, row in enumerate(t.rows):
         _card(doc, t, i, row, sig_col, tones[i])
@@ -136,7 +136,7 @@ def table_pdf(t: Table) -> bytes:
     doc.ln(2)
     doc.set_font("Helvetica", "I", 8)
     doc.set_text_color(*MUTED)
-    doc.multi_cell(doc.epw, 4, _text(get_profiles().disclaimer))
+    doc.multi_cell(doc.epw, 4, _text(get_profiles().disclaimer), align="L")
     return bytes(doc.output())
 
 
@@ -149,7 +149,7 @@ def _title_band(doc: _Doc, t: Table, generated: str) -> None:
     doc.cell(doc.epw, 9, _text(t.title), new_x="LMARGIN", new_y="NEXT")
     doc.set_font("Helvetica", size=9)
     doc.set_text_color(203, 213, 225)
-    doc.multi_cell(doc.epw, 4.5, _text(f"{t.context}\nGenerated {generated}"))
+    doc.multi_cell(doc.epw, 4.5, _text(f"{t.context}\nGenerated {generated}"), align="L")
     doc.set_y(max(doc.get_y(), 34) + 6)
 
 
@@ -238,7 +238,7 @@ def _card_body(
     doc.set_xy(left, y)
     doc.set_font("Helvetica", "B", 12)
     doc.set_text_color(*INK)
-    doc.multi_cell(inner - badge - 3, 6, _text(heading or f"Row {i + 1}"))
+    doc.multi_cell(inner - badge - 3, 6, _text(heading or f"Row {i + 1}"), align="L")
     after_heading = doc.get_y()
     if signal:
         _chip(doc, left + inner - badge, y + 0.2, signal, tone)
@@ -305,11 +305,11 @@ def _pair(doc: FPDF, w: float, label: str, value: str, tone: str | None) -> None
     x = doc.get_x()
     doc.set_font("Helvetica", size=7.5)
     doc.set_text_color(*MUTED)
-    doc.multi_cell(w, 3.8, _text(label), new_x="LEFT", new_y="NEXT")
+    doc.multi_cell(w, 3.8, _text(label), new_x="LEFT", new_y="NEXT", align="L")
     doc.set_x(x)
     doc.set_font("Helvetica", "B" if tone else "", 10)
     doc.set_text_color(*(TONES[tone][0] if tone else INK))
-    doc.multi_cell(w, 5, _text(value), new_x="LEFT", new_y="NEXT")
+    doc.multi_cell(w, 5, _text(value), new_x="LEFT", new_y="NEXT", align="L")
     doc.set_x(x)
     doc.ln(1)
 
@@ -328,5 +328,5 @@ def _points(doc: FPDF, left: float, inner: float, label: str, items: list[str], 
         doc.set_xy(left + 4, y)
         doc.set_font("Helvetica", size=9.5)
         doc.set_text_color(*INK)
-        doc.multi_cell(inner - 4, 4.6, _text(item), new_x="LMARGIN", new_y="NEXT")
+        doc.multi_cell(inner - 4, 4.6, _text(item), new_x="LMARGIN", new_y="NEXT", align="L")
     doc.ln(1.5)
